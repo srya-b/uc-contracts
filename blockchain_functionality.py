@@ -1,0 +1,78 @@
+import gevent
+from gevent.event import AsyncResult
+from gevent.queue import Queue, Channel
+
+
+def contract_addition():
+    def _funct(a, b):
+        return int(a)+int(b)
+
+def contract_input(N):
+    _inputs = [AsyncResult() for _ in range(N)]
+
+    def _func(pid, inp):
+        if not _inputs[pid].ready():
+            _inputs[pid].set(inp)
+    return _func
+
+class Ledger_Functionality(object):
+    def __init__(self, sid, contracts, N, delta):
+        self.sid = sid
+        self.contracts = contracts
+        self.N = N
+        self.delta = delta
+
+        self.outputs = [Queue() for _ in range(N)]
+        self.input = Channel()
+    
+    def run(self):
+        while True:
+            caller,addr,args = self.input.get()
+            result = self.contracts[addr](*args)
+            self.outputs[caller].put(result)
+
+def Blockchain_IdealProtocol(N):
+    class Ledger_IdealProtocol(object):
+        _instances = {}
+    
+        def __init__(self, sid, myid, contracts, N, delta):
+            if sid not in Ledger_IdealProtocol._instances:
+                Ledger_IdealProtocol._instances[sid] = Ledger_Functionality(sid, contracts, N, delta)
+            F_Ledger = Ledger_IdealProtocol._instances[sid]
+
+            self.input = F_Ledger.input
+            self.output = F_Ledger.outputs[myid]
+            self.run = F_Ledger.run
+
+    return Ledger_IdealProtocol
+
+def give_inputs(parties):
+    for i in range(len(parties)):
+        print('placing input party', i)
+        parties[i].input.put((i,0,[i,i+1]))
+
+    gevent.sleep()
+
+    for i in range(len(parties)):
+        result = parties[i].output.get()
+        print(i,'+', i+1, '=', result) 
+
+# for now test sequential transactions all processed serially
+def test_eth_protocol(N):
+    contracts = [contract_addition(), contract_input(N)]
+    ETH = Blockchain_IdealProtocol(N)
+
+    parties = [ETH('sid', i, contracts, N, 0) for i in range(N)]
+
+    functionality = gevent.spawn(parties[0].run)
+    inputs = gevent.spawn(give_inputs, parties)
+
+    #gevent.joinall([functionality, inputs])
+
+    while True:
+        gevent.sleep()
+
+if __name__=='__main__':
+    test_eth_protocol(5)
+        
+

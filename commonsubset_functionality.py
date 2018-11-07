@@ -70,7 +70,10 @@ def test_acs_ideal(sid='sid', N=4, f=1):
     g1 = gevent.spawn(parties[0].run)
     g2 = gevent.spawn(local_io, parties)
 
-    gevent.joinall([g1,g2])
+#    gevent.joinall([g1,g2])
+
+    while True:
+        pass        
 
 if __name__=='__main__':
     test_acs_ideal()
