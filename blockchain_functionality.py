@@ -4,17 +4,31 @@ from gevent.queue import Queue, Channel
 
 
 def contract_addition():
-    def _funct(a, b):
+    def _func(g, a, b):
         return int(a)+int(b)
+    return _func
 
 def contract_input(N):
     _inputs = [AsyncResult() for _ in range(N)]
 
-    def _func(pid, inp):
+    def _func(g, pid, inp):
         if not _inputs[pid].ready():
             _inputs[pid].set(inp)
     return _func
 
+
+class GlobalFunctions(object):
+    def __init__(self, blocks, balances, current_block):
+        self._blocks = blocks
+        self._balances = balances
+        self._current_block = current_block 
+
+    def blocknumber(self):
+        return self._current_block
+   
+    def balance(self, a):
+        return self._balances[a]
+    
 class Ledger_Functionality(object):
     def __init__(self, sid, contracts, N, delta):
         self.sid = sid
@@ -22,14 +36,38 @@ class Ledger_Functionality(object):
         self.N = N
         self.delta = delta
 
+        self.blocks = {}
+        self.current_block = 0
+        self.balances = {}
+        self.buffer_txs = []
+
         self.outputs = [Queue() for _ in range(N)]
         self.input = Channel()
-    
+
+    def process_tx(self, tx):
+        g = GlobalFunctions(self.blocks, self.balances, self.current_block)
+        caller,addr,args = tx
+        result = self.contracts[addr](g, *args)
+        self.outputs[caller].put(result)
+ 
+    def new_block(self):
+        self.current_block += 1
+        new_block = (self.current_block, self.buffer_txs)
+        self.blocks[self.current_block] = new_block
+
+        for tx in self.buffer_txs:
+            self.process_tx(tx)
+
+        self.buffer_txs = []
+
     def run(self):
         while True:
             caller,addr,args = self.input.get()
-            result = self.contracts[addr](*args)
-            self.outputs[caller].put(result)
+            
+            if addr == 'tick':
+                self.new_block()
+            else:
+                self.buffer_txs.append((caller,addr,args))
 
 def Blockchain_IdealProtocol(N):
     class Ledger_IdealProtocol(object):
@@ -52,6 +90,20 @@ def give_inputs(parties):
         parties[i].input.put((i,0,[i,i+1]))
 
     gevent.sleep()
+
+    parties[0].input.put((i,'tick',[]))
+
+    for i in range(len(parties)):
+        result = parties[i].output.get()
+        print(i,'+', i+1, '=', result) 
+
+    for i in range(len(parties)):
+        print('placing input party', i)
+        parties[i].input.put((i,0,[i,i+1]))
+
+    gevent.sleep()
+
+    parties[0].input.put((i,'tick',[]))
 
     for i in range(len(parties)):
         result = parties[i].output.get()
