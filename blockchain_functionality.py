@@ -30,11 +30,12 @@ class GlobalFunctions(object):
         return self._balances[a]
     
 class Ledger_Functionality(object):
-    def __init__(self, sid, contracts, N, delta):
+    def __init__(self, sid, contracts, N, delta=2, block_reward=10):
         self.sid = sid
         self.contracts = contracts
         self.N = N
         self.delta = delta
+        self.block_reward = 10
 
         self.blocks = {}
         self.current_block = 0
@@ -50,7 +51,7 @@ class Ledger_Functionality(object):
         result = self.contracts[addr](g, *args)
         self.outputs[caller].put(result)
  
-    def new_block(self):
+    def new_block(self, beneficiary):
         self.current_block += 1
         new_block = (self.current_block, self.buffer_txs)
         self.blocks[self.current_block] = new_block
@@ -65,7 +66,7 @@ class Ledger_Functionality(object):
             caller,addr,args = self.input.get()
             
             if addr == 'tick':
-                self.new_block()
+                self.new_block(*args)
             else:
                 self.buffer_txs.append((caller,addr,args))
 
@@ -110,7 +111,7 @@ def give_inputs(parties):
         print(i,'+', i+1, '=', result) 
 
 # for now test sequential transactions all processed serially
-def test_eth_protocol(N):
+def test_eth_protocol_simple(N):
     contracts = [contract_addition(), contract_input(N)]
     ETH = Blockchain_IdealProtocol(N)
 
@@ -124,6 +125,19 @@ def test_eth_protocol(N):
     while True:
         gevent.sleep()
 
+def test_eth_protocol_simple_transfer(N):
+    contracts = [contract_addition(), contract_input(N)]
+    ETH = Blockchain_IdealProtocol(N)
+
+    parties = [ETH('sid', i, contracts, N, 0) for i in range(N)]
+
+    functionality = gevent.spawn(parties[0].run)
+    inputs = gevent.spawn(give_inputs, parties)
+
+    #gevent.joinall([functionality, inputs])
+
+    while True:
+        gevent.sleep()
 if __name__=='__main__':
     test_eth_protocol(5)
         
