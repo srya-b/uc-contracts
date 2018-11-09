@@ -7,6 +7,9 @@ from collections import defaultdict
 def state_update(s, inps):
     return (s+1)
 
+# Contract which implements the state channel.
+# It is passed into the F_Ledger functionality as 
+# a callable contract.
 def contract_state(update_func, N, delta):
     bestRound = -1
     state = None
@@ -44,11 +47,13 @@ def contract_state(update_func, N, delta):
         flag = 1
         deadline = g.blocknumber() + T
     
-
+# The current state protocol can only support 2 parties
+# because multicast to all other parties is not realizable
+# in the real world in this case. There may be a way around
+# this but this dev certainly doesn't know what it is.
 def State_Protocol(F_Ledger):
 
     class StateProtocol(object):
-#        _instances = {}
         N = 2
         _leader = [0 for _ in range(N)]
         def __init__(self, sid, myid):
@@ -56,14 +61,7 @@ def State_Protocol(F_Ledger):
             self.myid = myid
             self.N = 2
             self.F_Ledger = F_Ledger
-#            if sid not in StateProtocol._instances:
-#                StateProtocol._instances[sid] = Ledger_Funtctionality(
-#                    sid,
-#                    contracts,
-#                    N
-#                )
 
-#            F_Ledger = StateProtocol._instances[sid]
             self.input = Channel()
             self.output = Channel()
 
@@ -88,16 +86,10 @@ def State_Protocol(F_Ledger):
                     if len(_round_inputs) == 2:
 
                         # Send batch messages to each party (incuding self)
+                        # TODO: should the ITM send the BATCH message to itself externally
+                        # or should it process it now and send to the other party?
                         for p in parties:
                             p.input.put(('BATCH',self.myid,_round_inputs))
-
-                
-
-                
-                        
-                            
-
-                
 
     return StateProtocol
                 
