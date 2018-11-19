@@ -1,0 +1,49 @@
+This is BibTeX, Version 0.99d (TeX Live 2016/Debian)
+Capacity: max_strings=100000, hash_size=100000, hash_prime=85009
+The top-level auxiliary file: uc-contracts.aux
+The style file: plain.bst
+Database file #1: bibuccontracts.bib
+Warning--I didn't find a database entry for "uc"
+Warning--I didn't find a database entry for "guc"
+You've used 2 entries,
+            2118 wiz_defined-function locations,
+            512 strings with 4481 characters,
+and the built_in function-call counts, 1043 in all, are:
+= -- 110
+> -- 41
+< -- 2
++ -- 16
+- -- 14
+* -- 66
+:= -- 155
+add.period$ -- 8
+call.type$ -- 2
+change.case$ -- 13
+chr.to.int$ -- 0
+cite$ -- 2
+duplicate$ -- 46
+empty$ -- 83
+format.name$ -- 14
+if$ -- 238
+int.to.chr$ -- 0
+int.to.str$ -- 2
+missing$ -- 2
+newline$ -- 13
+num.names$ -- 4
+pop$ -- 19
+preamble$ -- 1
+purify$ -- 11
+quote$ -- 0
+skip$ -- 36
+stack$ -- 0
+substring$ -- 74
+swap$ -- 22
+text.length$ -- 2
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 8
+warning$ -- 0
+while$ -- 10
+width$ -- 3
+write$ -- 26
+(There were 2 warnings)

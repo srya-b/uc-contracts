@@ -7,6 +7,7 @@ from collections import defaultdict
 def state_update(s, inps):
     return (s+1)
 
+
 # Contract which implements the state channel.
 # It is passed into the F_Ledger functionality as 
 # a callable contract.
@@ -74,22 +75,14 @@ def State_Protocol(F_Ledger):
             if not _leader[self.myid]:
                 return
 
-            _round_inputs = []
-
+            _round_inputs = {}
+    
+            _current_round = 0
             while True:
                 msg = self.input.get()
-                cmd,callerid,data = msg
+                cmd,callerid,r,data = msg
                 if cmd == 'INPUT':
-                    if len(_round_inputs) and _round_inputs[0][1] == callerid: return
-
-                    _round_inputs.append((cmd,callerid,data))
-                    if len(_round_inputs) == 2:
-
-                        # Send batch messages to each party (incuding self)
-                        # TODO: should the ITM send the BATCH message to itself externally
-                        # or should it process it now and send to the other party?
-                        for p in parties:
-                            p.input.put(('BATCH',self.myid,_round_inputs))
+                     
 
     return StateProtocol
                 
