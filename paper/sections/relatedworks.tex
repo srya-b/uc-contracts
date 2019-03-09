@@ -37,14 +37,30 @@ Furthermore, this paper makes the argument that it is dangerous to have a global
 It claims that~\cite{canetti2016universally} provides a sufficient condition for such a replacement, but that the condition is too strong to be satisfied by any ledger implementation.
 
 % UC with a global PKI
+Canneti et al.~\cite{uc-pki} addresses the global PKI and an ideal authentication within the UC with global setup.
+The specific problem presented in this paper is that the ideal authentication functionality, $\F_\msf{auth}$,is usually formulated with the desirable property of non-transferrability of authentication.
+This means that when I send an authenticated message to another person, they are unable to use that proof to convince anyone else of the authentication.
+The paper realized that the real world PKI model is global \emph{and} that, within it, signatures are globally verifiable.
+Once a key has signed a message for authentication, that proof is verifiable by and transferrable to anyone else in the system.
+Therefore, this work models a new relaxed global PKI, relaxes the UC authentication protocol to not require deniability, and formulates new functionalities for authentication and key exchange without deniability.
+Finally, they propose a new composition theorem allowing substitution of global functionalitites, $\f{F} \textit{ EUC-realizes } \f{G}$.
+The problem being solved relates back to a claim made by Badertscher et al.~\cite{badertscher2017bitcoin} that replacement of global functionalities with real implementations generally invalidates a realization proof of some functionality that shares state with it. 
+In this paper, this arises as replacement of the UC PKI system with a real one where transferrability is possible invalidates the realization proof of the ideal authentication functionality in the plain-PKI model.
+
+They formulate a new authentication functionality that does not impose non-transferrability and a long lasting global functionality handling certificates.
+Finally they prove that the certificate functionality guarantees are precisely captured by EU-CMA signatures and a globally-available PKI .
+This paper however imposes some restrictions on what can be done.
+For example, there is a limitation that a particular ITI may only register a single key with the Cert and Bulletin Board functionalities.
+They claim however, that it is possible to realize $\F_\msf{cert\_auth}$, but a certificate-based approach is not it.
+
+One of the main takeaways in this paper is that you can define a functionality and analyze it for it's properties then prove that it is equivalent to another functionality that realizes this protocol. 
+In this paper that is done by defining
+
+\paragraph{Differentiating $\f{G}_\msf{cert}^\msf{pid}$ and $\f{G}_\msf{swk}^\msf{pid}$}
+
+Questions to answer:
 \begin{itemize}
-	\item The leading example in this paper is that the standard PKI that has been described in previous works does not work in the generalized case in most attempts.
-			When it does have GUC, it is often required to also have this non-transferability (deniability) property where signatures received by a party from another can not be re-used to prove the authenticity of a message.
-			This means that signatures are only valid and checkable by the intended recipient. 
-			In the real world this requirement is bogus because signatures are re-usable and general EU-CMA signatures behave in this way meaning that the functionalities can not be realized by a useful signature scheme.
-			This is why they propose a new composition theorem which allows swapping of shared functionalities with EUC-simulated other functionalities with weaker properties (``verify this choice of words'').
-	\item One lacking concept in tihs paper is that a particular ITI may only register a single key with the Cert and Bulliten Board functionalities.
-			The claim made is that it is possible to realize $\F_{\msf{cert\_auth}}$, but not by going through certificates.
+\item What is the precise difference between $\f{G}_\msf{cert}^\msf{pid}$ and $\f{G}_\msf{cwk}^\msf{pid}$ and why is the substitution necessary?
 \end{itemize}
 
 
