@@ -21,6 +21,7 @@ class Ledger_Functionality(object):
         self.round = 0
         self.sid = sid
         self.pid = pid
+        self.DELTA = 8
 
         self.outputs = defaultdict(Queue)
         self.input = Channel()
@@ -90,7 +91,7 @@ class Ledger_Functionality(object):
 
     def input_transfer(self, sid, pid, to, val, data, fro):
         assert self._balances[fro] >= val
-        self.txqueue[self.round + DELTA].append(('transfer', to, val, data, fro))
+        self.txqueue[self.round + self.DELTA].append(('transfer', to, val, data, fro))
         # Leak message to the adversary ONLY if not private
         self.adversary_out.put(('transfer',to,val,data,fro))  
         # TODO: is this the right way to do it?
@@ -103,7 +104,7 @@ class Ledger_Functionality(object):
         compute_addr = sha256(fro.encode() + str(self.nonces[fro]+1).encode()).hexdigest()[24:]
         assert compute_addr == addr, 'Given address: %s, computed address %s, nonce: %s' % (addr, compute_addr, self.nonces[fro]+1)
         assert data is not None
-        self.txqueue[self.round + DELTA].append(('contract-create', addr, val, data, fro, private))
+        self.txqueue[self.round + self.DELTA].append(('contract-create', addr, val, data, fro, private))
         # Leak to adversary only if not private
         self.adversary_out.put(('contract-create',addr,val,data,fro,private))
 
@@ -158,6 +159,9 @@ class Ledger_Functionality(object):
         self.input_tick_honest()
         dump.dump()
 
+    def block_number(self, sid, pid):
+        return self.round
+
     def decide_tick(self, sid, sender, msg):
         if sender == ADVERSARY:
             self.input_tick_adversary(sid, msg[1])
@@ -190,6 +194,8 @@ class Ledger_Functionality(object):
             self.input_contract_create(sid, pid, msg[1], msg[2], msg[3], msg[4], msg[5])
         elif msg[0] == 'tick':
             self.input_tick_honest(sid, pid, msg[1])
+        else:
+            dump.dump()
 
     def subroutine_msg(self, sender, msg):
         sid,pid = sender
@@ -199,6 +205,8 @@ class Ledger_Functionality(object):
             return self.getbalance(sid, pid, msg[1])
         elif msg[0] == 'read-output':
             return self.read_output(sid, pid, msg[1])
+        elif msg[0] == 'block-number':
+            return self.block_number(sid, pid)
 
     def run(self):
         while True:
