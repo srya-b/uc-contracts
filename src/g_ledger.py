@@ -99,7 +99,6 @@ class Ledger_Functionality(object):
         # TODO: is this the right way to do it?
         print('[TX RECEIVED]', 'to (%s), from (%s), data (%s), val (%d)' % (to, fro, data, val))
         #dump.dump()
-        
 
     def input_contract_create(self, sid, pid, addr, val, data, private, fro):
         assert self._balances[fro] >= val

@@ -77,8 +77,8 @@ class ITMPassthrough(object):
                 self.F.input.set(
                     ((self.sid,self.pid), True, msg)
                 )
-#            else:
-#                dump.dump() 
+            else:
+                dump.dump() 
 
             r = AsyncResult()
 
@@ -106,11 +106,12 @@ class ITMAdversary(object):
         while True:
             ready = gevent.wait(
                 objects=[self.input, self.leak],
+                count=1
             )
+
             assert len(ready) == 1
             r = ready[0]
             sender,reveal,msg = r.get()
-            
             if r == self.input:
                 self.F.backdoor_msg(None if not reveal else sender, msg)
             elif r == self.leak:

@@ -56,34 +56,32 @@ class Multisig_Functionality(object):
         self.balance += val
 
     def input_deposit(self, sid, pid, val):
-        print('block number', self.subroutine_block_number())
         self.buffer_changes.append((self.subroutine_block_number() + self.DELTA, self._deliver_deposit, val))
-        print('[DEPOSIT]', 'deposit received from (%s,%s)' % (sid,pid))
-        dump.dump()
+        self.adversary_out.set(((sid,pid), True, ('deposit',val)))
+        #dump.dump()
 
     def _deliver_transfer(self, to, val):
         new_transfer_msg = ('transfer', to, val, (), self.addr)
-        new_transfer = (pid, new_transfer_msg)
-        transfers.append(new_transfer)
+#        new_transfer = (pid, new_transfer_msg)
+        self.transfers.append(new_transfer_msg)
 
     def input_transfer(self, sid, pid, to, val):
-        #new_transfer_msg = ('transfer', to, val, (), self.addr)
-        #new_transfer = (pid, new_transfer_msg)
-        #transfers.append(new_transfer)
         self.buffer_changes.append(
-            (self.subroutine_block_number(), _deliver_transfer, to, val)
+            (self.subroutine_block_number(), self._deliver_transfer, to, val)
         )
-        dump.dump()
+        self.adversary_out.set(((sid,pid), True, ('transfer',to,val) ))
 
     def _deliver_confirm_transfer(self, idx):
-        _sender,_msg = _transfer
+        #_sender,_msg = _transfer
+        _msg = self.transfers[idx]
         
-        if _sender != pid and self.balance >= _msg[2]:
-            self.G.input.put(
+        #if _sender != pid and self.balance >= _msg[2]:
+        if self.balance >= _msg[2]:
+            self.G.input.set((
                 (self.sid, self.pid),
                 True,
                 _msg
-            )
+            ))
             self.balance -= _msg[2]
 
     def input_confirm_transfer(self, sid, pid, idx):
@@ -98,7 +96,7 @@ class Multisig_Functionality(object):
         #    )
         #    self.balance -= _msg[2]
         self.buffer_changes.append(
-            (self.subroutine_block_number(), _deliver_confirm_transfer, idx)
+            (self.subroutine_block_number(), self._deliver_confirm_transfer, idx)
         )
 
         dump.dump()
@@ -123,7 +121,7 @@ class Multisig_Functionality(object):
         elif msg[0] == 'transfer':
             self.input_transfer(sid, pid, msg[1], msg[2])
         elif msg[0] == 'confirm':
-            self.input_confirm_transfer(sid, pid, msg[1], msg[2])
+            self.input_confirm_transfer(sid, pid, msg[1])
         else:
             dump.dump()
 
