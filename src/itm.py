@@ -91,7 +91,6 @@ def createParties(sid, r, f):
     return parties
 
 class ITMAdversary(object):
-    
     def __init__(self, sid, pid):
         self.sid = sid
         self.pid = pid
