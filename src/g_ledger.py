@@ -49,6 +49,8 @@ class Ledger_Functionality(object):
                 'blocknumber': self.round,
                }
 
+    def set_backdoor(self, _backdoor):
+        self.adversary_out = _backdoor
 
     def getbalance(self, sid, pid, addr):
         print('[DEBUG]:', 'writing output for (%s,%s)' % (sid,pid))
@@ -93,10 +95,10 @@ class Ledger_Functionality(object):
         assert self._balances[fro] >= val
         self.txqueue[self.round + self.DELTA].append(('transfer', to, val, data, fro))
         # Leak message to the adversary ONLY if not private
-        self.adversary_out.put(('transfer',to,val,data,fro))  
+        self.adversary_out.put(((self.sid,self.pid), True, ('transfer',to,val,data,fro)))
         # TODO: is this the right way to do it?
         print('[TX RECEIVED]', 'to (%s), from (%s), data (%s), val (%d)' % (to, fro, data, val))
-        dump.dump()
+        #dump.dump()
         
 
     def input_contract_create(self, sid, pid, addr, val, data, private, fro):
@@ -229,6 +231,13 @@ class Ledger_Functionality(object):
             elif msg[0] == 'read-output':
                 self.read_output(sid, msg[1], sender)
                  
+
+def LedgerITM(sid, pid):
+    g_ledger = Ledger_Functionality(sid,pid)
+    ledger_itm = ITMFunctionality(sid,pid)
+    ledger_itm.init(g_ledger)
+    return g_ledger,ledger_itm
+
 
 # Contract definition as a list of functions
 # all contracts have an init (constructor)

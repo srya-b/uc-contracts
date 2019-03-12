@@ -82,6 +82,14 @@ class ITMPassthrough(object):
 
             r = AsyncResult()
 
+def createParties(sid, r, f):
+    parties = []
+    for i in r:
+        p = ITMPassthrough(sid,i)
+        p.init(f)
+        parties.append(p)
+    return parties
+
 class ITMAdversary(object):
     
     def __init__(self, sid, pid):
@@ -89,6 +97,7 @@ class ITMAdversary(object):
         self.pid = pid
         #self.input = Channel()
         self.input = AsyncResult()
+        self.leak = AsyncResult()
         
     def init(self, functionality):
         self.F = functionality
@@ -97,7 +106,7 @@ class ITMAdversary(object):
     def run(self):
         while True:
             ready = gevent.wait(
-                objects=[self.input],
+                objects=[self.input, self.leak],
             )
             assert len(ready) == 1
             r = ready[0]
@@ -105,8 +114,16 @@ class ITMAdversary(object):
             
             if r == self.input:
                 self.F.backdoor_msg(None if not reveal else sender, msg)
-#            else:
-#                dump.dump()
+            elif r == self.leak:
+                print('[LEAK]', sender, msg)
+                dump.dump()
+            else:
+                dump.dump()
 
             r = AsyncResult()
+
+def createAdversary(sid,pid,f):
+    a = ITMAdversary(sid,pid)
+    a.init(f)
+    return a
     

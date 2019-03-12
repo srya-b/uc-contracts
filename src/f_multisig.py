@@ -22,7 +22,11 @@ class Multisig_Functionality(object):
 
         self.buffer_changes = []
         self.DELTA = self.G.F.DELTA 
+        self.adversary_out = None
     
+    def set_backdoor(self, _backdoor):
+        self.adversary_out = _backdoor
+
     def process_buffer(self):
         number = self.subroutine_block_number()
 
@@ -144,6 +148,12 @@ class Multisig_Functionality(object):
         if msg[0] == 'ping':
             self.backdoor_ping()
 
+def MultisigITM(sid, pid, ledger, p1, p2, caddr):
+    f = Multisig_Functionality(sid, pid, ledger, p1, p2, caddr)
+    itm = ITMFunctionality(sid,pid)
+    itm.init(f)
+    return f,itm
+
 class C_Multisig:
     def __init__(self, address, call, out):
         self.call = call
@@ -197,13 +207,4 @@ class Sim_Multisig:
     def __init__(self, sid, pid, G, F):
         self.sid = sid
         self.pid = pid
-        self.G = G
-        self.F = F
-
-        self.buffered_output = []
-
-    def input_contract_create(self, sid, pid, addr, val, data, private, fro):
-        ## DON'T DO ANYTHING BECUSE YOU DON'T REALLY NEED TO DEPLPOY THE CONTRAT ##
-        pass
-
 
