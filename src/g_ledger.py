@@ -95,7 +95,7 @@ class Ledger_Functionality(object):
         assert self._balances[fro] >= val
         self.txqueue[self.round + self.DELTA].append(('transfer', to, val, data, fro))
         # Leak message to the adversary ONLY if not private
-        self.adversary_out.put(((self.sid,self.pid), True, ('transfer',to,val,data,fro)))
+        self.adversary_out.set(((self.sid,self.pid), True, ('transfer',to,val,data,fro)))
         # TODO: is this the right way to do it?
         print('[TX RECEIVED]', 'to (%s), from (%s), data (%s), val (%d)' % (to, fro, data, val))
         #dump.dump()
@@ -107,7 +107,7 @@ class Ledger_Functionality(object):
         assert data is not None
         self.txqueue[self.round + self.DELTA].append(('contract-create', addr, val, data, fro, private))
         # Leak to adversary only if not private
-        self.adversary_out.put(('contract-create',addr,val,data,fro,private))
+        self.adversary_out.set( ((self.sid,self.pid), True, ('contract-create',addr,val,data,fro,private)))
 
         print('[DEBUG]', 'tx from', fro, 'creates contract', addr)
         dump.dump()

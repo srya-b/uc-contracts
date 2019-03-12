@@ -29,6 +29,7 @@ idealitm.init(idealf)
 # start ideal adversary
 adversary = ITMAdversary('sid', 1)
 adversary.init(idealitm)
+idealf.set_backdoor(adversary.leak)
 gevent.spawn(adversary.run)
 
 # start passthrough party itms
