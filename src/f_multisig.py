@@ -49,19 +49,40 @@ class Multisig_Functionality(object):
             ('block-number',)
         ))
 
+    '''
+        This just queries the functionality's balance in G_ledger
+    '''
     def subroutine_balance(self, sid, pid):
-        return self.balance
+        return self.G.subroutine_call((
+            (self.sid,self.pid),
+            True,
+            (True, ('getbalance', (self.sid,self.pid)))
+        ))
 
-    def _deliver_deposit(self, val):
-        self.balance += val
+    #def _deliver_deposit(self, val, sid, pid):
+    #    self.balance += val
 
+    '''
+        In this case, we want a transaction to occurr in the underlying
+        blockchain functionality, so directly submit the transaction
+        to G_ledger and that will do the buffer.
+        TODO: this functionality should poll the blockchain for transactions
+        that it received, like wallet software.
+    '''
     def input_deposit(self, sid, pid, val):
-        self.buffer_changes.append((self.subroutine_block_number() + self.DELTA, self._deliver_deposit, val))
-        self.adversary_out.set(((sid,pid), True, ('deposit',val)))
+#        self.buffer_changes.append((self.subroutine_block_number() + self.DELTA, self._deliver_deposit, sid, pid, val))
+#        self.adversary_out.set(((sid,pid), True, ('deposit',val)))
+        self.G.input.set((
+            (self.sid,self.pid),
+            True,
+            (True,
+                ('transfer', (self.sid,self.pid), val, (), (sid,pid))
+            )
+        ))
         #dump.dump()
 
     def _deliver_transfer(self, to, val):
-        new_transfer_msg = ('transfer', to, val, (), self.addr)
+        new_transfer_msg = (True, ('transfer', to, val, (), (self.sid, self.pid)))
 #        new_transfer = (pid, new_transfer_msg)
         self.transfers.append(new_transfer_msg)
 
@@ -72,34 +93,38 @@ class Multisig_Functionality(object):
         self.adversary_out.set(((sid,pid), True, ('transfer',to,val) ))
 
     def _deliver_confirm_transfer(self, idx):
-        #_sender,_msg = _transfer
-        _msg = self.transfers[idx]
+        print('***** CONFIRM TRANSFER DELIVER')
+        _wrapper,_msg = self.transfers[idx]
         
         #if _sender != pid and self.balance >= _msg[2]:
-        if self.balance >= _msg[2]:
+        #if self.balance >= _msg[2]:
+        if self.subroutine_balance(self.sid,self.pid) >= _msg[2]:
+            print('Sending transfer to ledger')
             self.G.input.set((
                 (self.sid, self.pid),
                 True,
-                _msg
+                (_wrapper,_msg)
             ))
             self.balance -= _msg[2]
+        else:
+            dump.dump()
 
     def input_confirm_transfer(self, sid, pid, idx):
-        #_transfer = transfers[idx]
-        #_sender,_msg = _transfer
-        #
-        #if _sender != pid and self.balance >= _msg[2]:
-        #    self.G.input.put(
-        #        (self.sid, self.pid),
-        #        True,
-        #        _msg
-        #    )
-        #    self.balance -= _msg[2]
-        self.buffer_changes.append(
-            (self.subroutine_block_number(), self._deliver_confirm_transfer, idx)
-        )
+        #self.buffer_changes.append(
+        #    (self.subroutine_block_number(), self._deliver_confirm_transfer, idx)
+        #)
 
-        dump.dump()
+        _wrapper,_msg = self.transfers[idx]
+
+        if self.subroutine_balance(self.sid,self.pid) >= _msg[2]:
+            print('sending confirm')
+            self.G.input.set((
+                (self.sid, self.pid),
+                True,
+                (_wrapper, _msg)
+            ))
+        else:
+            dump.dump()
 
     def backdoor_ping(self, sid, pid):
         self.process_buffer()
@@ -206,3 +231,8 @@ class Sim_Multisig:
         self.sid = sid
         self.pid = pid
 
+    '''
+        On receiving deposit from Z, simulator
+        just passes 'deposit' to the functionality
+    '''
+        

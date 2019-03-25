@@ -188,7 +188,7 @@ class Ledger_Functionality(object):
         sid,pid = None,None
         if sender:
             sid,pid = sender
-
+        
         if msg[0] == 'transfer':
             self.input_transfer(sid, pid, msg[1],msg[2],msg[3],msg[4])
         elif msg[0] == 'contract-create':
@@ -200,6 +200,7 @@ class Ledger_Functionality(object):
 
     def subroutine_msg(self, sender, msg):
         sid,pid = sender
+        print('SUBTROUTINE', msg)
         if msg[0] == 'get-caddress':
             return self.get_caddress(sender, msg[1])
         elif msg[0] == 'getbalance':
@@ -209,27 +210,6 @@ class Ledger_Functionality(object):
         elif msg[0] == 'block-number':
             return self.block_number(sid, pid)
 
-    def run(self):
-        while True:
-            identity,sender,msg = self.input.get()
-            print('Received message:', msg, 'from:', sender)
-
-            if not self.allowed(identity):
-                print('SID of sender is incorrect:', sender)
-                continue
-            sid,pid = identity
-
-            if msg[0] == 'transfer':
-                self.input_transfer(sid, msg[1],msg[2],msg[3],sender)
-            elif msg[0] == 'contract-create':
-                self.input_contract_create(sid, msg[1], msg[2], msg[3], msg[4], sender)
-            elif msg[0] == 'tick':
-                self.input_tick_honest(sid, sender, msg)
-            elif msg[0] == 'getbalance':
-                self.getbalance(sid, pid, msg[1])
-            elif msg[0] == 'read-output':
-                self.read_output(sid, msg[1], sender)
-                 
 
 def LedgerITM(sid, pid):
     g_ledger = Ledger_Functionality(sid,pid)

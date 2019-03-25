@@ -12,13 +12,19 @@ def cset(sid,pid,itm):
 
 def isf(sid,pid):
     try:
-        return comman[sid,pid] == FUNCTIONALITY
+        return commap[sid,pid] == FUNCTIONALITY
     except KeyError:
         return False
 
 def isadversary(sid,pid):
     try:
         return commap[sid,pid] == ADVERSARY
+    except KeyError:
+        return False
+
+def isparty(sid,pid):
+    try:
+        return commap[sid,pid] == PARTY
     except KeyError:
         return False
 
@@ -31,14 +37,17 @@ def getitm(sid,pid):
 def setAdversary(itm):
     sid,pid = itm.sid,itm.pid
     cset(sid,pid,ADVERSARY)
+    print('ADVERSARY', sid, pid)
 
 def setFunctionality(itm):
     sid,pid = itm.sid,itm.pid
     cset(sid,pid,FUNCTIONALITY)
+    print('FUNCTIONALITY', sid, pid)
 
 def setParty(p):
     sid,pid = p.sid,p.pid
     cset(sid,pid,PARTY)
+    print('PARTY', sid, pid)
 
 def setParties(parties):
     for p in parties:

@@ -36,9 +36,12 @@ class ITMFunctionality(object):
             sender,reveal,msg = r.get()
             
             if r == self.input:
+                #print('MSG', msg)
                 self.F.input_msg(None if not reveal else sender, msg)
             elif r == self.backdoor:
                 self.F.adversary_msg(None if not reveal else sender, msg)
+            else:
+                dump.dump()
 
             r = AsyncResult()
 
