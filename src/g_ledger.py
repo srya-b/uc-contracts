@@ -1,10 +1,10 @@
 import gevent
-from gevent.event import AsyncResult
-from gevent.queue import Queue, Channel
+import dump
+from itm import ITMFunctionality
 from hashlib import sha256
 from collections import defaultdict
-from itm import ITMFunctionality
-import dump
+from gevent.event import AsyncResult
+from gevent.queue import Queue, Channel
 
 ADVERSARY = -1
 DELTA = 8

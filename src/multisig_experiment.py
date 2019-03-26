@@ -1,11 +1,11 @@
 import gevent
-from gevent.queue import Queue, Channel
-from collections import defaultdict
-from itm import ITMFunctionality, ITMPassthrough, ITMAdversary, createParties
 import dump
-from f_multisig import C_Multisig, Multisig_Functionality, MultisigITM
-from g_ledger import Ledger_Functionality, LedgerITM
 import comm
+from itm import ITMFunctionality, ITMPassthrough, ITMAdversary, createParties
+from g_ledger import Ledger_Functionality, LedgerITM
+from f_multisig import C_Multisig, Multisig_Functionality, MultisigITM
+from collections import defaultdict
+from gevent.queue import Queue, Channel
 from protected_wrapper import Protected_Wrapper, ProtectedITM
 
 '''
@@ -67,7 +67,6 @@ gevent.spawn(simparty.run)
 
 #################### EXPERIMENT ##############################
 #################### TRIGGERED  ##############################
-#simaddr = '1234'
 def z_mine_blocks(n, itm):
     sender = (itm.sid, itm.pid)
     for i in range(n):
@@ -105,11 +104,6 @@ print('P2:', p2.sid, p2.pid)
 
 ''' p1 and p2 need funds, so mine blocks and send them funds '''
 z_mine_blocks(1, simparty)
-#bsim = ledger_itm.subroutine_call((
-#    ('sid1234',1),
-#    True,
-#    ('getbalance', (simparty.sid, simparty.pid))
-#))
 bsim = z_get_balance(simparty)
 assert(bsim > 0)
 

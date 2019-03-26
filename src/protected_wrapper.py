@@ -1,12 +1,13 @@
 import gevent
-from gevent.event import AsyncResult
-from gevent.queue import Channel, Queue
-from hashlib import sha256
 import random
-from g_ledger import Ledger_Functionality
-from itm import ITMFunctionality
 import dump
 import comm
+from itm import ITMFunctionality
+from hashlib import sha256
+from g_ledger import Ledger_Functionality
+from collections import defaultdictionary
+from gevent.event import AsyncResult
+from gevent.queue import Channel, Queue
 
 
 '''
@@ -33,6 +34,7 @@ class Protected_Wrapper(object):
     def __init__(self, ledger):
         self.ledger = ledger
         self.addresses = {}
+        self.allowed = defaultdict(set)
 
         self.outputs = self.ledger.outputs
         self.adversary_out = self.ledger.adversary_out
