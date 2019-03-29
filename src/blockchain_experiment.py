@@ -4,6 +4,8 @@ from collections import defaultdict
 from itm import ITMFunctionality, ITMPassthrough, ITMAdversary
 from g_ledger import Ledger_Functionality, Blockchain_IdealProtocol
 import dump
+from protected_wrapper import Protected_Wrapper
+import comm
 
 ### CONTRACTS ###
 class c_counter:
@@ -23,17 +25,22 @@ class c_counter:
 
 ### IDEAL WORLD ###
 idealf = Ledger_Functionality('sid', 0)
+protected = Protected_Wrapper(idealf)
 idealitm = ITMFunctionality('sid', 0)
-idealitm.init(idealf)
+#idealitm.init(idealf)
+idealitm.init(protected)
+comm.setFunctionality(idealitm)
 
 # start ideal adversary
 adversary = ITMAdversary('sid', 1)
 adversary.init(idealitm)
 idealf.set_backdoor(adversary.leak)
+comm.setAdversary(adversary)
 gevent.spawn(adversary.run)
 
 # start passthrough party itms
 parties = [ITMPassthrough('sid', i) for i in range(2,4)]
+comm.setParties(parties)
 for party in parties:
     party.init(idealitm)
 
@@ -70,7 +77,7 @@ caddress = p1.subroutine_call(
 )
 print('caddress:', caddress)
 
-dump.dump_wait()
+#dump.dump_wait()
 
 # get balance through subroutine
 p1_balance = p1.subroutine_call(
@@ -87,6 +94,8 @@ p1.input.set(
     ('contract-create', caddress, 0, (c_counter,(12,)), False, addr1)
 )
 dump.dump_wait()
+
+print('Contract create input set')
 
 for i in range(10):
     p1.input.set(
@@ -114,7 +123,7 @@ for i in range(10):
         ('tick', addr2)
     )
     dump.dump_wait()
-
+gevent.sleep(2)
 
 print(p1.subroutine_call(
     ('read-output', ([(addr1,2)]))
