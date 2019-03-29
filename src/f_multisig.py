@@ -1,9 +1,9 @@
 import gevent
-from gevent.queue import Queue, Channel
+import dump
+from itm import ITMFunctionality
 from hashlib import sha256
 from collections import defaultdict
-from itm import ITMFunctionality
-import dump
+from gevent.queue import Queue, Channel
 
 DELTA = 8
 
@@ -46,7 +46,7 @@ class Multisig_Functionality(object):
         return self.G.subroutine_call((
             (self.sid, self.pid),
             True,
-            ('block-number',)
+            (True, ('block-number',))
         ))
 
     '''
@@ -59,9 +59,6 @@ class Multisig_Functionality(object):
             (True, ('getbalance', (self.sid,self.pid)))
         ))
 
-    #def _deliver_deposit(self, val, sid, pid):
-    #    self.balance += val
-
     '''
         In this case, we want a transaction to occurr in the underlying
         blockchain functionality, so directly submit the transaction
@@ -70,8 +67,6 @@ class Multisig_Functionality(object):
         that it received, like wallet software.
     '''
     def input_deposit(self, sid, pid, val):
-#        self.buffer_changes.append((self.subroutine_block_number() + self.DELTA, self._deliver_deposit, sid, pid, val))
-#        self.adversary_out.set(((sid,pid), True, ('deposit',val)))
         self.G.input.set((
             (self.sid,self.pid),
             True,
@@ -83,7 +78,6 @@ class Multisig_Functionality(object):
 
     def _deliver_transfer(self, to, val):
         new_transfer_msg = (True, ('transfer', to, val, (), (self.sid, self.pid)))
-#        new_transfer = (pid, new_transfer_msg)
         self.transfers.append(new_transfer_msg)
 
     def input_transfer(self, sid, pid, to, val):
@@ -93,11 +87,8 @@ class Multisig_Functionality(object):
         self.adversary_out.set(((sid,pid), True, ('transfer',to,val) ))
 
     def _deliver_confirm_transfer(self, idx):
-        print('***** CONFIRM TRANSFER DELIVER')
         _wrapper,_msg = self.transfers[idx]
         
-        #if _sender != pid and self.balance >= _msg[2]:
-        #if self.balance >= _msg[2]:
         if self.subroutine_balance(self.sid,self.pid) >= _msg[2]:
             print('Sending transfer to ledger')
             self.G.input.set((
@@ -109,11 +100,12 @@ class Multisig_Functionality(object):
         else:
             dump.dump()
 
+    '''
+        Confirm transactions will end up creating the transaction
+        anyway so the ledger can buffer for us. Therefore, send the 
+        transaction immediately
+    '''
     def input_confirm_transfer(self, sid, pid, idx):
-        #self.buffer_changes.append(
-        #    (self.subroutine_block_number(), self._deliver_confirm_transfer, idx)
-        #)
-
         _wrapper,_msg = self.transfers[idx]
 
         if self.subroutine_balance(self.sid,self.pid) >= _msg[2]:
@@ -225,14 +217,59 @@ class C_Multisig:
         self.call(to, self.address, (), amt)
         return 0
 
+import inspect
 
 class Sim_Multisig:
-    def __init__(self, sid, pid, G, F):
+    def __init__(self, sid, pid, G, F, crony, c_multisig):
         self.sid = sid
         self.pid = pid
-
+        self.crony = crony
+        self.cronysid = crony.sid
+        self.cronypid = crony.pid
     '''
         On receiving deposit from Z, simulator
         just passes 'deposit' to the functionality
     '''
-        
+    def input_deposit(self, val):
+        self.F.input.set((
+            (self.cronysid,self.cronypid),
+            True,
+            ('deposit', val)
+        ))
+
+    '''
+        Create a transfer
+    '''
+    def input_transfer(self, to, val):
+        self.F.input.set((
+            (self.cronysid, self.cronypid),
+            True,
+            ('transfer', to, val)
+        ))
+
+    '''
+        Get contract code at addr
+    '''
+    def subroutine_get_contract(self, addr):
+        # Get the mapping from (sid,pid) of F to address
+        f_addr = self.G.subroutine_call((
+            (self.sid,self.pid),
+            True,
+            ('get-addr', addr)
+        ))
+
+        assert f_address is not None
+
+        if f_addr == addr:
+            print('[WARNING] Environment requested functionality contract')
+            # Create the contract with 
+            source = inspect.getsource(c_multisig).split(':',1)[1]
+        else:
+            source = self.G.subroutine_call((
+                (self.sid, self.pid),
+                True,
+                (True, ('get-contract'))
+            ))
+        print('SIMULATOR got source:', source[:20])
+        return source
+

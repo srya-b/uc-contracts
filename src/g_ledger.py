@@ -1,5 +1,6 @@
-import gevent
 import dump
+import gevent
+import inspect
 from itm import ITMFunctionality
 from hashlib import sha256
 from collections import defaultdict
@@ -26,6 +27,7 @@ class Ledger_Functionality(object):
         self.outputs = defaultdict(Queue)
         self.input = Channel()
         self.adversary_out = Queue()
+        self.receipts = defaultdict(dict)
 
         self.block_txs = defaultdict(list)
         
@@ -39,7 +41,14 @@ class Ledger_Functionality(object):
 
         self.restricted = defaultdict(bool)
 
-    def get_caddress(self, sender, addr):
+    def get_contract(self, sid, pid, addr):
+        if addr in self.contracts:
+            return inspect.getsource(type(self.contracts[addr])).split(':',1)[1] 
+        else:
+            return ''
+
+    def get_caddress(self, sid, pid, addr):
+        print('PARAMS OF GET CADDRESS', sender, addr, self.nonces[addr]+1)
         return sha256(addr.encode() + str(self.nonces[addr]+1).encode()).hexdigest()[24:]
 
     def txref(self, val, sender):
@@ -79,7 +88,11 @@ class Ledger_Functionality(object):
         if data == ():
             return 1
         func,args = data
-        r = getattr(self.contracts[to], func)(*args, self.txref(val, fro))
+        _tx = self.txref(val, fro)
+        r = getattr(self.contracts[to], func)(*args, _tx)
+        if 'return' in _tx:
+            print('Contract returned something:', _tx['return'])
+        self.receipts[fro, self.nonces[fro]] = _tx
         # TODO: REVERT CHANGES TO CONTRACT STORAGE WHEN FAILED TX
         # THIS MEANS WE NEED STORAGE TO BE OUTSIDE THE CONTRACT/TEMP
         return r
@@ -102,6 +115,7 @@ class Ledger_Functionality(object):
 
     def input_contract_create(self, sid, pid, addr, val, data, private, fro):
         assert self._balances[fro] >= val
+        print('PARAMS OF CREATE', (sid,pid), fro, self.nonces[fro]+1)
         compute_addr = sha256(fro.encode() + str(self.nonces[fro]+1).encode()).hexdigest()[24:]
         assert compute_addr == addr, 'Given address: %s, computed address %s, nonce: %s' % (addr, compute_addr, self.nonces[fro]+1)
         assert data is not None
@@ -118,6 +132,7 @@ class Ledger_Functionality(object):
         assert self._balances[fro] >= val
         self._balances[fro] -= val
         self._balances[to] += val
+        self.receipts[fro,self.nonces[fro]] = self.txref(val, fro)
         if to in self.contracts:
             r = self.Exec(to, val, data, fro)
             self.txs[fro,self.nonces[fro]] = r
@@ -202,13 +217,15 @@ class Ledger_Functionality(object):
         sid,pid = sender
         print('SUBTROUTINE', msg)
         if msg[0] == 'get-caddress':
-            return self.get_caddress(sender, msg[1])
+            return self.get_caddress(sid, pid, msg[1])
         elif msg[0] == 'getbalance':
             return self.getbalance(sid, pid, msg[1])
         elif msg[0] == 'read-output':
             return self.read_output(sid, pid, msg[1])
         elif msg[0] == 'block-number':
             return self.block_number(sid, pid)
+        elif msg[0] == 'get-contract':
+            return self.get_contract(sid, pid, msg[1])
 
 
 def LedgerITM(sid, pid):

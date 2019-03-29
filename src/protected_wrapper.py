@@ -5,7 +5,7 @@ import comm
 from itm import ITMFunctionality
 from hashlib import sha256
 from g_ledger import Ledger_Functionality
-from collections import defaultdictionary
+from collections import defaultdict
 from gevent.event import AsyncResult
 from gevent.queue import Channel, Queue
 
@@ -34,12 +34,15 @@ class Protected_Wrapper(object):
     def __init__(self, ledger):
         self.ledger = ledger
         self.addresses = {}
-        self.allowed = defaultdict(set)
+        self.private = {}
 
         self.outputs = self.ledger.outputs
         self.adversary_out = self.ledger.adversary_out
         
         self.DELTA = self.ledger.DELTA
+
+    def iscontract(self, addr):
+        return addr in self.ledger.contracts
 
     '''
         All parties, including the adversary, must access the protected mode.
@@ -58,7 +61,6 @@ class Protected_Wrapper(object):
         if comm.isf(sid,pid) or comm.isadversary(sid,pid):
             print('msg', _msg)
             wrapper,msg = _msg
-            print('wrapper is set to', wrapper)
         else:
             msg = _msg
             wrapper = True
@@ -71,29 +73,38 @@ class Protected_Wrapper(object):
         else:
             if msg[0] == 'transfer':
                 _,_to,_val,_data,_fro = msg
-
                 to = self.genym(_to)
                 val = _val
                 data = _data
-                '''
-                    Only a functionality can send a transaction FROM a random
-                    address.
-                '''
+
+                '''Special rules for contracts'''
+                if self.iscontract(_to):
+                    to = _to
+                    '''Contracts that are private and accessed by other sid
+                    can only receive money from them, no execution'''
+                    if to in self.private and sid != self.private[to]:
+                        data = ()
+                ''' Only a functionality can send a transaction FROM a random address.'''
                 if comm.isf(sid,pid):
-                    print('*** _fro', _fro)
                     fro = self.genym(_fro)
                 else:
-                    print('*** sender', sender)
                     fro = self.genym(sender)
-
                 msg = (msg[0], to, val, data, fro)
-                print('[PROTECTED]', 'transger msg', msg) 
+                #print('[PROTECTED]', 'transger msg', msg)
             elif msg[0] == 'tick':
                 _,_sender = msg
-
                 _sender = self.genym(_sender)
-
-                msg = (msg[0], _sender)
+                msg = (msg[0], _sender)    
+            elif msg[0] == 'contract-create':
+                _,_addr,_val,_data,_private,_fro = msg
+                if comm.isf(sid,pid):
+                    fro = self.genym(_fro)
+                else:
+                    fro = self.genym(sender)
+                ''' No translation necessary for the address '''
+                if _private: self.private[_addr] = sid
+                msg = (msg[0],_addr,_val,_data,_private,fro)
+                print('Contract create, private:', _private)
 
             self.ledger.input_msg(sender,msg)
 
@@ -110,6 +121,15 @@ class Protected_Wrapper(object):
         self.addresses[key] = h
         return self.addresses[key]
 
+
+    def subroutine_get_addr(self, sid, pid, key):
+        if not comm.isf(sid,pid) and not comm.isadversary(sid.pid):
+            return None
+
+        if key in self.addresses:
+            return self.addresses[key]
+        else:
+            return None
     '''
         So far subroutine messages are only for the ledger
         so they are passed through all of the time
@@ -117,7 +137,13 @@ class Protected_Wrapper(object):
     def subroutine_msg(self, sender, _msg):
         sid,pid = sender
 
-        if type(_msg[0]) == bool:
+        #if type(_msg[0]) == bool:
+        #    wrapper,msg = _msg
+        #else:
+        #    msg = _msg
+        #    wrapper = True
+
+        if comm.isf(sid,pid) or comm.isadversary(sid,pid):
             wrapper,msg = _msg
         else:
             msg = _msg
@@ -132,6 +158,13 @@ class Protected_Wrapper(object):
                 addr = self.genym(_addr)
                 msg = (msg[0], addr)
                 return self.ledger.subroutine_msg(sender,msg)
+            elif msg[0] == 'get-caddress':
+                _,_addr = msg
+                addr = self.genym(_addr)
+                msg = (msg[0], addr)
+                return self.ledger.subroutine_msg(sender,msg)
+            elif msg[0] == 'get-addr':# and (comm.isf(*sender) or comm.isadversary(*sender)):
+                return self.subroutine_get_addr(sid, pid, msg[1])
             else:
                 return self.ledger.subroutine_msg(sender, msg)
         else:

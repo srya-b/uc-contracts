@@ -1,5 +1,10 @@
+from collections import defaultdict
 global commap
+global corrupted
+
 commap = {}
+currupted = defaultdict(bool)
+
 
 FUNCTIONALITY = 0
 PARTY = 1
@@ -52,3 +57,11 @@ def setParty(p):
 def setParties(parties):
     for p in parties:
         setParty(p)
+
+def corrupt(sid,pid):
+    corrupted[sid,pid] = True
+
+def isdishonest(sid,pid):
+    return corrupted[sid,pid]
+def ishonest(sid,pid):
+    return not corrupted[sid,pid]
