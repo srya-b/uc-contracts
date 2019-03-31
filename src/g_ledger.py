@@ -2,6 +2,7 @@ import dump
 import gevent
 import inspect
 from itm import ITMFunctionality
+from utils import print
 from hashlib import sha256
 from collections import defaultdict
 from gevent.event import AsyncResult
@@ -12,7 +13,6 @@ DELTA = 8
 
 class Ledger_Functionality(object):
     def __init__(self, sid, pid):
-        self.txqueue = []
         self.txqueue = defaultdict(list)
         self._balances = defaultdict(int)
         self.contracts = {}
@@ -215,7 +215,6 @@ class Ledger_Functionality(object):
 
     def subroutine_msg(self, sender, msg):
         sid,pid = sender
-        print('SUBTROUTINE', msg)
         if msg[0] == 'get-caddress':
             return self.get_caddress(sid, pid, msg[1])
         elif msg[0] == 'getbalance':
