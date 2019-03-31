@@ -130,3 +130,38 @@ def createAdversary(sid,pid,f):
     a.init(f)
     return a
     
+class ITMPrinterAdversary(object):
+    def __init__(self, sid, pid):
+        self.sid = sid
+        self.pid = pid
+        #self.input = Channel()
+        self.input = AsyncResult()
+        self.leak = AsyncResult()
+        
+    def init(self, functionality):
+        self.F = functionality
+        self.outputs = self.F.outputs
+
+    def run(self):
+        while True:
+            ready = gevent.wait(
+                objects=[self.input, self.leak],
+                count=1
+            )
+
+            assert len(ready) == 1
+            r = ready[0]
+            sender,reveal,msg = r.get()
+            print('[ADVERSARY]', sender, reveal, msg)
+            dump.dump()
+
+            #if r == self.input:
+            #    self.F.backdoor_msg(None if not reveal else sender, msg)
+            #elif r == self.leak:
+            #    print('[LEAK]', sender, msg)
+            #    dump.dump()
+            #else:
+            #    dump.dump()
+
+            r = AsyncResult()
+
