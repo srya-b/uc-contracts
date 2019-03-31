@@ -13,43 +13,31 @@ class PaymentChannel_Functionality(object):
         self.G = G
 
         self.outputs = defaultdict(Queue)
-        self.p1 = p2
+        self.p1 = p1
         self.p2 = p2
-#        self.balances = {
-#            (p1.sid,p1.pid): 0,
-#            (p2.sid,p2.pid): 0
-#        }
         self.balances = {
             p1: 0,
             p2: 0
         }
+
+        print(p1, p2, self.balances)
 
         self.transfers = []
 
         self.buffer_changes = []
         self.DELTA = self.G.F.DELTA
         self.adversary_out = None
+        self.blockno = 0
     
     def other_party(self,sid,pid):
         if pid == self.p1:
             return self.p2
         else:
             return self.p1
-        #p1_id = (p1.sid, p1.pid)
-        #p2_id = (p2.sid, p2.pid)
 
-        #if (sid,pid) == p1_id:
-        #    return p2_id
-        #else:
-        #    return p1_id
-
-    @property
     def p1balance(self):
-        #return self.balances[p1.sid,p1.pid]
         return self.balances[self.p1]
-    @property
     def p2balance(self):
-        #return self.balances[p2.sid,p2.pid]
         return self.balances[self.p2]
 
     def isplayer(self, sid, pid):
@@ -58,21 +46,12 @@ class PaymentChannel_Functionality(object):
         else:
             print('Accessed by rando')
             return False
-
-        #p1_id = (p1.sid,p1.pid)
-        #p2_id = (p2.sid,p2.pid)
-
-        #if (sid,pid) == p1_id or (sid,pid) == p2_id:
-        #    return True
-        #else:
-        #    print('Accessed by rando')
-        #    return False
-
+    
     def set_backdoor(self, _backdoor):
         self.adversary_out = _backdoor
    
     def subroutine_balance(self):
-        return (self.p1balance, self.p2balance)
+        return (self.p1balance(), self.p2balance())
 
     def input_deposit(self, sid, pid, val):
         self.G.input.set((
@@ -84,8 +63,8 @@ class PaymentChannel_Functionality(object):
         ))
 
     def subroutine_block_number(self):
-        return self.F.subroutine_call((
-            (self.sid,seld.pid),
+        return self.G.subroutine_call((
+            (self.sid,self.pid),
             True,
             (True, ('block-number',))
         ))
@@ -147,7 +126,8 @@ class PaymentChannel_Functionality(object):
             (True, ('transfer', (self.sid,self.pid), val, (), (sid,pid)))
         ))
     
-    '''Check list list of delayed messages and deliver the ones that are ready'''
+    '''Check list list of delayed messages and deliver the ones that are ready
+        Also check for deposits or transfers from blockchain'''
     def process_buffer(self):
         blockno = self.subroutine_block_number()
         msg = (-1, '')
@@ -156,6 +136,21 @@ class PaymentChannel_Functionality(object):
             no,sid,pid,msg = self.buffer_changes.pop(0)
             self.outputs[sid,pid].put(msg)
 
+        '''Check the blockchain for new transactions'''
+        txs = self.G.subroutine_call((
+            (self.sid,self.pid),
+            True,
+            (True, ('get-txs', (self.sid,self.pid), blockno, self.blockno))
+        ))
+
+        self.blockno = blockno
+
+        for tx in txs:
+            _sid,_pid = tx[0]
+            assert _sid == self.sid
+            assert _pid == self.p1 or _pid == self.p2, 'p1:(%s), p2:(%s), sender:(%s)' % (self.p1, self.p2, _pid)
+            self.balances[_pid] += tx[1]       # tuple is (sender, val) add val to balances[sender]
+                
 
     def backdoor_ping(self,sid,pid):
         self.process_buffer()
@@ -188,7 +183,7 @@ class PaymentChannel_Functionality(object):
         if sender:
             sid,pid = sender
 
-        if not isplayer(sid,pid):
+        if not self.isplayer(sid,pid):
             print('PAY: subroutine access by:', sid, pid)
             return None
 

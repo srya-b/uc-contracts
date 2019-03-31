@@ -1,3 +1,4 @@
+from __future__ import print_function
 import inspect
 import dump
 
@@ -36,4 +37,13 @@ def z_get_balance(itm, simparty, ledger):
         ('getbalance', (itm.sid, itm.pid))
     ))
 
+
+
+try:
+    import __builtin__
+except ImportError:
+    import builtins as __builtin__
+
+def print(*args, **kwargs):
+    return __builtin__.print(*args, '\n', **kwargs)
 

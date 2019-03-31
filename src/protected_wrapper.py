@@ -34,6 +34,7 @@ class Protected_Wrapper(object):
     def __init__(self, ledger):
         self.ledger = ledger
         self.addresses = {}
+        self.raddresses = {}
         self.private = {}
 
         self.outputs = self.ledger.outputs
@@ -114,13 +115,33 @@ class Protected_Wrapper(object):
         else:
             return self.addresses[key]
 
+    def rgenym(self, image):
+        assert image in self.raddresses
+        return self.raddresses[image]
+
     def subroutine_genym(self, key):
         p = str(key).encode()
         h = sha256(p).hexdigest()[24:]
         print('[PROTECTED]', 'new pseudonym ( %s, %s )' % (key, h))
         self.addresses[key] = h
+        self.raddresses[h] = key
         return self.addresses[key]
 
+    def subroutine_gettx(self, addr, to, fro):
+        assert to >= fro, 'to:%s   fro:%s' % (to, fro)
+        output = []
+        '''Need to include 'to' in the range'''
+        for blockno in range(fro,to+1):
+            txqueue = self.ledger.txqueue[blockno]
+            for tx in txqueue:
+                if tx[0] == 'transfer':
+                    if tx[1] == addr:
+                        output.append((tx[4], tx[2]))  # Append (sender, amount)
+
+        ''' Convert all addresses to sid,pid shit'''
+        for i in range(len(output)):
+            output[i] = (self.rgenym(output[i][0]), output[i][1])
+        return output
 
     def subroutine_get_addr(self, sid, pid, key):
         if not comm.isf(sid,pid) and not comm.isadversary(sid.pid):
@@ -165,6 +186,10 @@ class Protected_Wrapper(object):
                 return self.ledger.subroutine_msg(sender,msg)
             elif msg[0] == 'get-addr':# and (comm.isf(*sender) or comm.isadversary(*sender)):
                 return self.subroutine_get_addr(sid, pid, msg[1])
+            elif msg[0] == 'get-txs':
+                _,_addr,blockto,blockfro = msg
+                addr = self.genym(_addr)
+                return self.subroutine_gettx(addr, blockto, blockfro)
             else:
                 return self.ledger.subroutine_msg(sender, msg)
         else:
