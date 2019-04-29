@@ -128,7 +128,8 @@ class Protected_Wrapper(object):
         return self.addresses[key]
 
     def subroutine_gettx(self, addr, to, fro):
-        assert to >= fro, 'to:%s   fro:%s' % (to, fro)
+        #assert to >= fro, 'to:%s   fro:%s' % (to, fro)
+        if fro >= to: return []
         output = []
         '''Need to include 'to' in the range'''
         for blockno in range(fro,to+1):

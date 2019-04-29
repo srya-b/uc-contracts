@@ -3,7 +3,7 @@ global commap
 global corrupted
 
 commap = {}
-currupted = defaultdict(bool)
+corrupted = defaultdict(bool)
 
 
 FUNCTIONALITY = 0
