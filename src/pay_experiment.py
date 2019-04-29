@@ -43,10 +43,11 @@ p1 = iparties[0]
 p2 = iparties[1]
 
 '''Adversary'''
-adversary = ITMPrinterAdversary('sid2',6)
+adversary = ITMAdversary('sid2',6)
 comm.setAdversary(adversary)
-g_ledger.set_backdoor(adversary.leak)
-idealf.set_backdoor(adversary.leak)
+#g_ledger.set_backdoor(adversary.leak)
+#idealf.set_backdoor(adversary.leak)
+adversary.addParty(p1); adversary.addParty(p2)
 gevent.spawn(adversary.run)
 
 
@@ -77,4 +78,51 @@ balance = p1.subroutine_call(
     ('balance',)
 )
 print('balance', balance)
+assert balance[0] == 10 and balance[1] == 1
+'''Send my homeboi p2 some money bruh
+    ....ok....
+'''
+p1.input.set(
+    ('pay', 2)
+)
+dump.dump_wait()
+balance = p2.subroutine_call(
+    ('balance',)
+)
+print('balance', balance)
+assert balance[0] == 10-2 and balance[1] == 1+2, 'p1:(%d), p2:(%d)' % (balance[0], balance[1])
+
+
+''' p1 multiple pays'''
+p1.input.set(
+    ('pay', 1)
+)
+dump.dump_wait()
+p1.input.set(
+    ('pay', 1)
+)
+dump.dump_wait()
+p1.input.set(
+    ('pay', 1)
+)
+dump.dump_wait()
+p1.input.set(
+    ('pay', 1)
+)
+dump.dump_wait()
+
+balance = p2.subroutine_call(
+    ('balance',)
+)
+print('balance', balance)
+assert balance[0] == 10-2-4 and balance[1] == 1+2+4, 'p1:(%d), p2:(%d)' % (balance[0], balance[1])
+
+
+print('ADVERSARY corrupting p2 and sending payment...')
+''' Adversray corrupt p2'''
+adversary.input.set(
+    ('party-input', (p1.sid,p1.pid), 
+        ('pay', 2))
+)
+dump.dump_wait()
 

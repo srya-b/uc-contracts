@@ -51,8 +51,8 @@ Real adversary spawn.
 '''
 adversary = ITMAdversary('sid2', 6)
 comm.setAdversary(adversary)
-g_ledger.set_backdoor(adversary.leak)
-idealf.set_backdoor(adversary.leak)
+#g_ledger.set_backdoor(adversary.leak)
+#idealf.set_backdoor(adversary.leak)
 gevent.spawn(adversary.run)
 
 '''
