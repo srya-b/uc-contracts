@@ -22,10 +22,19 @@ class Multisig_Functionality(object):
 
         self.buffer_changes = []
         self.DELTA = self.G.F.DELTA 
-        self.adversary_out = None
+
+        # TODO: should this be queue or channel? 
+        self.adversary_out = Queue()
     
-    def set_backdoor(self, _backdoor):
-        self.adversary_out = _backdoor
+    #def set_backdoor(self, _backdoor):
+    #    self.adversary_out = _backdoor
+
+    def leak(self, msg):
+        self.adversary_out.put(
+            (self.sid, self.pid),
+            True,
+            msg
+        )
 
     def process_buffer(self):
         number = self.subroutine_block_number()
@@ -84,7 +93,9 @@ class Multisig_Functionality(object):
         self.buffer_changes.append(
             (self.subroutine_block_number(), self._deliver_transfer, to, val)
         )
-        self.adversary_out.set(((sid,pid), True, ('transfer',to,val) ))
+        #self.adversary_out.set(((sid,pid), True, ('transfer',to,val) ))
+        self.leak( ('transfer', to, val) )
+        dump.dump()
 
     def _deliver_confirm_transfer(self, idx):
         _wrapper,_msg = self.transfers[idx]

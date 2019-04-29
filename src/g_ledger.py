@@ -41,6 +41,13 @@ class Ledger_Functionality(object):
 
         self.restricted = defaultdict(bool)
 
+    def leak(self, msg):
+        self.adversary_out.put(
+            (self.sid, self.pid),
+            True,
+            msg
+        )
+
     def get_contract(self, sid, pid, addr):
         if addr in self.contracts:
             return inspect.getsource(type(self.contracts[addr])).split(':',1)[1] 
@@ -108,10 +115,11 @@ class Ledger_Functionality(object):
         assert self._balances[fro] >= val
         self.txqueue[self.round + self.DELTA].append(('transfer', to, val, data, fro))
         # Leak message to the adversary ONLY if not private
-        self.adversary_out.set(((self.sid,self.pid), True, ('transfer',to,val,data,fro)))
+        #self.adversary_out.set(((self.sid,self.pid), True, ('transfer',to,val,data,fro)))
+        self.leak( ('transfer', to, val, data, fro) )
         # TODO: is this the right way to do it?
         print('[TX RECEIVED]', 'to (%s), from (%s), data (%s), val (%d)' % (to, fro, data, val))
-        #dump.dump()
+        dump.dump()
 
     def input_contract_create(self, sid, pid, addr, val, data, private, fro):
         assert self._balances[fro] >= val
@@ -121,7 +129,8 @@ class Ledger_Functionality(object):
         assert data is not None
         self.txqueue[self.round + self.DELTA].append(('contract-create', addr, val, data, fro, private))
         # Leak to adversary only if not private
-        self.adversary_out.set( ((self.sid,self.pid), True, ('contract-create',addr,val,data,fro,private)))
+        #self.adversary_out.set( ((self.sid,self.pid), True, ('contract-create',addr,val,data,fro,private)))
+        self.leak( ('contract-create',addr,val,data,fro,private) )
 
         print('[DEBUG]', 'tx from', fro, 'creates contract', addr)
         dump.dump()

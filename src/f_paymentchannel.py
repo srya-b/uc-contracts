@@ -26,9 +26,16 @@ class PaymentChannel_Functionality(object):
 
         self.buffer_changes = []
         self.DELTA = self.G.F.DELTA
-        self.adversary_out = None
-        self.blockno = 0
-    
+        self.adversary_out = Queue()
+        self.blockno = -1
+
+    def leak(self, msg):
+        self.adversary_out.put(
+            (self.sid, self.pid),
+            True,
+            msg
+        )
+
     def other_party(self,sid,pid):
         if pid == self.p1:
             return self.p2
@@ -47,8 +54,8 @@ class PaymentChannel_Functionality(object):
             print('Accessed by rando')
             return False
     
-    def set_backdoor(self, _backdoor):
-        self.adversary_out = _backdoor
+    #def set_backdoor(self, _backdoor):
+    #    self.adversary_out = _backdoor
    
     def subroutine_balance(self):
         return (self.p1balance(), self.p2balance())
@@ -79,24 +86,32 @@ class PaymentChannel_Functionality(object):
 
     '''Sender is paying $val to the other party'''
     def input_pay(self, sid, pid, val):
-        if self.balances[sid,pid] < val:
+        if self.balances[pid] < val:
             dump.dump(); return
-        self.adversary_out.set((
-            (self.sid,self.pid),
-            True,
-            ('pay', (sid,pid), val)
-        ))
 
-        self.balances[sid,pid] -= val
+        #self.adversary_out.set((        # leak payment information to the adversary
+        #    (self.sid,self.pid),
+        #    True,
+        #    ('pay', (sid,pid), val)
+        #))
+        
+        self.leak( ('pay', (sid,pid), val) )
+        dump.dump()
+
+        print('sender subtract', self.balances[pid], val)
+        self.balances[pid] -= val
         
         # If the sender is corrupted, delay the output to other P
-        to_sid,to_pid = self.otherparty(sid,pid)
+        to_pid = self.other_party(sid,pid)
         to_msg = ('receive', val)
+        print(sid, pid, to_pid, val)
 
-        if comm.ishonest(sid,pid):
-            self.write_out(to_sid, to_pid, to_msg)
-        else:
-            self.buffer_output(to_sid, to_pid, to_msg)
+        if ishonest(sid,pid):   # If the receiver is honest, write 'pay' immediately
+            print('receiver add', self.balances[to_pid], val)
+            self.balances[to_pid] += val
+            self.write_output(sid, to_pid, to_msg)
+        else:   # If dishonest, delay delivery to simulate blockchain tx
+            self.buffer_output(sid, to_pid, to_msg)
 
     ''' The channel pays out to the player withdrawing after some balance
         checks. Initiate transaction from itself on the blockchain'''
@@ -104,12 +119,12 @@ class PaymentChannel_Functionality(object):
         if self.balances[sid,pid] < val:
             dump.dump(); return
 
-        self.adversary_out.set((
-            (self.sid, self.pid),
-            True,
-            ('withdraw', (sid,pid), val)
-        ))
-
+        #self.adversary_out.set((
+        #    (self.sid, self.pid),
+        #    True,
+        #    ('withdraw', (sid,pid), val)
+        #))
+        self.leak( ('withdraw', (sid,pid), val) )
         # Submit a transaction from "channel" to sender
         self.G.input.set((
             (self.sid, self.pid),
@@ -140,7 +155,7 @@ class PaymentChannel_Functionality(object):
         txs = self.G.subroutine_call((
             (self.sid,self.pid),
             True,
-            (True, ('get-txs', (self.sid,self.pid), blockno, self.blockno))
+            (True, ('get-txs', (self.sid,self.pid), blockno, self.blockno+1))
         ))
 
         self.blockno = blockno
@@ -149,8 +164,9 @@ class PaymentChannel_Functionality(object):
             _sid,_pid = tx[0]
             assert _sid == self.sid
             assert _pid == self.p1 or _pid == self.p2, 'p1:(%s), p2:(%s), sender:(%s)' % (self.p1, self.p2, _pid)
-            self.balances[_pid] += tx[1]       # tuple is (sender, val) add val to balances[sender]
-                
+            print('deposit from', tx[0], tx[1])
+            # tuple is (sender, val) add val to balances[sender]
+            self.balances[_pid] += tx[1]
 
     def backdoor_ping(self,sid,pid):
         self.process_buffer()
@@ -160,14 +176,13 @@ class PaymentChannel_Functionality(object):
         sid,pid = None,None
         if sender:
             sid,pid = sender
-        
+         
         if sid != self.sid:
             dump.dump(); return
         if not self.isplayer(sid,pid): 
             dump.dump(); return
 
         self.process_buffer()
-
         if msg[0] == 'deposit':
             self.input_deposit(sid, pid, msg[1])
         elif msg[0] == 'withdraw':
