@@ -5,7 +5,8 @@ from gevent.event import AsyncResult
 import identity
 import dump
 import gevent
-
+import comm
+from utils import print
 class ITMFunctionality(object):
 
     def __init__(self, sid, pid):
@@ -31,10 +32,10 @@ class ITMFunctionality(object):
                 objects=[self.input, self.backdoor],
                 count=1
             )
+            
             assert len(ready) == 1
             r = ready[0]
             sender,reveal,msg = r.get()
-            
             if r == self.input:
                 #print('MSG', msg)
                 self.F.input_msg(None if not reveal else sender, msg)
@@ -69,7 +70,7 @@ class ITMPassthrough(object):
     def run(self):
         while True:
             ready = gevent.wait(
-                objects=[self.input],
+                objects=[self.input, self.backdoor],
                 count=1
             )
             assert len(ready) == 1
@@ -79,6 +80,12 @@ class ITMPassthrough(object):
             if r == self.input:
                 self.F.input.set(
                     ((self.sid,self.pid), True, msg)
+                )
+            elif r == self.backdoor:
+                print('adversary gave input, guess im evil now')
+                comm.corrupt(self.sid, self.pid)
+                self.F.input.set(
+                    ((self.sid, self.pid), True, msg)
                 )
             else:
                 dump.dump() 
@@ -100,10 +107,24 @@ class ITMAdversary(object):
         #self.input = Channel()
         self.input = AsyncResult()
         self.leak = AsyncResult()
+        self.parties = {}
         
     def init(self, functionality):
         self.F = functionality
         self.outputs = self.F.outputs
+
+    def addParty(self, itm):
+        if (itm.sid,itm.pid) not in self.parties:
+            self.parties[itm.sid,itm.pid] = itm
+
+    def partyInput(self, sid, pid, msg):
+        print(sid, pid, msg)
+        if (sid,pid) in self.parties:
+            print('sending to party....')
+            party = self.parties[sid,pid]
+            party.backdoor.set(msg)
+        else:
+            dump.dump()
 
     def run(self):
         while True:
@@ -114,10 +135,20 @@ class ITMAdversary(object):
 
             assert len(ready) == 1
             r = ready[0]
-            sender,reveal,msg = r.get()
+            msg = r.get()
+
             if r == self.input:
-                self.F.backdoor_msg(None if not reveal else sender, msg)
+                if msg[0] == 'party-input':
+                    #msg = r.get()
+                    sid,pid = msg[1]
+                    self.partyInput(sid, pid, msg[2])
+                    #dump.dump()
+                else:
+                    sender,reveal,msg = msg
+                    print('[ADVERSARY]', sender, reveal, msg)
+                    self.F.backdoor_msg(None if not reveal else sender, msg)
             elif r == self.leak:
+                sender,reveal,msg = msg
                 print('[LEAK]', sender, msg)
                 dump.dump()
             else:
@@ -137,10 +168,16 @@ class ITMPrinterAdversary(object):
         #self.input = Channel()
         self.input = AsyncResult()
         self.leak = AsyncResult()
+        self.corrupted = set()
         
     def init(self, functionality):
         self.F = functionality
         self.outputs = self.F.outputs
+
+    def corrupt(self, pid):
+        self.corrupted.add(pid)
+        comm.corrupt(self.sid, pid)
+        dump.dump()
 
     def run(self):
         while True:
@@ -153,7 +190,14 @@ class ITMPrinterAdversary(object):
             r = ready[0]
             sender,reveal,msg = r.get()
             print('[ADVERSARY]', sender, reveal, msg)
-            dump.dump()
+
+            if r == self.input:
+                if msg[0] == 'corrupt':
+                    self.corrupt(msg[1])
+                else:
+                    dump.dump()
+            else:
+                dump.dump()
 
             #if r == self.input:
             #    self.F.backdoor_msg(None if not reveal else sender, msg)
