@@ -3,3 +3,24 @@
 \newcommand{\F}{\f{F}}
 \newcommand{\globalf}[1]{\ensuremath{{\overline{\mathcal{#1}}}}}
 \newcommand{\todo}[1]{\textcolor{red}{#1}}
+\newcommand{\edict}{\{\}}
+\newcommand{\lar}{\leftarrow}
+\newcommand{\rar}{\rightarrow}
+
+\makeatletter
+\newcommand{\inmsg}[1]{%
+	(\msf{#1}\checknextarg}
+\newcommand{\checknextarg}{\@ifnextchar\bgroup{\gobblenextarg}{)~}}
+\newcommand{\gobblenextarg}[1]{, #1\@ifnextchar\bgroup{\gobblenextarg}{)~}}
+\makeatother
+
+\newcommand{\transfermsg}{\inmsg{transfer}{to}{val}{data}{from}}
+\newcommand{\createmsg}{\inmsg{contract \ create}{addr}{val}{data}{private}{from}}
+\newcommand{\reject}{\textbf{reject}~}
+\newcommand{\For}{\textbf{For}~}
+\newcommand{\In}{\textbf{in}~}
+\newcommand{\If}{\textbf{If}~}
+%\newcommand{\qquad}{\quad \quad}
+\newcommand{\qqquad}{\qquad \quad}
+\newcommand{\qqqquad}{\qqquad \quad}
+\newcommand{\qqqqquad}{\qqqquad \quad}

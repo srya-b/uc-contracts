@@ -1,0 +1,20 @@
+
+\begin{bbox}[title=\msf{ExecTx(to, val, data, from)}]
+
+$\msf{nonces[from]} \lar \msf{nonces[from]} + 1$
+
+\If $\msf{balances[from]} < \msf{val}$: \reject
+
+$\msf{balances[from]} \lar \msf{balances[from]} - \msf{val}$
+
+$\msf{balances[to]} \lar \msf{balances[to]} + \msf{val}$
+
+$\msf{receipts[from,nonces[from]]} \lar \msf{CreateTxRef(val, from)}$
+
+\If $\msf{to} \in \msf{contracts}$:
+
+	\quad $ret \lar \msf{Exec(to, val, data, from)}$
+
+	\quad $\msf{txs[from, nonces[from]]} \lar ret$
+
+\end{bbox}

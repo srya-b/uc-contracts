@@ -1,0 +1,44 @@
+\begin{bbox}[title=$\globalf{G}_{\msf{ledger}}$]
+
+Initialize $\msf{txqueue} := \edict$, $\msf{contracts} := \edict$, \msf{balances} := \edict, $\Delta := 8$, $rnd := 0$\\
+
+{\bf On input} \transfermsg from $P_i=(sid,pid)$:
+
+	\quad If $\msf{balances[fro]} < \msf{val}$: {\bf reject}
+	
+	\quad $\msf{txqueue}[round + \Delta] \lar \transfermsg$
+	
+	\quad {\bf leak} \transfermsg to $\mathcal{A}$
+
+{\bf On input} \createmsg from $P_i=(sid,pid)$:
+
+	\quad If $\msf{balances[from]} < \msf{val}$: {\bf reject}
+	
+	\quad $caddr \lar \msf{ComputeAddr}(from)$
+	
+	\quad If $caddr \neq addr$: \reject
+
+	\quad If \msf{len(data)} = 0: \reject
+
+	\quad $\msf{txqueue}[round + \Delta] \lar \createmsg$
+
+	\quad {\bf leak} \createmsg to $\mathcal{A}$
+
+{\bf On input} \inmsg{tick} from $P_i=(sid,pid)$:
+
+	\quad $rnd += 1$
+
+	\quad $\msf{balances[sid,pid]} += 1000000$
+
+	\quad \For \msf{tx} \In \msf{txqueue}: 
+
+		\qquad \If $tx[0] = \msf{transfer}$:
+			
+			\qqquad $(\msf{transfer, to, val, data, from}) \lar tx$
+
+			\qqquad \msf{ExecTx(to, val, data, from)}
+
+		\qquad If $tx[0] = \msf{contract \ create}$:
+
+			\qqquad $(\msf{contract \ create}, $
+\end{bbox}

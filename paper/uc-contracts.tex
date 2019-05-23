@@ -1,6 +1,28 @@
 \documentclass[11pt]{article}
 \usepackage{fancyhdr}
 \usepackage{url}
+\usepackage[most]{tcolorbox}
+\usepackage{multirow}
+
+\usetikzlibrary{matrix, arrows.meta, calc, positioning}
+\tikzset{myarrow/.style={-Latex, rounded corners},}
+
+\definecolor{vert}{RGB}{0,181,0}
+\definecolor{oran}{RGB}{223,74,0}
+\definecolor{viol}{RGB}{134,0,175}
+\definecolor{roug}{RGB}{215,15,0}
+\definecolor{bb}{RGB}{0,0,0}
+
+\newtcolorbox[auto counter]{bbox}[2][]{%
+    colback=white,
+    colframe=bb,
+    colbacktitle=white!90!roug,
+    coltitle=black,
+    fonttitle=\bfseries, 
+    enhanced,
+    attach boxed title to top left={yshift=-2mm, xshift=0.5cm},%
+    #1% For possible options
+}
 \topmargin=-5mm
 \evensidemargin=0cm
 \oddsidemargin=0cm
@@ -9,6 +31,7 @@
 \addtolength{\headheight}{1.6pt}
 \newcommand{\cancel}[1]{}
 \newcommand{\mymark}{$^*$}
+\setlength\parindent{24pt}
 
 \newcommand{\lastupdate}{August 2015}
 
@@ -34,6 +57,14 @@
 
 \section{Related Works}
 \input{sections/relatedworks}
+
+\input{figures/exec_tx}
+\input{figures/exec_contract_create}
+\input{figures/g_ledger}
+%\begin{bbox}[title=asd]
+%hello
+%\end{bbox}
+
 
 \bibliographystyle{plain}
 \emergencystretch 1.5em
