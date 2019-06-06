@@ -39,11 +39,15 @@ def z_mine_block_perm(perm, itm):
 def z_send_money(v, to, itm, ledger):
     sender = (itm.sid, itm.pid)
     
-    ledger.input.set((
-        sender,
-        True,
-        ('transfer', (to.sid,to.pid), v, (), 'does not matter')
-    ))
+    #ledger.input.set((
+    #    sender,
+    #    True,
+    #    ('transfer', (to.sid,to.pid), v, (), 'does not matter')
+    #))
+
+    itm.input.set(
+        ('transfer', (to.sid, to.pid), v, (), 'does not matter')
+    )
     dump.dump_wait()
 
 def z_get_balance(itm, simparty, ledger):
