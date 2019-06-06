@@ -16,7 +16,10 @@ class ITMFunctionality(object):
         self.input = AsyncResult()
         self.subroutine = AsyncResult()
         self.backdoor = AsyncResult()
-        
+       
+    def __str__(self):
+        return str(self.F)
+
     def init(self, functionality):
         self.F = functionality
         self.outputs = self.F.outputs
@@ -37,7 +40,6 @@ class ITMFunctionality(object):
             r = ready[0]
             sender,reveal,msg = r.get()
             if r == self.input:
-                #print('MSG', msg)
                 self.F.input_msg(None if not reveal else sender, msg)
             elif r == self.backdoor:
                 self.F.adversary_msg(None if not reveal else sender, msg)
@@ -55,7 +57,14 @@ class ITMPassthrough(object):
         self.input = AsyncResult()
         self.subroutine = AsyncResult()
         self.backdoor = AsyncResult()
-        
+       
+    def __str__(self):
+        return '\033[1mITM(%s, %s)\033[0m' % (self.sid, self.pid)
+
+    def write(self, to, msg):
+        print('\033[1m{:>20}\033[0m -----> {}, msg={}'.format('ITM(%s, %s)' % (self.sid,self.pid), str(to), msg))
+        #print('%s:<15 -----> %s\tmsg=%s' % (str(self), str(to), msg))
+
     def init(self, functionality):
         self.F = functionality
         self.outputs = self.F.outputs
@@ -78,12 +87,13 @@ class ITMPassthrough(object):
             msg = r.get()
             
             if r == self.input:
+                self.write(self.F, msg)
                 self.F.input.set(
                     ((self.sid,self.pid), True, msg)
                 )
             elif r == self.backdoor:
-                print('adversary gave input, guess im evil now')
                 comm.corrupt(self.sid, self.pid)
+                self.write(self.F, msg)
                 self.F.input.set(
                     ((self.sid, self.pid), True, msg)
                 )
@@ -108,17 +118,23 @@ class ITMAdversary(object):
         self.input = AsyncResult()
         self.leak = AsyncResult()
         self.parties = {}
-        
+    
+    def __str__(self):
+        return str(self.F)
+
     def init(self, functionality):
         self.F = functionality
-        self.outputs = self.F.outputs
+#        self.outputs = self.F.outputs
 
     def addParty(self, itm):
         if (itm.sid,itm.pid) not in self.parties:
             self.parties[itm.sid,itm.pid] = itm
 
+    def addParties(self, itms):
+        for itm in itms:
+            self.addParty(itm)
+
     def partyInput(self, sid, pid, msg):
-        print(sid, pid, msg)
         if (sid,pid) in self.parties:
             print('sending to party....')
             party = self.parties[sid,pid]
@@ -126,10 +142,29 @@ class ITMAdversary(object):
         else:
             dump.dump()
 
+    def getLeaks(self, sid, pid):
+        assert comm.isf(sid,pid)
+        itm = comm.getitm(sid,pid)
+        leaks = itm.subroutine_call((
+            (self.sid,self.pid),
+            True,
+            ('get-leaks',)
+        ))
+
+        print('Leaks from (%s,%s):' % (sid,pid))
+        print(leaks, sep='\n')
+
+    '''
+        Instead of waiting for a party to write to the adversary
+        the adversary checks leak queues of all the parties in 
+        a loop and acts on the first message that is seen. The
+        environment can also tell the adversary to get all of the
+        messages from a particular ITM.
+    '''
     def run(self):
         while True:
             ready = gevent.wait(
-                objects=[self.input, self.leak],
+                objects=[self.input],
                 count=1
             )
 
@@ -143,14 +178,18 @@ class ITMAdversary(object):
                     sid,pid = msg[1]
                     self.partyInput(sid, pid, msg[2])
                     #dump.dump()
+                elif msg[0] == 'get-leaks':
+                    sid,pid = msg[1]
+                    self.getLeaks(sid, pid)
                 else:
-                    sender,reveal,msg = msg
-                    print('[ADVERSARY]', sender, reveal, msg)
-                    self.F.backdoor_msg(None if not reveal else sender, msg)
-            elif r == self.leak:
-                sender,reveal,msg = msg
-                print('[LEAK]', sender, msg)
-                dump.dump()
+                    #sender,reveal,msg = msg
+                    #print('[ADVERSARY]', sender, reveal, msg)
+                    #self.F.backdoor_msg(None if not reveal else sender, msg)
+                    self.F.input_msg(msg)
+#            elif r == self.leak:
+#                sender,reveal,msg = msg
+#                print('[LEAK]', sender, msg)
+#                dump.dump()
             else:
                 dump.dump()
 

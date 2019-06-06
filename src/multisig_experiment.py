@@ -2,9 +2,9 @@ import dump
 import comm
 import gevent
 from itm import ITMFunctionality, ITMPassthrough, ITMAdversary, createParties
-from utils import z_mine_blocks, z_send_money, z_get_balance
+from utils import z_mine_blocks, z_send_money, z_get_balance, print
 from g_ledger import Ledger_Functionality, LedgerITM
-from f_multisig import C_Multisig, Multisig_Functionality, MultisigITM
+from f_multisig import C_Multisig, Multisig_Functionality, MultisigITM, Sim_Multisig
 from collections import defaultdict
 from gevent.queue import Queue, Channel
 from protected_wrapper import Protected_Wrapper, ProtectedITM
@@ -49,17 +49,10 @@ gevent.spawn(multisig_itm.run)
 '''
 Real adversary spawn.
 '''
-adversary = ITMAdversary('sid2', 6)
-comm.setAdversary(adversary)
-#g_ledger.set_backdoor(adversary.leak)
-#idealf.set_backdoor(adversary.leak)
-gevent.spawn(adversary.run)
+#adversary = ITMAdversary('sid2', 6)
+#comm.setAdversary(adversary)
+#gevent.spawn(adversary.run)
 
-'''
-Simulator spawn
-'''
-#simulator = Sim_Multisig('sid', 7, ledger_itm, multisig_itm)
-#gevent.spawn(simulator.run)
 
 simparty = ITMPassthrough('sid2', 23)
 comm.setParty(simparty)
@@ -71,9 +64,17 @@ gevent.spawn(simparty.run)
 p1 = iparties[0]
 p2 = iparties[1]
 
+'''
+Simulator spawn
+'''
+simulator = Sim_Multisig('sid', 7, ledger_itm, multisig_itm, p2, 'rando')
+simitm = ITMAdversary('sid', 7)
+simitm.init(simulator)
+comm.setAdversary(simitm)
+gevent.spawn(simitm.run)
 print('P1:', p1.sid, p1.pid)
 print('P2:', p2.sid, p2.pid)
-
+print('its already zet bozo')
 ''' p1 and p2 need funds, so mine blocks and send them funds '''
 z_mine_blocks(1, simparty, ledger_itm)
 bsim = z_get_balance(simparty, simparty, ledger_itm)
@@ -99,7 +100,10 @@ Environment increments block number, different delivery of deposits.
 '''
 z_mine_blocks(1, simparty, ledger_itm)
 
-p2.input.set( ('deposit',1) )
+simitm.input.set(
+    ('deposit', 1)
+)
+#p2.input.set( ('deposit',1) )
 dump.dump_wait()
 
 '''
@@ -130,7 +134,8 @@ dump.dump_wait()
 
 z_mine_blocks(8, simparty, ledger_itm)
 
-p2.input.set( ('confirm', 0) )
+simitm.input.set( ('confirm', 0) )
+#p2.input.set( ('confirm', 0) )
 dump.dump_wait()
 
 z_mine_blocks(8, simparty, ledger_itm)

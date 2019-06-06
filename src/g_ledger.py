@@ -3,6 +3,7 @@ import gevent
 import inspect
 from itm import ITMFunctionality
 from utils import print
+from queue import Queue as qqueue
 from hashlib import sha256
 from collections import defaultdict
 from gevent.event import AsyncResult
@@ -26,7 +27,7 @@ class Ledger_Functionality(object):
 
         self.outputs = defaultdict(Queue)
         self.input = Channel()
-        self.adversary_out = Queue()
+        self.adversary_out = qqueue()
         self.receipts = defaultdict(dict)
 
         self.block_txs = defaultdict(list)
@@ -41,12 +42,30 @@ class Ledger_Functionality(object):
 
         self.restricted = defaultdict(bool)
 
+    def __str__(self):
+        return '\033[92mG_ledger\033[0m'
+
+    @property
+    def windowSize(self):
+        return self.round
+
+    @property
+    def nu(self):
+        return int(self.round / 2)
+
     def leak(self, msg):
-        self.adversary_out.put(
+        self.adversary_out.put((
             (self.sid, self.pid),
             True,
             msg
-        )
+        ))
+
+    def getLeaks(self):
+        ret = []
+        while not self.adversary_out.empty():
+            leak = self.adversary_out.get()
+            ret.append(leak)
+        return ret
 
     def get_contract(self, sid, pid, addr):
         if addr in self.contracts:
@@ -55,6 +74,7 @@ class Ledger_Functionality(object):
             return ''
 
     def get_caddress(self, sid, pid, addr):
+        sender = (sid,pid)
         print('PARAMS OF GET CADDRESS', sender, addr, self.nonces[addr]+1)
         return sha256(addr.encode() + str(self.nonces[addr]+1).encode()).hexdigest()[24:]
 
@@ -65,11 +85,8 @@ class Ledger_Functionality(object):
                 'blocknumber': self.round,
                }
 
-    def set_backdoor(self, _backdoor):
-        self.adversary_out = _backdoor
-
     def getbalance(self, sid, pid, addr):
-        print('[DEBUG]:', 'writing output for (%s,%s)' % (sid,pid))
+        #print('[DEBUG]:', 'writing output for (%s,%s)' % (sid,pid))
         self.outputs[sid,pid].put(self._balances[addr])
         return self._balances[addr]
 
@@ -87,6 +104,7 @@ class Ledger_Functionality(object):
   
     def OUT(self,data,sender):
         nonce = self.nonces[sender]
+        print('DEBUG:', 'writing output for', sender, nonce)
         if (sender,nonce) not in self.output:
             self.output[sender,nonce] = []
         self.output[sender,nonce].append(data)
@@ -105,7 +123,6 @@ class Ledger_Functionality(object):
         return r
 
     def read_output(self, sid, pid, indices):
-        print('[DEBUG]:', 'writing output to (%s,%s)' % (sid,pid))
         ret = []
         for sender,nonce in indices:
             ret.append(self.output[sender,nonce])
@@ -115,7 +132,6 @@ class Ledger_Functionality(object):
         assert self._balances[fro] >= val
         self.txqueue[self.round + self.DELTA].append(('transfer', to, val, data, fro))
         # Leak message to the adversary ONLY if not private
-        #self.adversary_out.set(((self.sid,self.pid), True, ('transfer',to,val,data,fro)))
         self.leak( ('transfer', to, val, data, fro) )
         # TODO: is this the right way to do it?
         print('[TX RECEIVED]', 'to (%s), from (%s), data (%s), val (%d)' % (to, fro, data, val))
@@ -123,13 +139,13 @@ class Ledger_Functionality(object):
 
     def input_contract_create(self, sid, pid, addr, val, data, private, fro):
         assert self._balances[fro] >= val
-        print('PARAMS OF CREATE', (sid,pid), fro, self.nonces[fro]+1)
-        compute_addr = sha256(fro.encode() + str(self.nonces[fro]+1).encode()).hexdigest()[24:]
+        #print('PARAMS OF CREATE', (sid,pid), fro, self.nonces[fro]+1)
+        #compute_addr = sha256(fro.encode() + str(self.nonces[fro]+1).encode()).hexdigest()[24:]
+        compute_addr = self.get_caddress(sid,pid,fro)
         assert compute_addr == addr, 'Given address: %s, computed address %s, nonce: %s' % (addr, compute_addr, self.nonces[fro]+1)
         assert data is not None
         self.txqueue[self.round + self.DELTA].append(('contract-create', addr, val, data, fro, private))
         # Leak to adversary only if not private
-        #self.adversary_out.set( ((self.sid,self.pid), True, ('contract-create',addr,val,data,fro,private)))
         self.leak( ('contract-create',addr,val,data,fro,private) )
 
         print('[DEBUG]', 'tx from', fro, 'creates contract', addr)
@@ -167,7 +183,7 @@ class Ledger_Functionality(object):
     def input_tick_honest(self, sid, pid, sender):
         self.round += 1
         # WHAT DOES DELAY LOOK LIKE IN PYTHON
-        print('Block (%d) mined by (%s)' % (self.round, sender))
+        #print('Block (%d) mined by (%s)' % (self.round, sender))
         self._balances[sender] += 100000
         for tx in self.txqueue[self.round]:
             if tx[0] == 'transfer':
@@ -176,12 +192,13 @@ class Ledger_Functionality(object):
                 self.exec_contract_create(sid, tx[1], tx[2], tx[3], tx[4], tx[5])
         dump.dump()
                
-    def input_tick_adversary(self, sid, pid, permutation):
-        new_txqueue = self.txqueue[self.round].copy() 
-        for i,x in enumerate(permuatation):
-            new_txqueue[i] = self.txqueue[self.round][x]
-        self.txqueue[self.round] = new_txqueue
-        self.input_tick_honest()
+    def input_tick_adversary(self, sid, pid, addr, permutation):
+        new_txqueue = self.txqueue[self.round+1].copy() 
+        print('miner adversary', self.round, self.txqueue[self.round+1])
+        for i,x in enumerate(permutation):
+            new_txqueue[i] = self.txqueue[self.round+1][x]
+        self.txqueue[self.round+1] = new_txqueue
+        self.input_tick_honest(sid, pid, addr)
         dump.dump()
 
     def block_number(self, sid, pid):
@@ -204,9 +221,10 @@ class Ledger_Functionality(object):
         sid,pid = None,None
         if sender:
             sid,pid = sender
-
+        print('DEBUG: ledger adversary msg', msg)
         if msg[0] == 'tick':
-            self.input_tick_adversary(sid,pid,msg[1])
+            print('adversary tick')
+            self.input_tick_adversary(sid,pid,msg[1], msg[2])
 
     def input_msg(self, sender, msg):
         sid,pid = None,None
@@ -234,6 +252,8 @@ class Ledger_Functionality(object):
             return self.block_number(sid, pid)
         elif msg[0] == 'get-contract':
             return self.get_contract(sid, pid, msg[1])
+        elif msg[0] == 'get-leaks':
+            return self.getLeaks()
 
 
 def LedgerITM(sid, pid):

@@ -12,12 +12,29 @@ def z_mine_blocks(n, itm, ledger):
     sender = (itm.sid, itm.pid)
     for i in range(n):
         #itm.input.set( ('tick', sender) )
-        ledger.input.set((
-            sender,
-            True,
-            ('tick', sender)
-        ))
+        #ledger.input.set((
+        #    sender,
+        #    True,
+        #    ('tick', sender)
+        #))
+        itm.input.set( ('tick', (itm.sid, itm.pid)) )
         dump.dump_wait()
+
+#def z_mine_block_perm(perm, itm, ledger):
+#    sender = (itm.sid,itm.pid)
+#    ledger.backdoor.set((
+#        sender,
+#        True,
+#        (True, ('tick', perm))
+#    ))
+#    dump.dump_wait()
+
+def z_mine_block_perm(perm, itm):
+    itm.input.set(
+        ('tick', perm)
+    )
+    dump.dump_wait()
+
 
 def z_send_money(v, to, itm, ledger):
     sender = (itm.sid, itm.pid)
@@ -36,7 +53,6 @@ def z_get_balance(itm, simparty, ledger):
         True,
         ('getbalance', (itm.sid, itm.pid))
     ))
-
 
 
 try:

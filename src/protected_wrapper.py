@@ -42,11 +42,14 @@ class Protected_Wrapper(object):
         
         self.DELTA = self.ledger.DELTA
 
+    def __str__(self):
+        return str(self.ledger)
+
     def iscontract(self, addr):
         return addr in self.ledger.contracts
 
     '''
-        All parties, including the adversary, must access the protected mode.
+        All honest parties must access the protected mode.
         This means that they can only see sid,pid combos and no actual mapping between
         then and pseudonyms in the underlying blockchain
     '''
@@ -54,23 +57,23 @@ class Protected_Wrapper(object):
         sid,pid = None,None
         if sender:
             sid,pid = sender
-            if sender not in self.addresses:
-                a = self.subroutine_genym(sender)
+            #if sender not in self.addresses:
+            #    a = self.subroutine_genym(sender)
         
         # if functionality, it can choose wrapper/no-wrapper
         # adversary can also decide which he wants to talk to
         if comm.isf(sid,pid) or comm.isadversary(sid,pid):
-            print('msg', _msg)
+            #print('msg', _msg)
             wrapper,msg = _msg
         else:
             msg = _msg
             wrapper = True
     
         if not wrapper:
-            if comm.isf(sid,pid):
-                self.ledger.input_msg(sender, msg)
+            if msg[0] == 'tick' and comm.isadversary(sid,pid):
+                self.ledger.adversar_msg(sender, msg)
             else:
-                dump.dump()
+                self.ledger.input_msg(sender, msg)
         else:
             if msg[0] == 'transfer':
                 _,_to,_val,_data,_fro = msg
@@ -95,7 +98,7 @@ class Protected_Wrapper(object):
             elif msg[0] == 'tick':
                 _,_sender = msg
                 _sender = self.genym(_sender)
-                msg = (msg[0], _sender)    
+                msg = (msg[0], _sender)
             elif msg[0] == 'contract-create':
                 _,_addr,_val,_data,_private,_fro = msg
                 if comm.isf(sid,pid):
@@ -122,7 +125,7 @@ class Protected_Wrapper(object):
     def subroutine_genym(self, key):
         p = str(key).encode()
         h = sha256(p).hexdigest()[24:]
-        print('[PROTECTED]', 'new pseudonym ( %s, %s )' % (key, h))
+        #print('[PROTECTED]', 'new pseudonym ( %s, %s )' % (key, h))
         self.addresses[key] = h
         self.raddresses[h] = key
         return self.addresses[key]
@@ -166,7 +169,11 @@ class Protected_Wrapper(object):
         #    wrapper = True
 
         if comm.isf(sid,pid) or comm.isadversary(sid,pid):
-            wrapper,msg = _msg
+            try:
+                wrapper,msg = _msg
+            except ValueError:
+                msg = _msg
+                wrapper = False
         else:
             msg = _msg
             wrapper = True
@@ -175,14 +182,15 @@ class Protected_Wrapper(object):
             if msg[0] == 'genym':
                 return self.subroutine_genym(sid,pid)
             elif msg[0] == 'getbalance':
-                print('[protected] getbalance subroutine call')
+                #print('[protected] getbalance subroutine call')
                 _,_addr = msg
                 addr = self.genym(_addr)
                 msg = (msg[0], addr)
                 return self.ledger.subroutine_msg(sender,msg)
             elif msg[0] == 'get-caddress':
-                _,_addr = msg
-                addr = self.genym(_addr)
+                #_,_addr = msg
+                #addr = self.genym(_addr)
+                addr = self.genym((sid,pid))
                 msg = (msg[0], addr)
                 return self.ledger.subroutine_msg(sender,msg)
             elif msg[0] == 'get-addr':# and (comm.isf(*sender) or comm.isadversary(*sender)):
@@ -191,22 +199,33 @@ class Protected_Wrapper(object):
                 _,_addr,blockto,blockfro = msg
                 addr = self.genym(_addr)
                 return self.subroutine_gettx(addr, blockto, blockfro)
+            elif msg[0] == 'read-output':
+                _,_outputs = msg
+                outputs = []
+                for o in _outputs:
+                    _sender,_nonce = o
+                    outputs.append( (self.genym(sender), _nonce))
+                msg = (msg[0], outputs)
+                return self.ledger.subroutine_msg(sender, msg)
             else:
                 return self.ledger.subroutine_msg(sender, msg)
         else:
             return self.ledger.subroutine_msg(sender, msg)
 
     '''
-        Adversary, like the parties, can only talk to the protected
-        mode so mapping between sid,pid needs to happen here
+        Unlike honest parties, adversary doesn't need to use the protected
+        mode.
     '''
     def adversary_msg(self, sender, _msg):
         sid,pid = sender
         wrapper,msg = _msg
-
+        #print('DEBUG: adversary msg', msg)
         if not wrapper:
             self.ledger.adversary_msg(sender, msg)
         else:
+            if msg[0] == 'tick':
+                addr = self.genym(sender)
+                msg = (msg[0], addr, msg[1])
             self.ledger.adversary_msg(sender, msg)
 
 

@@ -1,6 +1,8 @@
 import gevent
+import comm 
 import dump
 from itm import ITMFunctionality
+from utils import print
 from hashlib import sha256
 from collections import defaultdict
 from gevent.queue import Queue, Channel
@@ -25,11 +27,16 @@ class Multisig_Functionality(object):
 
         # TODO: should this be queue or channel? 
         self.adversary_out = Queue()
-    
-    #def set_backdoor(self, _backdoor):
-    #    self.adversary_out = _backdoor
+   
+    def __str__(self):
+        #return 'asd'
+        return '\033[92mF_multisig\033[0m'
 
+    def write(self, to, msg):
+        print(u'\033[92m{:>20}\033[0m -----> {}, msg={}'.format('F_multisig', str(to), msg))
+                  
     def leak(self, msg):
+        self.write(comm.adversary, msg)
         self.adversary_out.put(
             (self.sid, self.pid),
             True,
@@ -76,11 +83,13 @@ class Multisig_Functionality(object):
         that it received, like wallet software.
     '''
     def input_deposit(self, sid, pid, val):
+        msg = ('transfer', (self.sid,self.pid), val, (), (sid,pid))
+        self.write(self.G, msg)
         self.G.input.set((
             (self.sid,self.pid),
             True,
-            (True,
-                ('transfer', (self.sid,self.pid), val, (), (sid,pid))
+            (True, msg
+                #('transfer', (self.sid,self.pid), val, (), (sid,pid))
             )
         ))
         #dump.dump()
@@ -93,7 +102,7 @@ class Multisig_Functionality(object):
         self.buffer_changes.append(
             (self.subroutine_block_number(), self._deliver_transfer, to, val)
         )
-        #self.adversary_out.set(((sid,pid), True, ('transfer',to,val) ))
+        
         self.leak( ('transfer', to, val) )
         dump.dump()
 
@@ -234,28 +243,49 @@ class Sim_Multisig:
     def __init__(self, sid, pid, G, F, crony, c_multisig):
         self.sid = sid
         self.pid = pid
+        self.sender = (sid,pid)
         self.crony = crony
         self.cronysid = crony.sid
         self.cronypid = crony.pid
+        self.G = G
+        self.F = F
+
+    def __str__(self):
+        return '\033[91mSimulator (%s, %s)\033[0m' % (self.sid, self.pid)
+
+    def write(self, to, msg):
+        print('\033[91m{:>20}\033[0m -----> {}, msg={}'.format('Simulator (%s,%s)'%(self.sid,self.pid), str(to), msg))
+        #print('%s:<15 -----> %s\tmsg=%s' % (str(self), str(to), msg))
+
     '''
         On receiving deposit from Z, simulator
         just passes 'deposit' to the functionality
     '''
     def input_deposit(self, val):
-        self.F.input.set((
-            (self.cronysid,self.cronypid),
-            True,
-            ('deposit', val)
-        ))
+        msg = ('deposit', val)
+        self.write(self.crony, msg)
+        self.crony.input.set(msg)
 
     '''
         Create a transfer
     '''
     def input_transfer(self, to, val):
-        self.F.input.set((
-            (self.cronysid, self.cronypid),
+        msg = ('transfer', to, val)
+        self.write(self.crony, msg)
+        self.crony.input.set(msg)
+
+    def input_confirm(self, idx):
+        msg = ('confirm', idx)
+        self.write(self.crony, msg)
+        self.crony.input.set(msg)
+
+    def input_tick(self, permutation):
+        msg = (self.sender, True, (True, ('tick', perm)))
+        self.write(self.G, msg)
+        self.G.backdoor.set((
+            self.sender,
             True,
-            ('transfer', to, val)
+            (True, ('tick', perm))
         ))
 
     '''
@@ -269,18 +299,41 @@ class Sim_Multisig:
             ('get-addr', addr)
         ))
 
-        assert f_address is not None
+        assert f_addr is not None
 
         if f_addr == addr:
-            print('[WARNING] Environment requested functionality contract')
-            # Create the contract with 
-            source = inspect.getsource(c_multisig).split(':',1)[1]
+            return 'lulz'
+    
+    #def input_msg(self, msg):
+    #    if msg[0] == 'tick':
+    #        self.input_tick(msg[1])
+    #    else:
+    #        dump.dump()
+    #        print('[WARNING] Environment requested functionality contract')
+    #        # Create the contract with 
+    #        source = inspect.getsource(c_multisig).split(':',1)[1]
+    #    else:
+    #        source = self.G.subroutine_call((
+    #            (self.sid, self.pid),
+    #            True,
+    #            (True, ('get-contract'))
+    #        ))
+    #    print('SIMULATOR got source:', source[:20])
+    #    return source
+
+    def input_msg(self, msg):
+        if msg[0] == 'transfer':
+            self.input_transfer(msg[1], msg[2])
+        elif msg[0] == 'deposit':
+            self.input_deposit(msg[1])
+        elif msg[0] == 'confirm':
+            self.input_confirm(msg[1])
+        elif msg[0] == 'tick':
+            self.input_tick(msg[1])
         else:
-            source = self.G.subroutine_call((
-                (self.sid, self.pid),
-                True,
-                (True, ('get-contract'))
-            ))
-        print('SIMULATOR got source:', source[:20])
-        return source
+            dump.dump()
+
+    def subroutine_msg(self, msg):
+        if msg[0] == 'get-contract':
+            return self.subroutine_get_contract(msg[1])
 
