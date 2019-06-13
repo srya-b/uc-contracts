@@ -39,14 +39,20 @@ class ITMFunctionality(object):
             assert len(ready) == 1
             r = ready[0]
             sender,reveal,msg = r.get()
+            #print('Ready before, input={}, backdoor={}'.format(self.input.ready(),self.backdoor.ready()))
             if r == self.input:
                 self.F.input_msg(None if not reveal else sender, msg)
+                self.input = AsyncResult()
             elif r == self.backdoor:
                 self.F.adversary_msg(None if not reveal else sender, msg)
+                self.backdoor = AsyncResult()
             else:
                 dump.dump()
-
-            r = AsyncResult()
+            #print('DEFINITELY ABOUT TO RESET THE INOUT')
+            #print('Ready right before, input={}, backdoor={}'.format(self.input.ready(),self.backdoor.ready()))
+            #print('Equal, (self.input==r)={}, (self.backdoor==r)={}'.format(self.input==r, self.backdoor==r))
+            #r = AsyncResult()
+            #print('Ready after, input={}, backdoor={}, r={}'.format(self.input.ready(),self.backdoor.ready(), r.ready()))
 
 class ITMPassthrough(object):
 
@@ -91,16 +97,18 @@ class ITMPassthrough(object):
                 self.F.input.set(
                     ((self.sid,self.pid), True, msg)
                 )
+                self.input = AsyncResult()
             elif r == self.backdoor:
                 comm.corrupt(self.sid, self.pid)
                 self.write(self.F, msg)
                 self.F.input.set(
                     ((self.sid, self.pid), True, msg)
                 )
+                self.backdoor = AsyncResult()
             else:
                 dump.dump() 
 
-            r = AsyncResult()
+            #r = AsyncResult()
 
 def createParties(sid, r, f):
     parties = []
@@ -118,9 +126,13 @@ class ITMAdversary(object):
         self.input = AsyncResult()
         self.leak = AsyncResult()
         self.parties = {}
+        self.leakbuffer = []
     
     def __str__(self):
         return str(self.F)
+
+    def read(self, fro, msg):
+        print(u'{:>20} -----> {}, msg={}'.format(str(fro), str(self), msg))
 
     def init(self, functionality):
         self.F = functionality
@@ -145,14 +157,18 @@ class ITMAdversary(object):
     def getLeaks(self, sid, pid):
         assert comm.isf(sid,pid)
         itm = comm.getitm(sid,pid)
-        leaks = itm.subroutine_call((
+        msg = ('get-leaks',)
+        self.F.write(itm, msg)
+        itm.backdoor.set((
             (self.sid,self.pid),
             True,
-            ('get-leaks',)
+            (True, msg)
         ))
 
-        print('Leaks from (%s,%s):' % (sid,pid))
-        print(leaks, sep='\n')
+        #self.read(itm, leaks[0]) 
+
+        #print('Leaks from (%s,%s):' % (sid,pid))
+        #print(leaks, sep='\n')
 
     '''
         Instead of waiting for a party to write to the adversary
@@ -164,7 +180,7 @@ class ITMAdversary(object):
     def run(self):
         while True:
             ready = gevent.wait(
-                objects=[self.input],
+                objects=[self.input, self.leak],
                 count=1
             )
 
@@ -185,15 +201,28 @@ class ITMAdversary(object):
                     #sender,reveal,msg = msg
                     #print('[ADVERSARY]', sender, reveal, msg)
                     #self.F.backdoor_msg(None if not reveal else sender, msg)
+                    #self.F.input.set((
+                    #    (self.sid,self.pid),
+                    #    True,
+                    #    msg
+                    #))
                     self.F.input_msg(msg)
-#            elif r == self.leak:
-#                sender,reveal,msg = msg
-#                print('[LEAK]', sender, msg)
-#                dump.dump()
+                    #dump.dump()
+                self.input = AsyncResult()
+            elif r == self.leak:
+                print('processing leaks')
+                sender,msg = msg
+                sid,pid = sender
+                assert comm.isf(sid,pid)
+                print('leak leaks', self.leakbuffer)
+                self.leakbuffer.append(msg)
+                print('leak leaks', self.leakbuffer)
+                dump.dump()
+                self.leak = AsyncResult()
             else:
                 dump.dump()
 
-            r = AsyncResult()
+            #r = AsyncResult()
 
 def createAdversary(sid,pid,f):
     a = ITMAdversary(sid,pid)

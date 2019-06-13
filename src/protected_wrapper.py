@@ -71,7 +71,7 @@ class Protected_Wrapper(object):
     
         if not wrapper:
             if msg[0] == 'tick' and comm.isadversary(sid,pid):
-                self.ledger.adversar_msg(sender, msg)
+                self.ledger.adversary_msg(sender, msg)
             else:
                 self.ledger.input_msg(sender, msg)
         else:

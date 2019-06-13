@@ -1,7 +1,8 @@
 import dump
 import gevent
 from itm import ITMFunctionality
-from comm import ishonest, isdishonest
+from comm import ishonest, isdishonest, isadversary
+from queue import Queue as qqueue
 from hashlib import sha256
 from collections import defaultdict
 from gevent.queue import Queue, Channel
@@ -26,15 +27,22 @@ class PaymentChannel_Functionality(object):
 
         self.buffer_changes = []
         self.DELTA = self.G.F.DELTA
-        self.adversary_out = Queue()
+        self.adversary_out = qqueue()
         self.blockno = -1
 
     def leak(self, msg):
-        self.adversary_out.put(
+        self.adversary_out.put((
             (self.sid, self.pid),
             True,
             msg
-        )
+        ))
+
+    def getLeaks(self):
+        ret = []
+        while not self.adversary_out.empty():
+            leak = self.adversary_out.get()
+            ret.append(leak)
+        return ret
 
     def other_party(self,sid,pid):
         if pid == self.p1:
@@ -54,9 +62,6 @@ class PaymentChannel_Functionality(object):
             print('Accessed by rando')
             return False
     
-    #def set_backdoor(self, _backdoor):
-    #    self.adversary_out = _backdoor
-   
     def subroutine_balance(self):
         return (self.p1balance(), self.p2balance())
 
@@ -89,29 +94,23 @@ class PaymentChannel_Functionality(object):
         if self.balances[pid] < val:
             dump.dump(); return
 
-        #self.adversary_out.set((        # leak payment information to the adversary
-        #    (self.sid,self.pid),
-        #    True,
-        #    ('pay', (sid,pid), val)
-        #))
-        
         self.leak( ('pay', (sid,pid), val) )
-        dump.dump()
+#        dump.dump()
 
-        print('sender subtract', self.balances[pid], val)
+        #print('sender subtract', self.balances[pid], val)
         self.balances[pid] -= val
         
         # If the sender is corrupted, delay the output to other P
         to_pid = self.other_party(sid,pid)
         to_msg = ('receive', val)
-        print(sid, pid, to_pid, val)
+        #print(sid, pid, to_pid, val)
 
         if ishonest(sid,pid):   # If the receiver is honest, write 'pay' immediately
-            print('receiver add', self.balances[to_pid], val)
             self.balances[to_pid] += val
             self.write_output(sid, to_pid, to_msg)
         else:   # If dishonest, delay delivery to simulate blockchain tx
             self.buffer_output(sid, to_pid, to_msg)
+        dump.dump()
 
     ''' The channel pays out to the player withdrawing after some balance
         checks. Initiate transaction from itself on the blockchain'''
@@ -119,11 +118,6 @@ class PaymentChannel_Functionality(object):
         if self.balances[sid,pid] < val:
             dump.dump(); return
 
-        #self.adversary_out.set((
-        #    (self.sid, self.pid),
-        #    True,
-        #    ('withdraw', (sid,pid), val)
-        #))
         self.leak( ('withdraw', (sid,pid), val) )
         # Submit a transaction from "channel" to sender
         self.G.input.set((
@@ -195,15 +189,17 @@ class PaymentChannel_Functionality(object):
     def subroutine_msg(self, sender, msg):
         self.process_buffer()
         sid,pid = None,None
+        
         if sender:
             sid,pid = sender
 
-        if not self.isplayer(sid,pid):
+        if not self.isplayer(sid,pid) and not isadversary(sid,pid):
             print('PAY: subroutine access by:', sid, pid)
             return None
-
         if msg[0] == 'balance':
             return self.subroutine_balance()
+        elif msg[0] == 'get-leaks':
+            return self.getLeaks()
 
 def PayITM(sid, pid, ledger, p1, p2):
     f = PaymentChannel_Functionality(sid,pid,ledger,p1,p2)

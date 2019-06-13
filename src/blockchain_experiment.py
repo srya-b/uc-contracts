@@ -75,6 +75,7 @@ gevent.spawn(idealitm.run)
 Adversary
 '''
 adversary = ITMAdversary('sid', 6)
+adversary.init(idealitm)
 comm.setAdversary(adversary)
 gevent.spawn(adversary.run)
 

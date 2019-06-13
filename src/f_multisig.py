@@ -288,6 +288,15 @@ class Sim_Multisig:
             (True, ('tick', perm))
         ))
 
+    def input_delay_tx(self, fro, nonce, rounds):
+        msg = ('delay-tx', fro, nonce, rounds)
+        self.write(self.G, msg)
+        self.G.backdoor.set((
+            self.sender,
+            True,
+            (False, msg)
+        ))
+
     '''
         Get contract code at addr
     '''
@@ -330,6 +339,8 @@ class Sim_Multisig:
             self.input_confirm(msg[1])
         elif msg[0] == 'tick':
             self.input_tick(msg[1])
+        elif msg[0] == 'delay-tx':
+            self.input_delay_tx(msg[1], msg[2], msg[3])
         else:
             dump.dump()
 

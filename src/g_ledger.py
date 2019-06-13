@@ -1,4 +1,5 @@
 import dump
+import comm
 import gevent
 import inspect
 from itm import ITMFunctionality
@@ -15,6 +16,7 @@ DELTA = 8
 class Ledger_Functionality(object):
     def __init__(self, sid, pid):
         self.txqueue = defaultdict(list)
+        self.newtxs = dict()
         self._balances = defaultdict(int)
         self.contracts = {}
         self.nonces = defaultdict(int)
@@ -23,7 +25,7 @@ class Ledger_Functionality(object):
         self.round = 0
         self.sid = sid
         self.pid = pid
-        self.DELTA = 8
+        self.DELTA = 1
 
         self.outputs = defaultdict(Queue)
         self.input = Channel()
@@ -53,10 +55,13 @@ class Ledger_Functionality(object):
     def nu(self):
         return int(self.round / 2)
 
+    def write(self, to, msg):
+        print(u'\033[92m{:>20}\033[0m -----> {}, msg={}'.format('G_ledger', str(to), msg))
+
     def leak(self, msg):
+        #self.write( comm.adversary, msg )
         self.adversary_out.put((
             (self.sid, self.pid),
-            True,
             msg
         ))
 
@@ -65,7 +70,13 @@ class Ledger_Functionality(object):
         while not self.adversary_out.empty():
             leak = self.adversary_out.get()
             ret.append(leak)
-        return ret
+        self.adversary_out = qqueue()
+        adv = comm.adversary
+        self.write(adv, ('leaks', ret))
+        adv.leak.set((
+            (self.sid, self.pid),
+            ('leaks', ret)
+        ))
 
     def get_contract(self, sid, pid, addr):
         if addr in self.contracts:
@@ -128,32 +139,45 @@ class Ledger_Functionality(object):
             ret.append(self.output[sender,nonce])
         return ret
 
+    def input_delay_tx(self, sid, pid, fro, nonce, rounds):
+        tx = self.newtxs[fro,nonce]
+        self.txqueue[self.round + rounds].append( tx )
+        del self.newtxs[fro,nonce]
+        print('Tx {},{} delayed by {}'.format(fro, nonce, rounds))
+        dump.dump()
+
     def input_transfer(self, sid, pid, to, val, data, fro):
         assert self._balances[fro] >= val
-        self.txqueue[self.round + self.DELTA].append(('transfer', to, val, data, fro))
+        self.nonces[fro] += 1
+        #self.txqueue[self.round + self.DELTA].append(('transfer', to, val, data, fro))
+        #self.newtxs.append(('transfer', to, val, data, fro))
+        self.newtxs[fro,self.nonces[fro]] = ('transfer', to, val, data, fro)
         # Leak message to the adversary ONLY if not private
-        self.leak( ('transfer', to, val, data, fro) )
+        self.leak( ((fro,self.nonces[fro]),('transfer', to, val, data, fro)) )
         # TODO: is this the right way to do it?
         print('[TX RECEIVED]', 'to (%s), from (%s), data (%s), val (%d)' % (to, fro, data, val))
         dump.dump()
 
     def input_contract_create(self, sid, pid, addr, val, data, private, fro):
         assert self._balances[fro] >= val
+        self.nonces[fro] += 1
         #print('PARAMS OF CREATE', (sid,pid), fro, self.nonces[fro]+1)
-        #compute_addr = sha256(fro.encode() + str(self.nonces[fro]+1).encode()).hexdigest()[24:]
-        compute_addr = self.get_caddress(sid,pid,fro)
+        compute_addr = sha256(fro.encode() + str(self.nonces[fro]).encode()).hexdigest()[24:]
+        #compute_addr = self.get_caddress(sid,pid,fro)
         assert compute_addr == addr, 'Given address: %s, computed address %s, nonce: %s' % (addr, compute_addr, self.nonces[fro]+1)
         assert data is not None
-        self.txqueue[self.round + self.DELTA].append(('contract-create', addr, val, data, fro, private))
+        #self.txqueue[self.round + self.DELTA].append(('contract-create', addr, val, data, fro, private))
+        #self.newtxs.append(('contract-create', addr, val, data, fro, private))
+        self.newtxs[fro,self.nonces[fro]] = ('contract-create', addr, val, data, fro, private)
         # Leak to adversary only if not private
-        self.leak( ('contract-create',addr,val,data,fro,private) )
+        self.leak( ((fro,self.nonces[fro]),('contract-create',addr,val,data,fro,private)) )
 
         print('[DEBUG]', 'tx from', fro, 'creates contract', addr)
         dump.dump()
 
     def exec_tx(self, sid, to, val, data, fro):
         # Need to check again in case of other txs
-        self.nonces[fro] += 1
+        #self.nonces[fro] += 1
         assert self._balances[fro] >= val
         self._balances[fro] -= val
         self._balances[to] += val
@@ -163,7 +187,7 @@ class Ledger_Functionality(object):
             self.txs[fro,self.nonces[fro]] = r
 
     def exec_contract_create(self, sid, addr, val, data, fro, private):
-        self.nonces[fro] += 1
+        #self.nonces[fro] += 1
         assert self._balances[fro] >= val
         self._balances[fro] -= val
         self._balances[addr] += val
@@ -225,6 +249,12 @@ class Ledger_Functionality(object):
         if msg[0] == 'tick':
             print('adversary tick')
             self.input_tick_adversary(sid,pid,msg[1], msg[2])
+        elif msg[0] == 'get-leaks':
+            self.getLeaks()
+        elif msg[0] == 'delay-tx':
+            self.input_delay_tx(sid,pid,msg[1],msg[2],msg[3])
+        else:
+            dump.dump()
 
     def input_msg(self, sender, msg):
         sid,pid = None,None
@@ -237,6 +267,8 @@ class Ledger_Functionality(object):
             self.input_contract_create(sid, pid, msg[1], msg[2], msg[3], msg[4], msg[5])
         elif msg[0] == 'tick':
             self.input_tick_honest(sid, pid, msg[1])
+        #elif msg[0] == 'delay-tx':
+        #    self.input_delay_tx(sid, pid, msg[1], msg[2], msg[3])
         else:
             dump.dump()
 
@@ -252,8 +284,8 @@ class Ledger_Functionality(object):
             return self.block_number(sid, pid)
         elif msg[0] == 'get-contract':
             return self.get_contract(sid, pid, msg[1])
-        elif msg[0] == 'get-leaks':
-            return self.getLeaks()
+        #elif msg[0] == 'get-leaks':
+        #    return self.getLeaks()
 
 
 def LedgerITM(sid, pid):

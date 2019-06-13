@@ -29,6 +29,27 @@ def z_mine_blocks(n, itm, ledger):
 #    ))
 #    dump.dump_wait()
 
+def z_tx_leak(msg):
+    _,leaks = msg
+    sender,leak = leaks[0]
+    fro,tx = leak
+    fro,nonce = fro
+    return fro,nonce
+
+def z_delay_tx(adv, fro, nonce, rounds):
+    adv.input.set( ('delay-tx', fro, nonce, rounds) )
+    dump.dump_wait()
+
+def z_get_leaks(itm, ledger):
+    sender = (itm.sid, itm.pid)
+    itm.input.set( ('get-leaks', (ledger.sid, ledger.pid)) )
+    #return ledger.subroutine_call((
+    #    sender,
+    #    True,
+    #    ('get-leaks',)
+    #))
+    dump.dump_wait()
+
 def z_mine_block_perm(perm, itm):
     itm.input.set(
         ('tick', perm)

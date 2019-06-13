@@ -2,7 +2,7 @@ import dump
 import comm
 import gevent
 from itm import ITMFunctionality, ITMPassthrough, ITMAdversary, createParties
-from utils import z_mine_blocks, z_send_money, z_get_balance, print
+from utils import z_mine_blocks, z_send_money, z_get_balance, z_get_leaks, z_tx_leak, z_delay_tx, print
 from g_ledger import Ledger_Functionality, LedgerITM
 from f_multisig import C_Multisig, Multisig_Functionality, MultisigITM, Sim_Multisig
 from collections import defaultdict
@@ -74,14 +74,27 @@ comm.setAdversary(simitm)
 gevent.spawn(simitm.run)
 print('P1:', p1.sid, p1.pid)
 print('P2:', p2.sid, p2.pid)
-print('its already zet bozo')
+
 ''' p1 and p2 need funds, so mine blocks and send them funds '''
 z_mine_blocks(1, simparty, ledger_itm)
 bsim = z_get_balance(simparty, simparty, ledger_itm)
 assert(bsim > 0)
 
 z_send_money(10, p1, simparty, ledger_itm)
+z_get_leaks(simitm, ledger_itm)
+leaks = simitm.leakbuffer.pop(0)
+fro,nonce = z_tx_leak(leaks)
+z_delay_tx(simitm, fro, nonce, 8)
 z_send_money(10, p2, simparty, ledger_itm)
+z_get_leaks(simitm, ledger_itm)
+leaks = simitm.leakbuffer.pop(0)
+fro,nonce = z_tx_leak(leaks)
+z_delay_tx(simitm, fro, nonce, 8)
+
+# Adversary get messages 
+leaks = z_get_leaks(simitm, ledger_itm)
+print('LEAKS', leaks)
+
 z_mine_blocks(10, simparty, ledger_itm)
 
 b1 = z_get_balance(p1, simparty, ledger_itm)
@@ -94,6 +107,9 @@ p1 deposit funds
 '''
 p1.input.set( ('deposit',10) )
 dump.dump_wait()
+z_get_leaks(simitm, ledger_itm)
+leaks = simitm.leakbuffer
+print('DEPOSIT LEAKS', leaks)
 
 '''
 Environment increments block number, different delivery of deposits.
