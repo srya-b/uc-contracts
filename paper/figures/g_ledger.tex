@@ -1,36 +1,41 @@
 \begin{bbox}[title=$\globalf{G}_{\msf{ledger}}$]
 
-Initialize $\msf{txqueue} := \edict$, $\msf{contracts} := \edict$, \msf{balances} := \edict, $\Delta := 8$, $rnd := 0$\\
+Initialize $\msf{txqueue} := \edict$, $\msf{contracts} := \edict$, $\msf{newtxs} := \edict$, $\msf{nonces} := \edict$ \msf{balances} := \edict, $\Delta := 8$, $rnd := 0$\\
 
-{\bf On input} \transfermsg from $P_i=(sid,pid)$:
+\OnInput \transfermsg from \Partyi:
 
 	\quad If $\msf{balances[fro]} < \msf{val}$: {\bf reject}
-	
-	\quad $\msf{txqueue}[round + \Delta] \lar \transfermsg$
-	
-	\quad {\bf leak} \transfermsg to $\mathcal{A}$
 
-{\bf On input} \createmsg from $P_i=(sid,pid)$:
+	\quad $\msf{nonces[from]} \lar \msf{nonces[from]} + 1$
+
+	\quad $\msf{newtxs[from,nonces[from]} \lar \transfermsg$
+	
+	\quad {\bf leak} \transfermsg to \Adv
+
+\OnInput \createmsg from \Partyi:
 
 	\quad If $\msf{balances[from]} < \msf{val}$: {\bf reject}
 	
+	\quad $\msf{nonces[from]} \lar \msf{nonces[from]} + 1$
+
 	\quad $caddr \lar \msf{ComputeAddr}(from)$
 	
 	\quad If $caddr \neq addr$: \reject
 
 	\quad If \msf{len(data)} = 0: \reject
 
-	\quad $\msf{txqueue}[round + \Delta] \lar \createmsg$
+	\quad $\msf{newtxs[from,nonces[from]} \lar \transfermsg$
 
-	\quad {\bf leak} \createmsg to $\mathcal{A}$
+	\quad {\bf leak} \createmsg to \Adv
 
-{\bf On input} \inmsg{tick} from $P_i=(sid,pid)$:
+\OnInput \inmsg{tick}{addr} from \Partyi:
 
 	\quad $rnd += 1$
 
-	\quad $\msf{balances[sid,pid]} += 1000000$
+	%\quad $\msf{balances[sid,pid]} \pluseq 1000000$
+	\quad $\msf{balances[addr]} \pluseq 1000000$
 
-	\quad \For \msf{tx} \In \msf{txqueue}: 
+	\quad \For \msf{tx} \In \msf{txqueue[rnd]}: 
 
 		\qquad \If $tx[0] = \msf{transfer}$:
 			
@@ -38,7 +43,26 @@ Initialize $\msf{txqueue} := \edict$, $\msf{contracts} := \edict$, \msf{balances
 
 			\qqquad \msf{ExecTx(to, val, data, from)}
 
-		\qquad If $tx[0] = \msf{contract \ create}$:
+		\qquad If $tx[0] = \msf{contractcreate}$:
 
-			\qqquad $(\msf{contract \ create}, $
+			\qqquad $(\msf{contractcreate, addr, val, data, private, from}) \lar tx$
+	
+			\qqquad \msf{ExecContractCreate(addr, val, data, private, from)}
+
+\hrulefill
+
+\OnAdvInput \inmsg{delayTx}{from}{nonce}{rounds} from \Adv:
+
+	\quad $tx \lar \msf{newtxs[from,nonce]}$
+
+	\quad Add $tx$ to \msf{txqueue[rnd + rounds]}
+
+	\quad Remove $tx$ from \msf{newtxs}
+
+\OnAdvInput \inmsg{tick}{addr}{permutation} from \Adv:
+	
+	\quad Apply $permutation$ to \msf{txqueue[rnd]}
+
+	\quad Run honest party mining with \msf{addr}
+
 \end{bbox}
