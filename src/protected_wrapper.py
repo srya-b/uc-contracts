@@ -142,12 +142,14 @@ class Protected_Wrapper(object):
             txqueue = self.ledger.txqueue[blockno]
             for tx in txqueue:
                 if tx[0] == 'transfer':
-                    if tx[1] == addr:
-                        output.append((tx[4], tx[2]))  # Append (sender, amount)
+                    to,val,data,fro = tx[1:]
+                    if to == addr or fro == addr:
+                        output.append((to, fro, val))  # Append (sender, amount)
 
         ''' Convert all addresses to sid,pid shit'''
         for i in range(len(output)):
-            output[i] = (self.rgenym(output[i][0]), output[i][1])
+            to,fro,val = output[i]
+            output[i] = (self.rgenym(to), self.rgenym(fro), val)
         return output
 
     def subroutine_get_addr(self, sid, pid, key):

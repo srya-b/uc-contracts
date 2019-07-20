@@ -180,13 +180,19 @@ class PaymentChannel_Functionality(object):
         ))
         self.blockno = blockno
 
+        # Currently this really only updates balances for deposits
+        # should add withdraws as well.
         for tx in txs:
-            _sid,_pid = tx[0]
-            assert _sid == self.sid
-            assert _pid == self.p1 or _pid == self.p2, 'p1:(%s), p2:(%s), sender:(%s)' % (self.p1, self.p2, _pid)
-            print('deposit from', tx[0], tx[1])
-            # tuple is (sender, val) add val to balances[sender]
-            self.balances[_pid] += tx[1]
+            _to,_fro,_val = tx
+          
+            if _to == (self.sid,self.pid):          # these are the deposits
+                _sid,_pid = _fro
+                if _pid == self.p1 or _pid == self.p2: self.balances[_pid] += _val
+            # withdraws are decremented instantly so that payments can't be made
+            # TODO: review sprites paper and see the wd_i shit that they do
+            #elif _fro == (self.sid,self.pid):       # these are withdraws
+            #    _sid,_pid = _to
+            #    if _pid == self.p1 or _pid == self.p2: self.balances[_pid] -= _val
 
     def backdoor_ping(self):
         self.process_buffer()
