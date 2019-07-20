@@ -73,15 +73,7 @@ gevent.spawn(pay_itm.run)
 '''p1 and p2 needs funds, so mine blocks and send them money'''
 z_mine_blocks(1, simparty, ledger_itm)
 z_send_money(10, p1, simparty, ledger_itm)
-#z_get_leaks(simitm, ledger_itm)
-#leaks = simitm.leakbuffer.pop(0)
-#fro,nonce = z_tx_leak(leaks)
-#z_delay_tx(simitm, fro, nonce, 1)
 z_send_money(10, p2, simparty, ledger_itm)
-#z_get_leaks(simitm, ledger_itm)
-#leaks= simitm.leakbuffer.pop(0)
-#fro,nonce= z_tx_leak(leaks)
-#z_delay_tx(simitm, fro, nonce, 1)
 z_set_delays(simitm, ledger_itm, [1,1])
 z_mine_blocks(1, simparty, ledger_itm)
 
@@ -92,13 +84,6 @@ Users deposit
 '''
 exe(p1.input.set( ('deposit', 10) ))
 exe(p2.input.set( ('deposit', 1) ))
-#z_get_leaks(simitm, ledger_itm)
-#leaks = simitm.leakbuffer.pop(0)
-#leaks = iter(z_tx_leaks(leaks))
-#fro,nonce = next(leaks)
-#z_delay_tx(simitm, fro, nonce, 1)
-#fro,nonce = next(leaks)
-#z_delay_tx(simitm, fro, nonce, 1)
 z_set_delays(simitm, ledger_itm, [1,1])
 z_mine_blocks(2, simparty, ledger_itm)
 
@@ -144,11 +129,6 @@ assert balance[0] == 10-2-4 and balance[1] == 1+2+4, 'p1:(%d), p2:(%d)' % (balan
 
 
 print('ADVERSARY corrupting p2 and sending payment...')
-#''' Adversray corrupt p2'''
-#exe(simitm.input.set(
-#    ('party-input', (p1.sid,p1.pid), 
-#        ('pay', 2))
-#))
 exe(simitm.input.set(
     ('party-input', (p2.sid, p2.pid), ('pay', 2))
 ))
