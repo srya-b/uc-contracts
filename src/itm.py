@@ -146,13 +146,14 @@ class ITMAdversary(object):
         for itm in itms:
             self.addParty(itm)
 
-    def partyInput(self, sid, pid, msg):
-        if (sid,pid) in self.parties:
-            print('sending to party....')
-            party = self.parties[sid,pid]
-            party.backdoor.set(msg)
-        else:
-            dump.dump()
+    def partyInput(self, to, msg):
+        self.F.input_msg(('party-input', to, msg))
+        #if (sid,pid) in self.parties:
+        #    print('sending to party....')
+        #    party = self.parties[sid,pid]
+        #    party.backdoor.set(msg)
+        #else:
+        #    dump.dump()
 
     def getLeaks(self, sid, pid):
         assert comm.isf(sid,pid)
@@ -191,8 +192,8 @@ class ITMAdversary(object):
             if r == self.input:
                 if msg[0] == 'party-input':
                     #msg = r.get()
-                    sid,pid = msg[1]
-                    self.partyInput(sid, pid, msg[2])
+                    #sid,pid = msg[1]
+                    self.partyInput(msg[1], msg[2])
                     #dump.dump()
                 elif msg[0] == 'get-leaks':
                     sid,pid = msg[1]
@@ -210,13 +211,13 @@ class ITMAdversary(object):
                     #dump.dump()
                 self.input = AsyncResult()
             elif r == self.leak:
-                print('processing leaks')
+                #print('processing leaks')
                 sender,msg = msg
                 sid,pid = sender
                 assert comm.isf(sid,pid)
-                print('leak leaks', self.leakbuffer)
+                #print('leak leaks', self.leakbuffer)
                 self.leakbuffer.append(msg)
-                print('leak leaks', self.leakbuffer)
+                #print('leak leaks', self.leakbuffer)
                 dump.dump()
                 self.leak = AsyncResult()
             else:

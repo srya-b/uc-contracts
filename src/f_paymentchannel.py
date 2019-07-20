@@ -30,6 +30,12 @@ class PaymentChannel_Functionality(object):
         self.adversary_out = qqueue()
         self.blockno = -1
 
+    def __str__(self):
+        return '\033[92mF_pay\033[0m'
+
+    def write(self, to, msg):
+        print(u'\033[92m{:>20}\033[0m -----> {}, msg={}'.format('F_pay', str(to), msg))
+
     def leak(self, msg):
         self.adversary_out.put((
             (self.sid, self.pid),
@@ -42,7 +48,14 @@ class PaymentChannel_Functionality(object):
         while not self.adversary_out.empty():
             leak = self.adversary_out.get()
             ret.append(leak)
-        return ret
+        self.adversary_out = qqueue()
+        adv = comm.adversary
+        self.write(adv, ('leaks', ret))
+        adv.leak.set((
+            (self.sid, self.pid),
+            ('leaks', ret)
+        ))
+        #return ret
 
     def other_party(self,sid,pid):
         if pid == self.p1:
@@ -95,21 +108,30 @@ class PaymentChannel_Functionality(object):
             dump.dump(); return
 
         self.leak( ('pay', (sid,pid), val) )
-#        dump.dump()
 
-        #print('sender subtract', self.balances[pid], val)
         self.balances[pid] -= val
         
         # If the sender is corrupted, delay the output to other P
         to_pid = self.other_party(sid,pid)
-        to_msg = ('receive', val)
-        #print(sid, pid, to_pid, val)
-
+        to_msg = ('receive', (sid,pid), (self.sid,self.pid), val)
+        
         if ishonest(sid,pid):   # If the receiver is honest, write 'pay' immediately
             self.balances[to_pid] += val
             self.write_output(sid, to_pid, to_msg)
-        else:   # If dishonest, delay delivery to simulate blockchain tx
-            self.buffer_output(sid, to_pid, to_msg)
+        else:   
+            # Instead of buffering and all, just submit the transaction
+            # to the blockchain and let the adversary delay it according 
+            # to the ledger rules. When pinged, the functionality will get
+            # transaction from the ledger and deliver the "receive" message
+            # TODO: g ledger needs make it easy to track the txs to/from 
+            # every address for easy access
+            self.G.input.set((
+                (self.sid, self.pid),
+                True,
+                (True, ('transfer', (sid,pid), val, (), (self.sid,self.pid)))
+            ))
+
+            #self.buffer_output(sid, to_pid, to_msg)
         dump.dump()
 
     ''' The channel pays out to the player withdrawing after some balance
@@ -143,7 +165,12 @@ class PaymentChannel_Functionality(object):
 
         while len(self.buffer_changes) and self.buffer_changes[0][0] <= blockno:
             no,sid,pid,msg = self.buffer_changes.pop(0)
-            self.outputs[sid,pid].put(msg)
+            self.G.input.set((
+                (self.sid,self.pid),
+                True,
+                (True, msg)
+            ))
+            #self.outputs[sid,pid].put(msg)
 
         '''Check the blockchain for new transactions'''
         txs = self.G.subroutine_call((
@@ -151,7 +178,6 @@ class PaymentChannel_Functionality(object):
             True,
             (True, ('get-txs', (self.sid,self.pid), blockno, self.blockno+1))
         ))
-
         self.blockno = blockno
 
         for tx in txs:
@@ -162,9 +188,20 @@ class PaymentChannel_Functionality(object):
             # tuple is (sender, val) add val to balances[sender]
             self.balances[_pid] += tx[1]
 
-    def backdoor_ping(self,sid,pid):
+    def backdoor_ping(self):
         self.process_buffer()
         dump.dump()
+
+    def adversary_msg(self, sender, msg):
+        sid,pid = None,None
+        if sender:
+            sid,pid = sender
+        if msg[0] == 'get-leaks':
+            self.getLeaks()
+        elif msg[0] == 'ping':
+            self.backdoor_ping()
+        else:
+            dump.dump()
 
     def input_msg(self, sender, msg):
         sid,pid = None,None
@@ -198,8 +235,8 @@ class PaymentChannel_Functionality(object):
             return None
         if msg[0] == 'balance':
             return self.subroutine_balance()
-        elif msg[0] == 'get-leaks':
-            return self.getLeaks()
+        #elif msg[0] == 'get-leaks':
+        #    return self.getLeaks()
 
 def PayITM(sid, pid, ledger, p1, p2):
     f = PaymentChannel_Functionality(sid,pid,ledger,p1,p2)
@@ -227,4 +264,55 @@ class C_Pay:
 
         self.balances[tx['sender']] += tx['value']
         return 1
+
+
+class Sim_Payment:
+    def __init__(self, sid, pid, G, F, crony, c_payment):
+        self.sid = sid
+        self.pid = pid
+        self.sender = (sid,pid)
+        self.crony = crony
+        self.cronysid = crony.sid
+        self.cronypid = crony.pid
+        self.G = G
+        self.F = F
+
+    def __str__(self):
+        return '\033[91mSimulator (%s, %s)\033[0m' % (self.sid, self.pid) 
+
+    def write(self, to, msg):
+        print('\033[91m{:>20}\033[0m -----> {}, msg={}'.format('Simulator (%s,%s)' % (self.sid, self.pid), str(to), msg))
+
+    def input_delay_tx(self, fro, nonce, rounds):
+        msg=('delay-tx', fro, nonce, rounds)
+        self.write(self.G, msg)
+        self.G.backdoor.set((
+            self.sender,
+            True,
+            (False, msg)
+        ))
+
+    def input_ping(self):
+        self.write(self.F, ('ping',))
+        self.F.backdoor.set((
+            self.sender,
+            True,
+            ('ping',)
+        ))
+
+    def input_party(self, to, msg):
+        self.write(self.crony, msg)
+        self.crony.backdoor.set(msg)
+
+    def input_msg(self, msg):
+        if msg[0] == 'delay-tx':
+            self.input_delay_tx(msg[1], msg[2], msg[3])
+        elif msg[0] == 'ping':
+            self.input_ping()
+        elif msg[0] == 'party-input':
+            self.input_party(msg[1], msg[2])
+        else:
+            dump.dump()
+
+
 

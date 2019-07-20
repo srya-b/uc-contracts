@@ -91,6 +91,9 @@ class Protected_Wrapper(object):
                 ''' Only a functionality can send a transaction FROM a random address.'''
                 if comm.isf(sid,pid):
                     fro = self.genym(_fro)
+                    #if len(rest):               # This means that the functionality has specified a delay
+                    #    deadline = rest[0]
+                    #    msg = ('transferf', to, val, data, fro, deadline)
                 else:
                     fro = self.genym(sender)
                 msg = (msg[0], to, val, data, fro)

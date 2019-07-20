@@ -2,11 +2,11 @@ import dump
 import comm
 import gevent
 from itm import ITMFunctionality, ITMPassthrough, ITMAdversary, createParties, ITMPrinterAdversary
-from utils import z_mine_blocks, z_send_money, z_get_balance
+from utils import z_mine_blocks, z_send_money, z_get_balance, z_get_leaks, z_tx_leak, z_tx_leaks, z_delay_tx, z_set_delays, print
 from g_ledger import Ledger_Functionality, LedgerITM
 from collections import defaultdict
 from gevent.queue import Queue, Channel
-from f_paymentchannel import PaymentChannel_Functionality, PayITM
+from f_paymentchannel import PaymentChannel_Functionality, PayITM, Sim_Payment
 from protected_wrapper import Protected_Wrapper, ProtectedITM
 
 
@@ -47,11 +47,22 @@ p1 = iparties[0]
 p2 = iparties[1]
 
 '''Adversary'''
-adversary = ITMAdversary('sid2',6)
-comm.setAdversary(adversary)
-adversary.addParty(p1); adversary.addParty(p2)
-gevent.spawn(adversary.run)
+#adversary = ITMAdversary('sid2',6)
+#comm.setAdversary(adversary)
+#adversary.addParty(p1); adversary.addParty(p2)
+#gevent.spawn(adversary.run)
 
+
+'''
+Simulator spawn
+'''
+simulator = Sim_Payment('sid', 7, ledger_itm, pay_itm, p2, 'rando')
+simitm = ITMAdversary('sid', 7)
+simitm.init(simulator)
+comm.setAdversary(simitm)
+gevent.spawn(simitm.run)
+print('P1:', p1.sid, p1.pid)
+print('P2:', p2.sid, p2.pid)
 
 '''
 Start functionality itms
@@ -62,16 +73,34 @@ gevent.spawn(pay_itm.run)
 '''p1 and p2 needs funds, so mine blocks and send them money'''
 z_mine_blocks(1, simparty, ledger_itm)
 z_send_money(10, p1, simparty, ledger_itm)
+#z_get_leaks(simitm, ledger_itm)
+#leaks = simitm.leakbuffer.pop(0)
+#fro,nonce = z_tx_leak(leaks)
+#z_delay_tx(simitm, fro, nonce, 1)
 z_send_money(10, p2, simparty, ledger_itm)
-z_mine_blocks(8, simparty, ledger_itm)
+#z_get_leaks(simitm, ledger_itm)
+#leaks= simitm.leakbuffer.pop(0)
+#fro,nonce= z_tx_leak(leaks)
+#z_delay_tx(simitm, fro, nonce, 1)
+z_set_delays(simitm, ledger_itm, [1,1])
+z_mine_blocks(1, simparty, ledger_itm)
 
+
+print('USERS DEPOSIT')
 '''
 Users deposit
 '''
 exe(p1.input.set( ('deposit', 10) ))
-z_mine_blocks(1, simparty, ledger_itm)
 exe(p2.input.set( ('deposit', 1) ))
-z_mine_blocks(8, simparty, ledger_itm)
+#z_get_leaks(simitm, ledger_itm)
+#leaks = simitm.leakbuffer.pop(0)
+#leaks = iter(z_tx_leaks(leaks))
+#fro,nonce = next(leaks)
+#z_delay_tx(simitm, fro, nonce, 1)
+#fro,nonce = next(leaks)
+#z_delay_tx(simitm, fro, nonce, 1)
+z_set_delays(simitm, ledger_itm, [1,1])
+z_mine_blocks(2, simparty, ledger_itm)
 
 '''Check channel balanace is correct'''
 balance = p1.subroutine_call(
@@ -115,16 +144,16 @@ assert balance[0] == 10-2-4 and balance[1] == 1+2+4, 'p1:(%d), p2:(%d)' % (balan
 
 
 print('ADVERSARY corrupting p2 and sending payment...')
-''' Adversray corrupt p2'''
-exe(adversary.input.set(
-    ('party-input', (p1.sid,p1.pid), 
-        ('pay', 2))
+#''' Adversray corrupt p2'''
+#exe(simitm.input.set(
+#    ('party-input', (p1.sid,p1.pid), 
+#        ('pay', 2))
+#))
+exe(simitm.input.set(
+    ('party-input', (p2.sid, p2.pid), ('pay', 2))
 ))
+z_set_delays(simitm, ledger_itm, [8])
+z_mine_blocks(8, simparty, ledger_itm)
 
-exe(adversary.input.set(
-    ('get-leaks', (pay_itm.sid,pay_itm.pid))
-))
-
-exe(adversary.input.set(
-    ('get-leaks', (ledger_itm.sid, ledger_itm.pid))
-))
+balance = p1.subroutine_call(('balance',))
+print(balance)

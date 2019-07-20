@@ -115,7 +115,7 @@ class Ledger_Functionality(object):
   
     def OUT(self,data,sender):
         nonce = self.nonces[sender]
-        print('DEBUG:', 'writing output for', sender, nonce)
+        #print('DEBUG:', 'writing output for', sender, nonce)
         if (sender,nonce) not in self.output:
             self.output[sender,nonce] = []
         self.output[sender,nonce].append(data)
@@ -147,6 +147,7 @@ class Ledger_Functionality(object):
         dump.dump()
 
     def input_transfer(self, sid, pid, to, val, data, fro):
+        print('TRANSFERRING to', to, 'sid,pid', sid, pid, 'val', val, 'fro', fro)
         assert self._balances[fro] >= val
         self.nonces[fro] += 1
         #self.txqueue[self.round + self.DELTA].append(('transfer', to, val, data, fro))
@@ -157,6 +158,16 @@ class Ledger_Functionality(object):
         # TODO: is this the right way to do it?
         print('[TX RECEIVED]', 'to (%s), from (%s), data (%s), val (%d)' % (to, fro, data, val))
         dump.dump()
+
+    ''' Functionality chooses how long to delay tx
+        Need to consider for other transactions as well where adversary can
+        delay tx like 'deposit'.'''
+    def input_transfer_f(self, sid, pid, fro, nonce, rounds):
+        print('Functionality transferring money')
+        assert self._balances[fro] >= val
+        self.nonces[fro] += 1
+        self.newtxs[fro,self.nonces[fro]] = ('transfer', to, val, data, fro)
+        self.input_delay_tx(sid,pid,fro,nonce,rounds)
 
     def input_contract_create(self, sid, pid, addr, val, data, private, fro):
         assert self._balances[fro] >= val
@@ -172,7 +183,7 @@ class Ledger_Functionality(object):
         # Leak to adversary only if not private
         self.leak( ((fro,self.nonces[fro]),('contract-create',addr,val,data,fro,private)) )
 
-        print('[DEBUG]', 'tx from', fro, 'creates contract', addr)
+        #print('[DEBUG]', 'tx from', fro, 'creates contract', addr)
         dump.dump()
 
     def exec_tx(self, sid, to, val, data, fro):
@@ -245,7 +256,7 @@ class Ledger_Functionality(object):
         sid,pid = None,None
         if sender:
             sid,pid = sender
-        print('DEBUG: ledger adversary msg', msg)
+        #print('DEBUG: ledger adversary msg', msg)
         if msg[0] == 'tick':
             print('adversary tick')
             self.input_tick_adversary(sid,pid,msg[1], msg[2])
@@ -267,6 +278,8 @@ class Ledger_Functionality(object):
             self.input_contract_create(sid, pid, msg[1], msg[2], msg[3], msg[4], msg[5])
         elif msg[0] == 'tick':
             self.input_tick_honest(sid, pid, msg[1])
+        elif msg[0] == 'transferf':
+            self.input_transfer_f(sid, pid, msg[1], msg[2], msg[3], msg[4])
         #elif msg[0] == 'delay-tx':
         #    self.input_delay_tx(sid, pid, msg[1], msg[2], msg[3])
         else:

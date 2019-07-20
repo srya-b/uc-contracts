@@ -330,6 +330,13 @@ class Sim_Multisig:
     #    print('SIMULATOR got source:', source[:20])
     #    return source
 
+    def input_party_input(self, sid, pid, msg):
+        assert sid == self.cronysid
+        assert pid == self.cronypid
+
+        self.write(self.crony, msg)
+        crony.backdoor.set(msg)
+
     def input_msg(self, msg):
         if msg[0] == 'transfer':
             self.input_transfer(msg[1], msg[2])
@@ -341,6 +348,8 @@ class Sim_Multisig:
             self.input_tick(msg[1])
         elif msg[0] == 'delay-tx':
             self.input_delay_tx(msg[1], msg[2], msg[3])
+        elif msg[0] == 'party-input':
+            self.input_party_input(msg[1], msg[2], msg[3])
         else:
             dump.dump()
 

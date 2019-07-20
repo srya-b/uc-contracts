@@ -36,6 +36,13 @@ def z_tx_leak(msg):
     fro,nonce = fro
     return fro,nonce
 
+def z_tx_leaks(msg):
+    _,leaks = msg
+    for sender,leak in leaks:
+        fro,tx = leak
+        fro,nonce = fro
+        yield fro,nonce
+
 def z_delay_tx(adv, fro, nonce, rounds):
     adv.input.set( ('delay-tx', fro, nonce, rounds) )
     dump.dump_wait()
@@ -49,6 +56,18 @@ def z_get_leaks(itm, ledger):
     #    ('get-leaks',)
     #))
     dump.dump_wait()
+
+def z_set_delays(itm, ledger, delays):
+    z_get_leaks(itm,ledger)
+    leaks = itm.leakbuffer.pop(0)
+    
+    for i,(delay,leak) in enumerate(zip(delays,z_tx_leaks(leaks))):
+        fro,nonce = leak
+        z_delay_tx(itm, fro, nonce, delay)
+        print('(from,nonce)=({},{}), delay={}'.format(fro,nonce,delay))
+    print('delays={}, leaks={}, iterations={}'.format(len(delays), len(leaks), i+1))
+
+    print("Dome with all the leaks")
 
 def z_mine_block_perm(perm, itm):
     itm.input.set(

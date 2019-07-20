@@ -73,9 +73,13 @@ def setParties(parties):
         setParty(p)
 
 def corrupt(sid,pid):
+    global corrupted
     corrupted[sid,pid] = True
 
 def isdishonest(sid,pid):
+    global corrupted
     return corrupted[sid,pid]
+
 def ishonest(sid,pid):
+    global corrupted
     return not corrupted[sid,pid]

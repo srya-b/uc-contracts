@@ -59,9 +59,26 @@
 \section{Related Works}
 \input{sections/relatedworks}
 
-\input{figures/exec_tx}
+\begin{figure}[!ht]
+	\input{figures/exec_tx}
+	\label{fig:functionality:exectx}
+\end{figure}
+
+\begin{figure}[!ht]
 \input{figures/exec_contract_create}
+\label{fig:functionality:execcreate}
+\end{figure}
+
+\begin{figure}[!ht]
 \input{figures/g_ledger}
+	\caption{Ideal functionality representing a basic ledger with adversarial methods for delaying/reordering transactions and smart contract support}
+	\label{fig:functionality:ledger}
+\end{figure}
+
+\begin{figure}
+	\input{figures/protected_wrapper}
+	\caption{Protection wrapper for the ledger to maintain indistinguishability.}
+\end{figure}
 %\begin{bbox}[title=asd]
 %hello
 %\end{bbox}
