@@ -20,6 +20,9 @@ from gevent.queue import Channel, Queue
     keys. Then the contract address is different, so contract can be distinguished
     since information about nonces and address is known
 
+    sid access is also restricted. Only those in the same sid can access a
+    private contracts. 
+
     Q: Why is it necessary to have this extra layer if all it does is translate
         sid,pid pairs into addresses? Couldn't you just have g_ledger deal with
         only sid,pid pairs?
@@ -172,7 +175,6 @@ class Protected_Wrapper(object):
         #else:
         #    msg = _msg
         #    wrapper = True
-
         if comm.isf(sid,pid) or comm.isadversary(sid,pid):
             try:
                 wrapper,msg = _msg
@@ -212,6 +214,11 @@ class Protected_Wrapper(object):
                     outputs.append( (self.genym(sender), _nonce))
                 msg = (msg[0], outputs)
                 return self.ledger.subroutine_msg(sender, msg)
+            elif msg[0] == 'contract-ref':
+                _,_addr = msg
+                if self.iscontract(_addr):
+                    if _addr in self.private and sid != self.private[to]:
+                        return self.ledger.subroutine_msg(sender,msg)
             else:
                 return self.ledger.subroutine_msg(sender, msg)
         else:

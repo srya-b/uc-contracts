@@ -1,5 +1,6 @@
 import dump
 import comm
+import copy
 import gevent
 import inspect
 from itm import ITMFunctionality
@@ -86,7 +87,6 @@ class Ledger_Functionality(object):
 
     def get_caddress(self, sid, pid, addr):
         sender = (sid,pid)
-        print('PARAMS OF GET CADDRESS', sender, addr, self.nonces[addr]+1)
         return sha256(addr.encode() + str(self.nonces[addr]+1).encode()).hexdigest()[24:]
 
     def txref(self, val, sender):
@@ -100,6 +100,18 @@ class Ledger_Functionality(object):
         #print('[DEBUG]:', 'writing output for (%s,%s)' % (sid,pid))
         self.outputs[sid,pid].put(self._balances[addr])
         return self._balances[addr]
+
+    def get_txs(self, sid, pid, addr, to, fro):
+        if fro >= to: return []
+        output = []
+        for blockno in range(fro,to+1):
+            txqueue = self.txqueue[blockno]
+            for tx in txqueue:
+                if tx[0] == 'transfer':
+                    to,val,data,fro = tx[1:]
+                    if to == addr or fro == addr:
+                        output.append((to,fro,val))
+        return output
 
     def CALL(self,to,fro,data,amt):
         if self._balances[fro] < amt: return 0
@@ -142,7 +154,6 @@ class Ledger_Functionality(object):
         tx = self.newtxs[fro,nonce]
         self.txqueue[self.round + rounds].append( tx )
         del self.newtxs[fro,nonce]
-        print('Tx {},{} delayed by {}'.format(fro, nonce, rounds))
         dump.dump()
 
     def input_transfer(self, sid, pid, to, val, data, fro):
@@ -191,7 +202,7 @@ class Ledger_Functionality(object):
         self._balances[addr] += val
         contract,args = data
         # TODO: just make the contract def the init function
-        functions = contract(self.CALL, self.OUT)
+        functions = contract(addr, self.CALL, self.OUT)
         self.contracts[addr] = functions
         print('[CONTRACT CREATE]', 'contract: (%s)' % (addr))
         r = getattr(self.contracts[addr], 'init')(*args, self.txref(val,fro))
@@ -202,11 +213,14 @@ class Ledger_Functionality(object):
             self._balances[fro] += val
             self._balances[addr] -= val
 
+    def subroutine_contractref(self, sid, pid, addr):
+        return copy.deepcopy(self.contracts[addr])
+
     def input_tick_honest(self, sid, pid, sender):
         self.round += 1
         # WHAT DOES DELAY LOOK LIKE IN PYTHON
         self._balances[sender] += 100000
-        for tx in self.txqueue[self.round]:
+        for tx in self.txqueue[self.round-1]:
             if tx[0] == 'transfer':
                 self.exec_tx(sid, tx[1], tx[2], tx[3], tx[4])
             elif tx[0] == 'contract-create':
@@ -279,6 +293,10 @@ class Ledger_Functionality(object):
             return self.block_number(sid, pid)
         elif msg[0] == 'get-contract':
             return self.get_contract(sid, pid, msg[1])
+        elif msg[0] == 'get-txs':
+            return self.get_txs(sid, pid, msg[1], msg[2], msg[3])
+        elif msg[0] == 'contract-ref':
+            return self.subroutine_contractred(sid, pid, msg[1])
 
 
 def LedgerITM(sid, pid):

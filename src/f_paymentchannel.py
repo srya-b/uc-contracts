@@ -176,7 +176,7 @@ class PaymentChannel_Functionality(object):
         txs = self.G.subroutine_call((
             (self.sid,self.pid),
             True,
-            (True, ('get-txs', (self.sid,self.pid), blockno, self.blockno+1))
+            (True, ('get-txs', (self.sid,self.pid), blockno, self.blockno))
         ))
         self.blockno = blockno
 
@@ -187,7 +187,9 @@ class PaymentChannel_Functionality(object):
           
             if _to == (self.sid,self.pid):          # these are the deposits
                 _sid,_pid = _fro
-                if _pid == self.p1 or _pid == self.p2: self.balances[_pid] += _val
+                if _pid == self.p1 or _pid == self.p2: 
+                    print('GOT DEPOSIT')
+                    self.balances[_pid] += _val
             # withdraws are decremented instantly so that payments can't be made
             # TODO: review sprites paper and see the wd_i shit that they do
             #elif _fro == (self.sid,self.pid):       # these are withdraws
@@ -259,7 +261,7 @@ class C_Pay:
         self.p1, self.p2 = None,None
         self.balances = defaultdict(int)
         
-    def init(sef, p1, p2, tx):
+    def init(self, p1, p2, tx):
         self.p1 = p1
         self.p2 = p2
 

@@ -5,14 +5,23 @@ global _dump
 _dump = AsyncResult()
 
 def dump_clear():
+    global _dump
     _dump = AsyncResult()
 
 def dump():
+    global _dump
     _dump.set(0)
 
+def dump_check():
+    global _dump
+    return _dump.ready()
+
+
 def dump_wait():
+    global _dump
     gevent.wait([_dump])
     dump_clear()
 
 def isset():
+    global _dump
     return _dump.ready()

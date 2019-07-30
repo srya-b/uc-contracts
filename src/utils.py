@@ -1,6 +1,7 @@
 from __future__ import print_function
 import inspect
 import dump
+import gevent 
 
 def contracts_same(contract1, contract2):
     type1 = type(contract1)
@@ -90,6 +91,12 @@ def z_send_money(v, to, itm, ledger):
     )
     dump.dump_wait()
 
+def z_send_tx(val, to, data, itm, ledger):
+    itm.input.set(
+        ('transfer', (to.sid,ro.pid), val, data, 'doest matter') 
+    )
+    dump.dump_wait()
+
 def z_get_balance(itm, simparty, ledger):
     sender = (simparty.sid, simparty.pid)
     return ledger.subroutine_call((
@@ -98,6 +105,40 @@ def z_get_balance(itm, simparty, ledger):
         ('getbalance', (itm.sid, itm.pid))
     ))
 
+def z_deploy_contract(itm, adv, ledger, contract):
+    caddr = itm.subroutine_call( ('get-caddress',) )
+    
+    itm.input.set(
+        ('contract-create', caddr, 0, (contract,()), False, 'bad')
+    )
+    dump.dump_wait()
+    z_set_delays(adv, ledger, [0])
+    z_mine_blocks(1, itm, ledger)
+    return caddr
+
+def z_mint(itm, ledger, *to):
+    for t in to:
+        z_send_money(10, to, itm, ledger)
+    z_set_delays(itm, ledger, [0 for _ in range(len(t))])
+    z_mine_blocks(1, itm, ledger)
+
+def z_start_ledger(sid, pid, cledger, cwrapperitm):
+    g_ledger = cledger(sid,pid)
+    protected, ledger_itm = cwrapperitm(sid,pid,g_ledger)
+    gevent.spawn(ledger_itm.run)
+    return g_ledger, protected, ledger_itm
+
+def z_ideal_parties(sid,pids,itm,f):
+    iparties = f(sid,pids,itm)
+    for party in iparties:
+        gevent.spawn(party.run)
+    return iparties
+
+def z_sim_party(sid,pid,citm,itm):
+    simparty = citm(sid,pid)
+    simparty.init(itm)
+    gevent.spawn(simparty.run)
+    return simparty
 
 try:
     import __builtin__
