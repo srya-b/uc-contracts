@@ -43,6 +43,10 @@ class PaymentChannel_Functionality(object):
             msg
         ))
 
+    def other(self,pid):
+        if pid == self.p1: return self.p2
+        elif pid == self.p2: return self.p1
+
     def getLeaks(self):
         ret = []
         while not self.adversary_out.empty():
@@ -125,11 +129,12 @@ class PaymentChannel_Functionality(object):
             # transaction from the ledger and deliver the "receive" message
             # TODO: g ledger needs make it easy to track the txs to/from 
             # every address for easy access
-            self.G.input.set((
-                (self.sid, self.pid),
-                True,
-                (True, ('transfer', (sid,pid), val, (), (self.sid,self.pid)))
-            ))
+            #self.G.input.set((
+            #    (self.sid, self.pid),
+            #    True,
+            #    (True, ('transfer', (sid,pid), val, (), (self.sid,self.pid)))
+            #))
+            self.buffer_output(sid,pid,('pay',val))
 
             #self.buffer_output(sid, to_pid, to_msg)
         dump.dump()
@@ -165,11 +170,18 @@ class PaymentChannel_Functionality(object):
 
         while len(self.buffer_changes) and self.buffer_changes[0][0] <= blockno:
             no,sid,pid,msg = self.buffer_changes.pop(0)
-            self.G.input.set((
-                (self.sid,self.pid),
-                True,
-                (True, msg)
-            ))
+            if msg[0] == 'pay':
+                val = msg[1]
+                to_pid = self.other(pid)
+                print('Delivering pay to pid={}'.format(to_pid))
+                self.balances[to_pid] += val
+                self.write_output(sid, to_pid, msg)
+                print('Updated balance')
+            #self.G.input.set((
+            #    (self.sid,self.pid),
+            #    True,
+            #    (True, msg)
+            #))
             #self.outputs[sid,pid].put(msg)
 
         '''Check the blockchain for new transactions'''

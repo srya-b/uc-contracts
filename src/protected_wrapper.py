@@ -145,7 +145,7 @@ class Protected_Wrapper(object):
             txqueue = self.ledger.txqueue[blockno]
             for tx in txqueue:
                 if tx[0] == 'transfer':
-                    to,val,data,fro = tx[1:]
+                    to,val,data,fro,nonce = tx[1:]
                     if to == addr or fro == addr:
                         output.append((to, fro, val))  # Append (sender, amount)
 
@@ -156,7 +156,7 @@ class Protected_Wrapper(object):
         return output
 
     def subroutine_get_addr(self, sid, pid, key):
-        if not comm.isf(sid,pid) and not comm.isadversary(sid.pid):
+        if not comm.isf(sid,pid) and not comm.isadversary(sid,pid) and (sid,pid) != key:
             return None
 
         if key in self.addresses:
@@ -187,7 +187,7 @@ class Protected_Wrapper(object):
 
         if wrapper:
             if msg[0] == 'genym':
-                return self.subroutine_genym(sid,pid)
+                return self.genym((sid,pid))
             elif msg[0] == 'getbalance':
                 #print('[protected] getbalance subroutine call')
                 _,_addr = msg
@@ -217,7 +217,10 @@ class Protected_Wrapper(object):
             elif msg[0] == 'contract-ref':
                 _,_addr = msg
                 if self.iscontract(_addr):
-                    if _addr in self.private and sid != self.private[to]:
+                    if _addr in self.private:
+                        if sid == self.private[to]:
+                            return self.ledger.subroutine_msg(sender,msg)
+                    else:
                         return self.ledger.subroutine_msg(sender,msg)
             else:
                 return self.ledger.subroutine_msg(sender, msg)

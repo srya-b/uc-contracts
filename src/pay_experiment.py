@@ -35,10 +35,6 @@ def exe(result):
 '''
 Blockchain Functionality
 '''
-#g_ledger = Ledger_Functionality('sid1', 0)
-#protected,ledger_itm = ProtectedITM('sid1', 0, g_ledger)
-#comm.setFunctionality(ledger_itm)
-#gevent.spawn(ledger_itm.run)
 g_ledger, protected, ledger_itm = z_start_ledger('sid1',0,Ledger_Functionality,ProtectedITM)
 comm.setFunctionality(ledger_itm)
 
@@ -51,20 +47,12 @@ comm.setFunctionality(pay_itm)
 '''
 Ideal world parties
 '''
-#iparties = createParties('sid2', range(2,4), pay_itm)
-#comm.setParties(iparties)
-#for party in iparties:
-#    gevent.spawn(party.run)
 iparties = z_ideal_parties('sid2', [2,3], pay_itm, createParties)
 comm.setParties(iparties)
 
 ''' 
 Extra party
 '''
-#simparty = ITMPassthrough('sid2', 23)
-#comm.setParty(simparty)
-#simparty.init(ledger_itm)
-#gevent.spawn(simparty.run)
 simparty = z_sim_party('sid2', 23, ITMPassthrough, ledger_itm)
 comm.setParty(simparty)
 #################### EXPERIMENT ########################
@@ -121,29 +109,17 @@ assert balance[0] == 10 and balance[1] == 1
     ....ok....
 '''
 
-exe(p1.input.set(
-    ('pay', 2)
-))
-balance = p2.subroutine_call(
-    ('balance',)
-)
+exe(p1.input.set(('pay', 2)))
+balance = p2.subroutine_call(('balance',))
 print('balance', balance)
 assert balance[0] == 10-2 and balance[1] == 1+2, 'p1:(%d), p2:(%d)' % (balance[0], balance[1])
 
 
 ''' p1 multiple pays'''
-exe(p1.input.set(
-    ('pay', 1)
-))
-exe(p1.input.set(
-    ('pay', 1)
-))
-exe(p1.input.set(
-    ('pay', 1)
-))
-exe(p1.input.set(
-    ('pay', 1)
-))
+exe(p1.input.set(('pay', 1)))
+exe(p1.input.set(('pay', 1)))
+exe(p1.input.set(('pay', 1)))
+exe(p1.input.set(('pay', 1)))
 
 balance = p2.subroutine_call(
     ('balance',)

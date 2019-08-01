@@ -102,15 +102,19 @@ class Ledger_Functionality(object):
         return self._balances[addr]
 
     def get_txs(self, sid, pid, addr, to, fro):
-        if fro >= to: return []
+        if fro > to: return []
         output = []
+#        print('txqueue round={}, queue={}'.format(fro-1, self.txqueue[fro-1]))
         for blockno in range(fro,to+1):
             txqueue = self.txqueue[blockno]
+#            print('txqueue round={}, queue={}, to={}, from={}'.format(blockno,txqueue,to,fro))
             for tx in txqueue:
                 if tx[0] == 'transfer':
-                    to,val,data,fro = tx[1:]
+                    ########
+                    to,val,data,fro,nonce = tx[1:]
                     if to == addr or fro == addr:
-                        output.append((to,fro,val))
+                        output.append((to,fro,val,data,nonce))
+        #print('Returning transactions:', output)
         return output
 
     def CALL(self,to,fro,data,amt):
@@ -129,6 +133,7 @@ class Ledger_Functionality(object):
         nonce = self.nonces[sender]
         if (sender,nonce) not in self.output:
             self.output[sender,nonce] = []
+        print('PRINT: sender={}, msg={}'.format(sender, data))
         self.output[sender,nonce].append(data)
 
     def Exec(self,to,val,data,fro):
@@ -152,7 +157,7 @@ class Ledger_Functionality(object):
 
     def input_delay_tx(self, sid, pid, fro, nonce, rounds):
         tx = self.newtxs[fro,nonce]
-        self.txqueue[self.round + rounds].append( tx )
+        self.txqueue[self.round + rounds].append( (*tx, nonce) )
         del self.newtxs[fro,nonce]
         dump.dump()
 
@@ -214,7 +219,7 @@ class Ledger_Functionality(object):
             self._balances[addr] -= val
 
     def subroutine_contractref(self, sid, pid, addr):
-        return copy.deepcopy(self.contracts[addr])
+        return self.contracts[addr]
 
     def input_tick_honest(self, sid, pid, sender):
         self.round += 1
@@ -296,7 +301,7 @@ class Ledger_Functionality(object):
         elif msg[0] == 'get-txs':
             return self.get_txs(sid, pid, msg[1], msg[2], msg[3])
         elif msg[0] == 'contract-ref':
-            return self.subroutine_contractred(sid, pid, msg[1])
+            return self.subroutine_contractref(sid, pid, msg[1])
 
 
 def LedgerITM(sid, pid):
