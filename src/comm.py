@@ -85,6 +85,15 @@ def ishonest(sid,pid):
     global corrupted
     return not corrupted[sid,pid]
 
+def id2input(self, identifier):
+    global itmmap
+    return itmmap[identifier].input
+
+def id2backdoor(self, identifier)
+    global itmmap
+    return itmmap[identifier].backdoor
+    
+
 import dump
 import gevent
 from gevent.queue import Queue, Channel, Empty
@@ -103,48 +112,106 @@ There are 2 options with channels:
         desired construction is that all channels connect to the 
         simulator and the simulator can control the output messages
         to the actual intended recipient.
+
+Design Decision:
+    * Instead 'to' and 'fro' will be just identifiers of the form
+        (sid,pid). Having 'to' be the AsyncResult itself means the 
+        code will still be at the mercy of having to spawn itms
+        in a specific order based on the protocol at hand. Which
+        really blows.
+    * Can't be ^ (above) either. If 'to' is the identifier and the
+        itm is got from 'comm' then you're fucked because you have 
+        to fake an identifier and register is in 'comm' for the 
+        simulator to be able to sandbox run the adversary and
+        intercept outputs.
+    * Actually, shit the channel has to be the AsyncResult itself
+        that's the only way. That's the way it was the first time
+        idk how I convinced myself to change it. rip
 '''
-class Channel(object):
-    '''
-        'to': must be of type AsyncResult from gevent
-        'fro': Simply the identity of the writing party.
-                Furthermore, a channel can only be written to
-                by the correct party, not just anyone.
-    '''
+class Channel(AsyncResult):
     def __init__(self, to, fro):
+        AsyncResult.__init__(self)
         self.to = to
         self.fro = fro
 
-class P2F(Channel):
-    def __init__(self, *args):
-        Channel.__init__(self, *args)
+    def _write(self, data): self.set( data )
+    def read(self): self.get()
+    def read_nowait(self): self.get_nowait()
 
-    def write(self, data):
-        self.to.set( (self.fro, True, data) ) 
+class P2F(Channel):
+    def __init__(self, *args): Channel.__init__(self, *args)
+    def write(self, data): self._write( (self.fro, True, data) ) 
 
 class P2G(Channel):
-    ''' See comments above '''
-    def __init__(self, *args):
-        Channel.__init__(self, *args)
-
-    def write(self, data):
-        self.to.set( (self.fro, True, (True, data)) )
+    def __init__(self, *args): Channel.__init__(self, *args)
+    def write(self, data): self._write( (self.fro, True, (True, data)) )
 
 class F2G(Channel):
-    ''' See above '''
-    def __init__(self, *args):
-        Channel.__init__(*args)
-
-    def write(self, data):
-        x,y = data
-        assert type(x) == bool
-        assert type(y) == tuple
-        self.to.set( (self.fro, True, data) )
+    def __init__(self, *args): Channel.__init__(self, *args)
+    def write(self, data): self._write( (self.fro, True, data) ) 
 
 class A2G(F2G):
-    def __init__(self, *args):
-        F2G.__init__(self, *args)
+    def __init__(self, *args): Channel.__init__(self, *args)
 
+class A2P(Channel):
+    def __init__(self, *args): Channel.__init__(self, *args)
+    def write(self, data): self._write(data)
+    
 class F2P(Channel):
-    def __init__(self, *args):
-        Channel.__init__(self, *args)
+    def __init__(self, *args): Channel.__init__(self, *args)
+
+#class Channel(object):
+#    '''
+#        'to': identity of receiving party
+#        'fro': Simply the identity of the writing party.
+#                Furthermore, a channel can only be written to
+#                by the correct party, not just anyone.
+#    '''
+#    def __init__(self, to, fro):
+#        self.to = to
+#        self.fro = fro
+#        self._data = AsyncResult()
+#
+#class P2F(Channel):
+#    def __init__(self, *args):
+#        Channel.__init__(self, *args)
+#
+#    def write(self, data):
+#        print('DEBUG: Writing {} ==> {}'.format(self.fro,self.to))
+#        id2input(self.to).set( (self.fro, True, data) )
+#
+#class P2G(Channel):
+#    ''' See comments above '''
+#    def __init__(self, *args):
+#        Channel.__init__(self, *args)
+#
+#    def write(self, data):
+#        print('DEBUG: Writing {} ==> {}'.format(self.fro,self.to))
+#        id2input(self.to).set( (self.fro, True, (True, data)) )
+#
+#class F2G(Channel):
+#    ''' See above '''
+#    def __init__(self, *args):
+#        Channel.__init__(*args)
+#
+#    def write(self, data):
+#        x,y = data
+#        assert type(x) == bool
+#        assert type(y) == tuple
+#        id2input(self.to).set( (self.fro, True, data) )
+#
+#class A2G(F2G):
+#    def __init__(self, *args):
+#        F2G.__init__(self, *args)
+#
+#    def write(self, data):
+#        x,y = data
+#        assert type(x) == bool 
+#
+#class A2P(Channel):
+#    def __init__(self, *args):
+#        F2G.__init__(self, *args)
+#    
+#class F2P(Channel):
+#    def __init__(self, *args):
+#        Channel.__init__(self, *args)
