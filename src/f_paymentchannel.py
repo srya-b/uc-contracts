@@ -5,6 +5,7 @@ from comm import ishonest, isdishonest, isadversary
 from queue import Queue as qqueue
 from hashlib import sha256
 from collections import defaultdict
+from gevent.event import AsyncResult
 from gevent.queue import Queue, Channel
 
 class PaymentChannel_Functionality(object):
@@ -86,9 +87,7 @@ class PaymentChannel_Functionality(object):
         self.G.input.set((
             (self.sid, self.pid),
             True,
-            (True,
-                ('transfer', (self.sid,self.pid), val, (), (sid,pid))
-            )
+            (True,('transfer', (self.sid,self.pid), val, (), (sid,pid)))
         ))
 
     def subroutine_block_number(self):
@@ -200,7 +199,6 @@ class PaymentChannel_Functionality(object):
             if _to == (self.sid,self.pid):          # these are the deposits
                 _sid,_pid = _fro
                 if _pid == self.p1 or _pid == self.p2: 
-                    print('GOT DEPOSIT')
                     self.balances[_pid] += _val
             # withdraws are decremented instantly so that payments can't be made
             # TODO: review sprites paper and see the wd_i shit that they do
@@ -285,15 +283,26 @@ class C_Pay:
         self.balances[tx['sender']] += tx['value']
         return 1
 
-
+'''
+The problem is that the adversary expects inputs to be references to
+the itms themselves. This means that for the simulator to wait for 
+a 'write' event going out woult have to pass it fake itm instances
+that the simulator would have to create and input and modify. With
+channels instead, the simulator can make the destination w/e it wants
+to be and he adversary remains unchanged.
+'''
 class Sim_Payment:
-    def __init__(self, sid, pid, G, F, crony, c_payment):
+    def __init__(self, sid, pid, G, F, adv, crony, c_payment):
         self.sid = sid
         self.pid = pid
         self.sender = (sid,pid)
         self.crony = crony
         self.cronysid = crony.sid
         self.cronypid = crony.pid
+        self.a2G = AsyncResult()
+        self.a2F = AsyncResult()
+        self.a2p = AsyncResult()
+        self.adv = adv('na', 0, self.a2G, self.a2F, self.a2p, c_payment)
         self.G = G
         self.F = F
 
@@ -303,34 +312,52 @@ class Sim_Payment:
     def write(self, to, msg):
         print('\033[91m{:>20}\033[0m -----> {}, msg={}'.format('Simulator (%s,%s)' % (self.sid, self.pid), str(to), msg))
 
-    def input_delay_tx(self, fro, nonce, rounds):
-        msg=('delay-tx', fro, nonce, rounds)
-        self.write(self.G, msg)
-        self.G.backdoor.set((
-            self.sender,
-            True,
-            (False, msg)
-        ))
+#    def input_delay_tx(self, fro, nonce, rounds):
+#        msg=('delay-tx', fro, nonce, rounds)
+#        self.write(self.G, msg)
+#        self.G.backdoor.set((
+#            self.sender,
+#            True,
+#            (False, msg)
+#        ))
 
-    def input_ping(self):
-        self.write(self.F, ('ping',))
-        self.F.backdoor.set((
-            self.sender,
-            True,
-            ('ping',)
-        ))
+    def input_tick(self,msg):
+        self.adv.input_msg(msg)
 
     def input_party(self, to, msg):
         self.write(self.crony, msg)
         self.crony.backdoor.set(msg)
 
+    def input_tick(self, permutation):
+        msg = (self.sender, True, (True, ('tick', perm)))
+        self.write(self.G, msg)
+        self.G.backdoor.set((
+            self.sender,
+            True,
+            (True, ('tick', perm))
+        ))
+
+    '''
+        Get contract code at addr
+    '''
+    def subroutine_get_contract(self, addr):
+        # Get the mapping from (sid,pid) of F to address
+        f_addr = self.G.subroutine_call((
+            (self.sid,self.pid),
+            True,
+            ('get-addr', addr)
+        ))
+
+        assert f_addr is not None
+
+        if f_addr == addr:
+            return 'lulz'
+    
     def input_msg(self, msg):
-        if msg[0] == 'delay-tx':
-            self.input_delay_tx(msg[1], msg[2], msg[3])
-        elif msg[0] == 'ping':
-            self.input_ping()
-        elif msg[0] == 'party-input':
+        if msg[0] == 'party-input':
             self.input_party(msg[1], msg[2])
+        elif msg[0] == 'tick':
+            self.input_tick(msg[1])
         else:
             dump.dump()
 

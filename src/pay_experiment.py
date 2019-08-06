@@ -7,6 +7,7 @@ from g_ledger import Ledger_Functionality, LedgerITM
 from collections import defaultdict
 from gevent.queue import Queue, Channel
 from f_paymentchannel import PaymentChannel_Functionality, PayITM, Sim_Payment
+from pay_protocol import Adv, Contract_Pay
 from protected_wrapper import Protected_Wrapper, ProtectedITM
 
 
@@ -32,44 +33,28 @@ Final balance in the contract:
 def exe(result):
     dump.dump_wait()
 
-'''
-Blockchain Functionality
-'''
+'''Blockchain Functionality'''
 g_ledger, protected, ledger_itm = z_start_ledger('sid1',0,Ledger_Functionality,ProtectedITM)
 comm.setFunctionality(ledger_itm)
-
-'''
-Payment Channel functionality
-'''
+'''Payment Channel functionality'''
 idealf, pay_itm = PayITM('sid2',1, ledger_itm, 2, 3)
 comm.setFunctionality(pay_itm)
-
-'''
-Ideal world parties
-'''
+'''Ideal world parties'''
 iparties = z_ideal_parties('sid2', [2,3], pay_itm, createParties)
 comm.setParties(iparties)
-
-''' 
-Extra party
-'''
+''' Extra party'''
 simparty = z_sim_party('sid2', 23, ITMPassthrough, ledger_itm)
 comm.setParty(simparty)
 #################### EXPERIMENT ########################
 p1 = iparties[0]
 p2 = iparties[1]
-
 '''Adversary'''
 #adversary = ITMAdversary('sid2',6)
 #comm.setAdversary(adversary)
 #adversary.addParty(p1); adversary.addParty(p2)
 #gevent.spawn(adversary.run)
-
-
-'''
-Simulator spawn
-'''
-simulator = Sim_Payment('sid', 7, ledger_itm, pay_itm, p2, 'rando')
+'''Simulator spawn'''
+simulator = Sim_Payment('sid', 7, ledger_itm, pay_itm, Adv, p2, Contract_Pay)
 simitm = ITMAdversary('sid', 7)
 simitm.init(simulator)
 comm.setAdversary(simitm)
@@ -77,9 +62,7 @@ gevent.spawn(simitm.run)
 print('P1:', p1.sid, p1.pid)
 print('P2:', p2.sid, p2.pid)
 
-'''
-Start functionality itms
-'''
+'''Start functionality itms'''
 gevent.spawn(pay_itm.run)
 
 '''p1 and p2 needs funds, so mine blocks and send them money'''

@@ -1,4 +1,5 @@
 from collections import defaultdict
+from gevent.event import AsyncResult
 
 global commap
 global corrupted
@@ -83,3 +84,67 @@ def isdishonest(sid,pid):
 def ishonest(sid,pid):
     global corrupted
     return not corrupted[sid,pid]
+
+import dump
+import gevent
+from gevent.queue import Queue, Channel, Empty
+
+'''
+There are 2 options with channels:
+    1. The channels are greenlets themselves where they wait for
+        the AsyncResult to be set and then write the result to the
+        input of the 'to' itm. However, the channel itself needs
+        to be the input to the itm, otherwise there's just an extra
+        layer that ads another call to it.
+    2. Calling 'write' on the channel writes to the input tape of the
+        'to' itm. This allows the same interface for the party that's
+        writing, but the recipient can be someone different. If the
+        simulator want to run a sandbox of the adversary, then the 
+        desired construction is that all channels connect to the 
+        simulator and the simulator can control the output messages
+        to the actual intended recipient.
+'''
+class Channel(object):
+    '''
+        'to': must be of type AsyncResult from gevent
+        'fro': Simply the identity of the writing party.
+                Furthermore, a channel can only be written to
+                by the correct party, not just anyone.
+    '''
+    def __init__(self, to, fro):
+        self.to = to
+        self.fro = fro
+
+class P2F(Channel):
+    def __init__(self, *args):
+        Channel.__init__(self, *args)
+
+    def write(self, data):
+        self.to.set( (self.fro, True, data) ) 
+
+class P2G(Channel):
+    ''' See comments above '''
+    def __init__(self, *args):
+        Channel.__init__(self, *args)
+
+    def write(self, data):
+        self.to.set( (self.fro, True, (True, data)) )
+
+class F2G(Channel):
+    ''' See above '''
+    def __init__(self, *args):
+        Channel.__init__(*args)
+
+    def write(self, data):
+        x,y = data
+        assert type(x) == bool
+        assert type(y) == tuple
+        self.to.set( (self.fro, True, data) )
+
+class A2G(F2G):
+    def __init__(self, *args):
+        F2G.__init__(self, *args)
+
+class F2P(Channel):
+    def __init__(self, *args):
+        Channel.__init__(self, *args)

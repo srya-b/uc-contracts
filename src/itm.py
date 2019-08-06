@@ -40,7 +40,6 @@ class ITMFunctionality(object):
             assert len(ready) == 1
             r = ready[0]
             sender,reveal,msg = r.get()
-            #print('Ready before, input={}, backdoor={}'.format(self.input.ready(),self.backdoor.ready()))
             if r == self.input:
                 self.F.input_msg(None if not reveal else sender, msg)
                 self.input = AsyncResult()
@@ -49,12 +48,6 @@ class ITMFunctionality(object):
                 self.backdoor = AsyncResult()
             else:
                 dump.dump()
-            #print('DEFINITELY ABOUT TO RESET THE INOUT')
-            #print('Ready right before, input={}, backdoor={}'.format(self.input.ready(),self.backdoor.ready()))
-            #print('Equal, (self.input==r)={}, (self.backdoor==r)={}'.format(self.input==r, self.backdoor==r))
-            #r = AsyncResult()
-            #print('Ready after, input={}, backdoor={}, r={}'.format(self.input.ready(),self.backdoor.ready(), r.ready()))
-
 
 class ITMProtocol(object):
 
@@ -87,7 +80,6 @@ class ITMProtocol(object):
             assert len(ready) == 1
             r = ready[0]
             sender,reveal,msg = r.get()
-            #print('Ready before, input={}, backdoor={}'.format(self.input.ready(),self.backdoor.ready()))
             if r == self.input:
                 self.F.input_msg(None if not reveal else sender, msg)
                 self.input = AsyncResult()
@@ -165,6 +157,7 @@ class ITMAdversary(object):
     def __init__(self, sid, pid):
         self.sid = sid
         self.pid = pid
+        self.sender = (sid,pid)
         #self.input = Channel()
         self.input = AsyncResult()
         self.leak = AsyncResult()
@@ -176,6 +169,9 @@ class ITMAdversary(object):
 
     def read(self, fro, msg):
         print(u'{:>20} -----> {}, msg={}'.format(str(fro), str(self), msg))
+
+    def write(self, to, msg):
+        self.F.write(to, msg)
 
     def init(self, functionality):
         self.F = functionality
@@ -197,6 +193,17 @@ class ITMAdversary(object):
         #    party.backdoor.set(msg)
         #else:
         #    dump.dump()
+
+    def input_delay_tx(self, fro, nonce, rounds):
+        msg = ('delay-tx', fro, nonce, rounds)
+        self.write(self.F.G, msg)
+        self.F.G.backdoor.set((
+            self.sender, True, (False, msg)
+        ))
+
+    def input_ping(self):
+        self.write(self.F.F, ('ping',))
+        self.F.F.backdoor.set(( self.sender, True, ('ping,') ))
 
     def getLeaks(self, sid, pid):
         assert comm.isf(sid,pid)
@@ -241,6 +248,11 @@ class ITMAdversary(object):
                 elif msg[0] == 'get-leaks':
                     sid,pid = msg[1]
                     self.getLeaks(sid, pid)
+                elif msg[0] == 'delay-tx':
+                    self.input_delay_tx(msg[1], msg[2], msg[3])
+                elif msg[0] == 'ping':
+                    print('Ping at ITM level')
+                    self.input_ping(msg[1], msg[2])
                 else:
                     #sender,reveal,msg = msg
                     #print('[ADVERSARY]', sender, reveal, msg)

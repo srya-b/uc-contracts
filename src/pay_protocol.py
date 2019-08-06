@@ -211,8 +211,6 @@ class Adv:
         self.pid = pid
         self.sender = (sid,pid)
         self.crony = crony
-        self.cronysid = crony.sid
-        self.cronypid = crony.pid
         self.G = G
         self.F = F
 
@@ -230,6 +228,33 @@ class Adv:
             True,
             (False, msg)
         ))
+    
+    def input_tick(self, permutation):
+        msg = (self.sender, True, (True, ('tick', perm)))
+        self.write(self.G, msg)
+        self.G.backdoor.set((
+            self.sender,
+            True,
+            (True, ('tick', perm))
+        ))
+    
+    '''
+        Get contract code at addr
+    '''
+    def subroutine_get_contract(self, addr):
+        # Get the mapping from (sid,pid) of F to address
+        f_addr = self.G.subroutine_call((
+            (self.sid,self.pid),
+            True,
+            ('get-addr', addr)
+        ))
+
+        assert f_addr is not None
+
+        if f_addr == addr:
+            print('LULZ')
+            return 'lulz'
+
 
     def input_party(self, to, msg):
         self.write(self.crony, msg)
@@ -240,6 +265,12 @@ class Adv:
             self.input_delay_tx(msg[1], msg[2], msg[3])
         elif msg[0] == 'party-input':
             self.input_party(msg[1], msg[2])
+        elif msg[0] == 'tick':
+            self.input_tick(msg[1])
         else:
             dump.dump()
+
+    def subroutine_msg(self, msg):
+        if msg[0] == 'get-contract':
+            return self.subroutine_get_contract(msg[1])
 
