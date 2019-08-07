@@ -34,40 +34,51 @@ Final balance in the contract:
 def exe(result):
     dump.dump_wait()
 
+ledgerid = ('sid1',0)
+fpaysid = 'sid2'
+fpayid = (fpaysid,1)
+advid = ('sid',7)
+simpartyid = ('sid3',23)
+fpaypartyids = [2,3]
+p1id = (fpaysid, fpaypartyids[0])
+p2id = (fpaysid, fpaypartyids[1])
+zid = (0,0)
+
+
 ''' All of the channels for the functionalities '''
-a2ledger = A2G(('sid1',0),('sid',7))
-f2ledger = F2G(('sid1',0),('sid2',1))
-m2ledger = M2FChannel(('sid1',0))
+a2ledger = A2G(ledgerid,advid)
+f2ledger = F2G(ledgerid,('sid2',1))
+m2ledger = M2FChannel(ledgerid)
 p2ledger1 = M2F(('sid2',2),m2ledger)
 p2ledger2 = M2F(('sid2',3),m2ledger)
 
-a2fpay = A2G(('sid2',1), ('sid',7))
-f2fpay = F2G(('sid2',1), ('none',-1))
-m2fpay = M2FChannel(('sid2',1))
-p2fpay1 = M2F(('sid2',2), m2fpay)
-p2fpay2 = M2F(('sid2',3), m2fpay)
+a2fpay = A2G(fpayid, advid)
+f2fpay = F2G(fpayid, ('none',-1))
+m2fpay = M2FChannel(fpayid)
+p2fpay1 = M2F(p1id, m2fpay)
+p2fpay2 = M2F(p2id, m2fpay)
 
-z2p1 = Z2P(('sid2',2), (0,0))
-z2p2 = Z2P(('sid2',3), (0,0))
-a2p1 = A2P(('sid2',2), ('sid',7))
-a2p2 = A2P(('sid2',3), ('sid',7))
+z2p1 = Z2P(p1id, zid)
+z2p2 = Z2P(p2id, zid)
+a2p1 = A2P(p1id, advid)
+a2p2 = A2P(p2id, advid)
 
-z2sp = Z2P(('sid2',23), (0,0))
-a2sp = A2P(('sid2',23), ('sid',7))
-sp2f = M2F(('sid2',23), m2ledger)
-z2a = Z2A(('sid',7), (0,0))
+z2sp = Z2P(simpartyid, zid)
+a2sp = A2P(simpartyid, advid)
+sp2f = M2F(simpartyid, m2ledger)
+z2a = Z2A(advid, zid)
 
 '''Blockchain Functionality'''
-g_ledger, protected, ledger_itm = z_start_ledger('sid1',0,Ledger_Functionality,ProtectedITM, a2ledger, f2ledger, m2ledger)
+g_ledger, protected, ledger_itm = z_start_ledger(ledgerid[0],ledgerid[1],Ledger_Functionality,ProtectedITM, a2ledger, f2ledger, m2ledger)
 comm.setFunctionality(ledger_itm)
 '''Payment Channel functionality'''
-idealf, pay_itm = PayITM('sid2',1, ledger_itm, 2, 3, a2fpay, f2fpay, f2ledger, m2fpay)
+idealf, pay_itm = PayITM(fpayid[0], fpayid[1], ledger_itm, p1id[1], p2id[1], a2fpay, f2fpay, f2ledger, m2fpay)
 comm.setFunctionality(pay_itm)
 '''Ideal world parties'''
-iparties = z_ideal_parties('sid2', [2,3], pay_itm, createParties, [a2p1,a2p2], [p2fpay1,p2fpay2], [z2p1,z2p2])
+iparties = z_ideal_parties(fpaysid, fpaypartyids, pay_itm, createParties, [a2p1,a2p2], [p2fpay1,p2fpay2], [z2p1,z2p2])
 comm.setParties(iparties)
 ''' Extra party'''
-simparty = z_sim_party('sid2', 23, ITMPassthrough, ledger_itm, a2sp, sp2f, z2sp)
+simparty = z_sim_party(simpartyid[0], simpartyid[1], ITMPassthrough, ledger_itm, a2sp, sp2f, z2sp)
 comm.setParty(simparty)
 #################### EXPERIMENT ########################
 p1 = iparties[0]
@@ -78,8 +89,8 @@ p2 = iparties[1]
 #adversary.addParty(p1); adversary.addParty(p2)
 #gevent.spawn(adversary.run)
 '''Simulator spawn'''
-simulator = Sim_Payment('sid', 7, ledger_itm, pay_itm, Adv, p2, Contract_Pay, a2p2, a2ledger)
-simitm = ITMAdversary('sid', 7, z2a, a2p2, a2fpay, a2ledger)
+simulator = Sim_Payment(advid[0], advid[1], ledger_itm, pay_itm, Adv, p2, Contract_Pay, a2p2, a2ledger)
+simitm = ITMAdversary(advid[0], advid[1], z2a, a2p2, a2fpay, a2ledger)
 simitm.init(simulator)
 comm.setAdversary(simitm)
 gevent.spawn(simitm.run)
