@@ -6,6 +6,7 @@ _dump = AsyncResult()
 
 def dump_clear():
     global _dump
+    print('')
     _dump = AsyncResult()
 
 def dump():

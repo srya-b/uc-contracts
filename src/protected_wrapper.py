@@ -133,7 +133,7 @@ class Protected_Wrapper(object):
             else:
                 self.ledger.input_msg(sender, msg)
         else:
-            print('PROTECTED MSG', msg)
+            #print('PROTECTED MSG', msg)
             if msg[0] == 'transfer':
                 _,_to,_val,_data,_fro = msg
                 to = self.genym(_to)

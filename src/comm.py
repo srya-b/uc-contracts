@@ -153,8 +153,7 @@ class M2F():
     def __init__(self, fro,  m2f):
         self.m2f = m2f
         self.fro = fro
-    def write(self, data):
-        print('MSF Writing {} ==> {} msg={}'.format(self.fro,self.m2f.to,data));self.m2f._write( (self.fro, True, data) )
+    def write(self, data): self.m2f._write( (self.fro, True, data) )
 
 
 class P2F(Channel):
@@ -167,7 +166,7 @@ class Z2P(Channel):
 
 class Z2A(Channel):
     def __init__(self, *args): Channel.__init__(self, *args)
-    def write(self, data): print('Writing {} ==> {} msg={}'.format(self.fro,self.to,data)); self._write( data )
+    def write(self, data): self._write( data )
 
 class A2P(Channel):
     def __init__(self, *args): Channel.__init__(self, *args)

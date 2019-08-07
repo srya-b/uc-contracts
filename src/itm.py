@@ -46,17 +46,17 @@ class ITMFunctionality(object):
             r = ready[0]
             sender,reveal,msg = r.read()
             if r == self.f2f:
-                print('F2F MESSAE', msg)
+                #print('F2F MESSAE', msg)
                 #self.F.inputf2f(r.get()
                 self.F.input_msg(None if not reveal else sender, msg)
                 self.f2f.reset()
             elif r == self.a2f:
-                print('A2F Message', msg)
+                #print('A2F Message', msg)
                 #self.F.inputa2f(r.get())
                 self.F.adversary_msg(None if not reveal else sender, msg)
                 self.a2f.reset()
             elif r == self.p2f:
-                print('P2F MESSAGE', msg)
+                #print('P2F MESSAGE', msg)
                 #self.F.inputp2f(r.get())
                 self.F.input_msg(None if not reveal else sender, msg)
                 self.p2f.reset()
@@ -158,7 +158,7 @@ class ITMPassthrough(object):
             r = ready[0]
             msg = r.read()
             if r == self.z2p:
-                print('PASSTHROUGH MESSAGE', msg) 
+                #print('PASSTHROUGH MESSAGE', msg) 
                 self.write(self.F, msg)
                 self.p2f.write( msg )
                 #dump.dump(); continue

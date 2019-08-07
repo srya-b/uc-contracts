@@ -162,7 +162,7 @@ class PaymentChannel_Functionality(object):
     '''Create transaction from the player to the channel.
         Blockchain enforces the balances and delayed delivery'''
     def input_deposit(self, sid, pid, val):
-        print('PAYMENT CHANNEL MSG') 
+        #print('PAYMENT CHANNEL MSG') 
         msg = ('transfer', (self.sid, self.pid), val, (), (sid,pid))
         self.write(self.G, msg)
         self.f2g.write( (True, msg) )
