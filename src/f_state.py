@@ -150,9 +150,9 @@ class StateChannel_Functionality(object):
         else:
             return self.G.subroutine_call( (self.sender, True, msg) )
 
-def StateITM(sid, pid, G, C, U, *p):
+def StateITM(sid, pid, G, C, U, a2f, f2f, p2f, *p):
     f = StateChannel_Functionality(sid,pid,G,C,U,*p)
-    itm = ITMFunctionality(sid,pid)
+    itm = ITMFunctionality(sid,pid,a2f,f2f,p2f)
     itm.init(f)
     return f,itm
 

@@ -56,6 +56,61 @@ class Protected_Wrapper(object):
         This means that they can only see sid,pid combos and no actual mapping between
         then and pseudonyms in the underlying blockchain
     '''
+
+    #def inputp2f(self, msg):
+    #    sender,msg = msg
+    #    assert not comm.isf(*sender), and not comm.isadversary(*sender)
+    #    
+    #    if msg[0] == 'transfer':
+    #        _,_to,_val,_data,_fro = msg
+    #        to = self.genym(_to)
+    #        val = _val
+    #        data = _data
+    #        
+    #        if self.iscontract(_to):
+    #            to = _to
+    #            if to in self.private and sid != self.private[to]:
+    #                data = ()
+    #    elif msg[0] == 'tick':
+    #        _,_sender = msg
+    #        _sender = self.genym(_sender)
+    #        msg = (msg[0], _sender)
+    #    elif msg[0] == 'contract-create':
+    #        _,_addr,_val,_data,_private,_fro = msg
+    #        fro = self.genym(_fro)
+    #        if _private: self.private[_addr] = sid
+    #        msg = (msg[0], _addr, _val, _data, _private, fro)
+    #    self.ledger.input_msg(sender, msg) 
+
+    #def inputf2f(self, msg):
+    #    sender,msg = msg
+    #    assert comm.isf(*sender)
+
+    #    if msg[0] == 'transfer':
+    #        _,_to,_val,_data,_fro = msg
+    #        to = self.genym(_to)
+    #        val = _val
+    #        data = _data
+    #        if self.iscontract(_to):
+    #            to = _to
+    #            if to in self.private and sid != self.private[to]:
+    #                data = ()
+    #        fro = self.genym(_fro)
+    #        msg = (msg[0], to, val, data, fro)
+    #    else:
+    #        raise Exception('What you be passing into my wrapper???', msg)
+    #    self.ledger.input_msg(sender, msg)
+    #        
+    #def inputa2f(self, msg):
+    #    sender,msg = msg
+    #    
+    #    if msg[0] == 'tick':
+    #        addr = self.genym(sender)
+    #        msg = (msg[0], addr, msg[1])
+    #        self.ledger.adversary_msg(sender, msg)
+    #    else: 
+    #        self.ledger.adversary_msg()
+
     def input_msg(self, sender, _msg):
         sid,pid = None,None
         if sender:
@@ -78,6 +133,7 @@ class Protected_Wrapper(object):
             else:
                 self.ledger.input_msg(sender, msg)
         else:
+            print('PROTECTED MSG', msg)
             if msg[0] == 'transfer':
                 _,_to,_val,_data,_fro = msg
                 to = self.genym(_to)
@@ -233,6 +289,7 @@ class Protected_Wrapper(object):
     '''
     def adversary_msg(self, sender, _msg):
         sid,pid = sender
+        #print('PROTECTED MODE MESSAGE', _msg)
         wrapper,msg = _msg
         #print('DEBUG: adversary msg', msg)
         if not wrapper:
@@ -243,9 +300,9 @@ class Protected_Wrapper(object):
                 msg = (msg[0], addr, msg[1])
             self.ledger.adversary_msg(sender, msg)
 
-
-def ProtectedITM(sid,pid, G):
+from comm import Channel
+def ProtectedITM(sid,pid, G, a2f, f2f, p2f):
     p = Protected_Wrapper(G)
-    p_itm = ITMFunctionality(sid,pid)
+    p_itm = ITMFunctionality(sid,pid,a2f,f2f,p2f)
     p_itm.init(p)
     return p, p_itm

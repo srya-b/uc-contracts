@@ -183,9 +183,9 @@ class Multisig_Functionality(object):
         if msg[0] == 'ping':
             self.backdoor_ping()
 
-def MultisigITM(sid, pid, ledger, p1, p2, caddr):
+def MultisigITM(sid, pid, ledger, p1, p2, caddr, a2d, f2f, p2f):
     f = Multisig_Functionality(sid, pid, ledger, p1, p2, caddr)
-    itm = ITMFunctionality(sid,pid)
+    itm = ITMFunctionality(sid,pid,a2f,f2f,p2f)
     itm.init(f)
     return f,itm
 

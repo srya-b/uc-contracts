@@ -29,11 +29,7 @@ class c_counter:
 Blockchain functionality
 '''
 idealf = Ledger_Functionality('sid', 0)
-#protected = Protected_Wrapper(idealf)
-#idealitm = ITMFunctionality('sid', 0)
 protected, idealitm = ProtectedITM('sid', 0, idealf)
-#idealitm.init(idealf)
-#idealitm.init(protected)
 comm.setFunctionality(idealitm)
 
 '''

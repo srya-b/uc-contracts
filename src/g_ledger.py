@@ -304,9 +304,9 @@ class Ledger_Functionality(object):
             return self.subroutine_contractref(sid, pid, msg[1])
 
 
-def LedgerITM(sid, pid):
+def LedgerITM(sid, pid, a2f, f2f, p2f):
     g_ledger = Ledger_Functionality(sid,pid)
-    ledger_itm = ITMFunctionality(sid,pid)
+    ledger_itm = ITMFunctionality(sid,pid,a2f,f2f,p2f)
     ledger_itm.init(g_ledger)
     return g_ledger,ledger_itm
 

@@ -1,5 +1,4 @@
 from collections import defaultdict
-from gevent.event import AsyncResult
 
 global commap
 global corrupted
@@ -89,13 +88,14 @@ def id2input(self, identifier):
     global itmmap
     return itmmap[identifier].input
 
-def id2backdoor(self, identifier)
+def id2backdoor(self, identifier):
     global itmmap
     return itmmap[identifier].backdoor
     
 
 import dump
 import gevent
+from gevent.event import AsyncResult, Event
 from gevent.queue import Queue, Channel, Empty
 
 '''
@@ -128,19 +128,50 @@ Design Decision:
         that's the only way. That's the way it was the first time
         idk how I convinced myself to change it. rip
 '''
-class Channel(AsyncResult):
+class Channel(Event):
     def __init__(self, to, fro):
-        AsyncResult.__init__(self)
-        self.to = to
-        self.fro = fro
+        Event.__init__(self)
+        self.to = to; self.fro = fro
+        self._data = None
 
-    def _write(self, data): self.set( data )
-    def read(self): self.get()
-    def read_nowait(self): self.get_nowait()
+    def _write(self, data):
+        self._data = data; self.set()
+    def read(self): return self._data
+    def reset(self): self.clear()
+
+class M2FChannel(Event):
+    def __init__(self, to):
+        Event.__init__(self)
+        self.to = to
+        self._data = None
+    def _write(self, data):
+        self._data = data; self.set()
+    def read(self): return self._data
+    def reset(self): self.clear()
+
+class M2F():
+    def __init__(self, fro,  m2f):
+        self.m2f = m2f
+        self.fro = fro
+    def write(self, data):
+        print('MSF Writing {} ==> {} msg={}'.format(self.fro,self.m2f.to,data));self.m2f._write( (self.fro, True, data) )
+
 
 class P2F(Channel):
     def __init__(self, *args): Channel.__init__(self, *args)
     def write(self, data): self._write( (self.fro, True, data) ) 
+   
+class Z2P(Channel):
+    def __init__(self, *args): Channel.__init__(self, *args)
+    def write(self, data): self._write( data )
+
+class Z2A(Channel):
+    def __init__(self, *args): Channel.__init__(self, *args)
+    def write(self, data): print('Writing {} ==> {} msg={}'.format(self.fro,self.to,data)); self._write( data )
+
+class A2P(Channel):
+    def __init__(self, *args): Channel.__init__(self, *args)
+    def write(self, data): self._write( data )
 
 class P2G(Channel):
     def __init__(self, *args): Channel.__init__(self, *args)

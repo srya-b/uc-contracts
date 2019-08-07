@@ -9,10 +9,11 @@ from gevent.event import AsyncResult
 from gevent.queue import Queue, Channel
 
 class PaymentChannel_Functionality(object):
-    def __init__(self, sid, pid, G, p1, p2):
+    def __init__(self, sid, pid, G, p1, p2, f2g):
         self.sid = sid
         self.pid = pid
         self.G = G
+        self.f2g = f2g
 
         self.outputs = defaultdict(Queue)
         self.p1 = p1
@@ -84,11 +85,14 @@ class PaymentChannel_Functionality(object):
         return (self.p1balance(), self.p2balance())
 
     def input_deposit(self, sid, pid, val):
-        self.G.input.set((
-            (self.sid, self.pid),
-            True,
-            (True,('transfer', (self.sid,self.pid), val, (), (sid,pid)))
-        ))
+        msg = ('transfer', (self.sid,self.pid, val, (), (si,pid)))
+        self.write(self.G, msg)
+        self.f2g.write( (True, msg))
+        #self.G.input.set((
+        #    (self.sid, self.pid),
+        #    True,
+        #    (True,('transfer', (self.sid,self.pid), val, (), (sid,pid)))
+        #))
 
     def subroutine_block_number(self):
         return self.G.subroutine_call((
@@ -146,20 +150,27 @@ class PaymentChannel_Functionality(object):
 
         self.leak( ('withdraw', (sid,pid), val) )
         # Submit a transaction from "channel" to sender
-        self.G.input.set((
-            (self.sid, self.pid),
-            True,
-            (True, ('transfer', (sid,pid), val, (), (self.sid,self.pid)))
-        ))
+        msg = ('transfer', (sid,pid), val, (), (self.sid,self.pid))
+        self.write(self.G,msg)
+        self.f2g.write( (True,msg) ) 
+        #self.G.input.set((
+        #    (self.sid, self.pid),
+        #    True,
+        #    (True, ('transfer', (sid,pid), val, (), (self.sid,self.pid)))
+        #))
 
     '''Create transaction from the player to the channel.
         Blockchain enforces the balances and delayed delivery'''
     def input_deposit(self, sid, pid, val):
-        self.G.input.set((
-            (self.sid, self.pid),
-            True,
-            (True, ('transfer', (self.sid,self.pid), val, (), (sid,pid)))
-        ))
+        print('PAYMENT CHANNEL MSG') 
+        msg = ('transfer', (self.sid, self.pid), val, (), (sid,pid))
+        self.write(self.G, msg)
+        self.f2g.write( (True, msg) )
+        #self.G.input.set((
+        #    (self.sid, self.pid),
+        #    True,
+        #    (True, ('transfer', (self.sid,self.pid), val, (), (sid,pid)))
+        #))
     
     '''Check list list of delayed messages and deliver the ones that are ready
         Also check for deposits or transfers from blockchain'''
@@ -225,7 +236,6 @@ class PaymentChannel_Functionality(object):
         sid,pid = None,None
         if sender:
             sid,pid = sender
-         
         if sid != self.sid:
             dump.dump(); return
         if not self.isplayer(sid,pid): 
@@ -256,9 +266,9 @@ class PaymentChannel_Functionality(object):
         #elif msg[0] == 'get-leaks':
         #    return self.getLeaks()
 
-def PayITM(sid, pid, ledger, p1, p2):
-    f = PaymentChannel_Functionality(sid,pid,ledger,p1,p2)
-    itm = ITMFunctionality(sid,pid)
+def PayITM(sid, pid, ledger, p1, p2,a2f,f2f,f2g,p2f):
+    f = PaymentChannel_Functionality(sid,pid,ledger,p1,p2,f2g)
+    itm = ITMFunctionality(sid,pid,a2f,f2f,p2f)
     itm.init(f)
     return f, itm
 
@@ -292,19 +302,17 @@ channels instead, the simulator can make the destination w/e it wants
 to be and he adversary remains unchanged.
 '''
 class Sim_Payment:
-    def __init__(self, sid, pid, G, F, adv, crony, c_payment):
+    def __init__(self, sid, pid, G, F, adv, crony, c_payment, a2p, a2g):
         self.sid = sid
         self.pid = pid
         self.sender = (sid,pid)
         self.crony = crony
         self.cronysid = crony.sid
         self.cronypid = crony.pid
-        self.a2G = AsyncResult()
-        self.a2F = AsyncResult()
-        self.a2p = AsyncResult()
-        self.adv = adv('na', 0, self.a2G, self.a2F, self.a2p, c_payment)
+        #self.adv = adv('na', 0, self.a2g, self.a2g, self.a2p, c_payment)
         self.G = G
         self.F = F
+        self.a2p = a2p; self.a2g = a2g
 
     def __str__(self):
         return '\033[91mSimulator (%s, %s)\033[0m' % (self.sid, self.pid) 
@@ -321,21 +329,23 @@ class Sim_Payment:
 #            (False, msg)
 #        ))
 
-    def input_tick(self,msg):
-        self.adv.input_msg(msg)
+    #def input_tick(self,msg):
+    #    self.adv.input_msg(msg)
 
     def input_party(self, to, msg):
         self.write(self.crony, msg)
-        self.crony.backdoor.set(msg)
+        #self.crony.backdoor.set(msg)
+        self.a2p.write( msg )
 
     def input_tick(self, permutation):
         msg = (self.sender, True, (True, ('tick', perm)))
         self.write(self.G, msg)
-        self.G.backdoor.set((
-            self.sender,
-            True,
-            (True, ('tick', perm))
-        ))
+        self.a2g.write( (True, ('tick', perm)) )
+        #self.G.backdoor.set((
+        #    self.sender,
+        #    True,
+        #    (True, ('tick', perm))
+        #))
 
     '''
         Get contract code at addr

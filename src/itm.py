@@ -7,12 +7,14 @@ import dump
 import gevent
 import comm
 from utils import print
+
 class ITMFunctionality(object):
 
-    def __init__(self, sid, pid):
+    def __init__(self, sid, pid, a2f, f2f, p2f):
         self.sid = sid
         self.pid = pid
         self.sender = (sid,pid)
+        self.a2f = a2f; self.p2f = p2f; self.f2f = f2f
 
         self.input = AsyncResult()
         self.subroutine = AsyncResult()
@@ -29,25 +31,46 @@ class ITMFunctionality(object):
         sender,reveal,msg = inp
         return self.F.subroutine_msg(sender if reveal else None, msg)
 
-
     def run(self):
         while True:
+            #ready = gevent.wait(
+            #    objects=[self.input, self.backdoor],
+            #    count=1
+            #)
+           
             ready = gevent.wait(
-                objects=[self.input, self.backdoor],
+                objects=[self.f2f, self.p2f, self.a2f],
                 count=1
             )
-            
             assert len(ready) == 1
             r = ready[0]
-            sender,reveal,msg = r.get()
-            if r == self.input:
+            sender,reveal,msg = r.read()
+            if r == self.f2f:
+                print('F2F MESSAE', msg)
+                #self.F.inputf2f(r.get()
                 self.F.input_msg(None if not reveal else sender, msg)
-                self.input = AsyncResult()
-            elif r == self.backdoor:
+                self.f2f.reset()
+            elif r == self.a2f:
+                print('A2F Message', msg)
+                #self.F.inputa2f(r.get())
                 self.F.adversary_msg(None if not reveal else sender, msg)
-                self.backdoor = AsyncResult()
-            else:
-                dump.dump()
+                self.a2f.reset()
+            elif r == self.p2f:
+                print('P2F MESSAGE', msg)
+                #self.F.inputp2f(r.get())
+                self.F.input_msg(None if not reveal else sender, msg)
+                self.p2f.reset()
+            else: dump.dump()
+
+            #sender,reveal,msg = r.get()
+            #if r == self.input:
+            #    self.F.input_msg(None if not reveal else sender, msg)
+            #    self.input = AsyncResult()
+            #elif r == self.backdoor:
+            #    self.F.adversary_msg(None if not reveal else sender, msg)
+            #    self.backdoor = AsyncResult()
+            #else:
+            #    dump.dump()
 
 class ITMProtocol(object):
 
@@ -91,10 +114,13 @@ class ITMProtocol(object):
 
 class ITMPassthrough(object):
 
-    def __init__(self, sid, pid):
+    def __init__(self, sid, pid, a2p, p2f, z2p):
         self.sid = sid
         self.pid = pid
-        
+        self.sender = (sid,pid)
+
+        self.a2p = a2p; self.p2f = p2f; self.z2p = z2p 
+
         self.input = AsyncResult()
         self.subroutine = AsyncResult()
         self.backdoor = AsyncResult()
@@ -119,45 +145,67 @@ class ITMPassthrough(object):
     
     def run(self):
         while True:
+            #ready = gevent.wait(
+            #    objects=[self.input, self.backdoor],
+            #    count=1
+            #)
             ready = gevent.wait(
-                objects=[self.input, self.backdoor],
+                objects=[self.a2p, self.z2p],
                 count=1
             )
+
             assert len(ready) == 1
             r = ready[0]
-            msg = r.get()
-            
-            if r == self.input:
+            msg = r.read()
+            if r == self.z2p:
+                print('PASSTHROUGH MESSAGE', msg) 
                 self.write(self.F, msg)
-                self.F.input.set(
-                    ((self.sid,self.pid), True, msg)
-                )
-                self.input = AsyncResult()
-            elif r == self.backdoor:
+                self.p2f.write( msg )
+                #dump.dump(); continue
+                self.z2p.reset()
+            elif r == self.a2p:
                 comm.corrupt(self.sid, self.pid)
                 self.write(self.F, msg)
-                self.F.input.set(
-                    ((self.sid, self.pid), True, msg)
-                )
-                self.backdoor = AsyncResult()
+                self.p2f.write( msg )
+                self.a2p.reset()
             else:
-                dump.dump() 
+                dump.dump()
+
+            #if r == self.input:
+            #    self.write(self.F, msg)
+            #    self.F.input.set(
+            #        ((self.sid,self.pid), True, msg)
+            #    )
+            #    self.input = AsyncResult()
+            #elif r == self.backdoor:
+            #    comm.corrupt(self.sid, self.pid)
+            #    self.write(self.F, msg)
+            #    self.F.input.set(
+            #        ((self.sid, self.pid), True, msg)
+            #    )
+            #    self.backdoor = AsyncResult()
+            #else:
+            #    dump.dump() 
 
             #r = AsyncResult()
 
-def createParties(sid, r, f):
+def createParties(sid, r, f, a2ps, p2fs, z2ps):
     parties = []
-    for i in r:
-        p = ITMPassthrough(sid,i)
+    for i,a2p,p2f,z2p in zip(r, a2ps, p2fs, z2ps):
+        p = ITMPassthrough(sid,i,a2p,p2f,z2p)
         p.init(f)
         parties.append(p)
     return parties
 
 class ITMAdversary(object):
-    def __init__(self, sid, pid):
+    def __init__(self, sid, pid, z2a, z2p, a2f, a2g):
         self.sid = sid
         self.pid = pid
         self.sender = (sid,pid)
+        self.z2a = z2a
+        self.z2p = z2p
+        self.a2f = a2f
+        self.a2g = a2g
         #self.input = Channel()
         self.input = AsyncResult()
         self.leak = AsyncResult()
@@ -197,9 +245,12 @@ class ITMAdversary(object):
     def input_delay_tx(self, fro, nonce, rounds):
         msg = ('delay-tx', fro, nonce, rounds)
         self.write(self.F.G, msg)
-        self.F.G.backdoor.set((
-            self.sender, True, (False, msg)
+        self.a2g.write((
+            (False, msg)
         ))
+        #self.F.G.backdoor.set((
+        #    self.sender, True, (False, msg)
+        #))
 
     def input_ping(self):
         self.write(self.F.F, ('ping',))
@@ -210,11 +261,15 @@ class ITMAdversary(object):
         itm = comm.getitm(sid,pid)
         msg = ('get-leaks',)
         self.F.write(itm, msg)
-        itm.backdoor.set((
-            (self.sid,self.pid),
-            True,
+        #print('GET LEAKS', msg)
+        #itm.backdoor.set((
+        self.a2g.write((
             (True, msg)
         ))
+        #    (self.sid,self.pid),
+        #    True,
+        #    (True, msg)
+        #))
 
         #self.read(itm, leaks[0]) 
 
@@ -230,16 +285,23 @@ class ITMAdversary(object):
     '''
     def run(self):
         while True:
+            #ready = gevent.wait(
+            #    objects=[self.input, self.leak],
+            #    count=1
+            #)
+
             ready = gevent.wait(
-                objects=[self.input, self.leak],
+                objects=[self.z2a, self.leak],
                 count=1
             )
 
             assert len(ready) == 1
             r = ready[0]
-            msg = r.get()
+            #msg = r.get()
 
-            if r == self.input:
+            #if r == self.input:
+            if r == self.z2a:
+                msg = r.read()
                 if msg[0] == 'party-input':
                     #msg = r.get()
                     #sid,pid = msg[1]
@@ -266,6 +328,7 @@ class ITMAdversary(object):
                     #dump.dump()
                 self.input = AsyncResult()
             elif r == self.leak:
+                msg = r.get()
                 #print('processing leaks')
                 sender,msg = msg
                 sid,pid = sender
