@@ -8,9 +8,10 @@ from collections import defaultdict
 from gevent.queue import Queue, Channel
 
 class StateChannel_Functionality(object):
-    def __init__(self, sid, pid, G, C, U, *p):
+    def __init__(self, sid, pid, G, C, U, f2g, *p):
         self.sid = sid
         self.pid = pid
+        self.f2g = f2g
         self.sender = (sid,pid)
         self.G = G
         self.C = C
@@ -23,7 +24,7 @@ class StateChannel_Functionality(object):
         self.state = ''
         self.buf = ''
         self.lastblock = self.subroutine_block_number()
-        print("LASTBLOCL:", self.lastblock)
+        print("LASTBLOCK:", self.lastblock)
 
         self.round = 0
         self.outputs = defaultdict(Queue)
@@ -150,8 +151,8 @@ class StateChannel_Functionality(object):
         else:
             return self.G.subroutine_call( (self.sender, True, msg) )
 
-def StateITM(sid, pid, G, C, U, a2f, f2f, p2f, *p):
-    f = StateChannel_Functionality(sid,pid,G,C,U,*p)
+def StateITM(sid, pid, G, C, U, a2f, f2f, f2g, p2f, *p):
+    f = StateChannel_Functionality(sid,pid,G,C,U,f2g, *p)
     itm = ITMFunctionality(sid,pid,a2f,f2f,p2f)
     itm.init(f)
     return f,itm

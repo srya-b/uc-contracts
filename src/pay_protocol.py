@@ -81,7 +81,7 @@ class Contract_Pay(object):
         return 1
 
 class Pay_Protocol(object):
-    def __init__(self,sid,pid,F_state,G,C):
+    def __init__(self,sid,pid,F_state,G,C, p2f ):
         self.sid = sid
         self.pid = pid
         self.sender = (sid,pid)
@@ -206,13 +206,14 @@ class Pay_Protocol(object):
         else: dump.dump()
 
 class Adv:
-    def __init__(self, sid, pid, G, F, crony, c_payment):
+    def __init__(self, sid, pid, G, F, crony, c_payment, a2g):
         self.sid = sid
         self.pid = pid
         self.sender = (sid,pid)
         self.crony = crony
         self.G = G
         self.F = F
+        self.a2g = a2g
 
     def __str__(self):
         return '\033[91mAdversary (%s, %s)\033[0m' % (self.sid, self.pid) 

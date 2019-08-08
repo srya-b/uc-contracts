@@ -125,48 +125,67 @@ def z_genym(sender, itm):
     addr = itm.subroutine_call((sender, True, ('genym',)))
     return addr
 
-def z_deploy_contract(itm, adv, ledger, contract, *args):
+#def z_deploy_contract(itm, adv, ledger, contract, *args):
+def z_deploy_contract(z2sp, z2a, itm, adv, ledger, contract, *args):
     caddr = itm.subroutine_call( ('get-caddress',) )
     
-    itm.input.set(
+    #itm.input.set(
+    #    ('contract-create', caddr, 0, (contract,args), False, 'bad')
+    #)
+    z2sp.write(
         ('contract-create', caddr, 0, (contract,args), False, 'bad')
     )
     dump.dump_wait()
-    z_set_delays(adv, ledger, [0])
-    z_mine_blocks(1, itm, ledger)
+    z_set_delays(z2a, adv, ledger, [0])
+    #z_mine_blocks(1, itm, ledger)
+    z_mine_blocks(1, z2sp, z2sp.to)
     return caddr
 
-def z_ping(itm):
-    z_inputs(('ping',),itm)
+#def z_ping(itm):
+def z_ping(z2p):
+    z_inputs(('ping',),z2p)
 
 def z_mint(itm, adv, ledger, *to):
     for t in to:
         z_send_money(10, t, itm, ledger)
     z_set_delays(adv, ledger, [0 for _ in range(len(to))])
 
-def z_prot_input(itm, msg):
-    _write(itm, msg)
-    itm.input.set( (itm.sender, True, msg) )
+#def z_prot_input(itm, msg):
+def z_prot_input(z2p, msg):
+    _write(z2p.to, msg)
+    #itm.input.set( (itm.sender, True, msg) )
+    z2p.write( (z2p.to, True, msg) )
     dump.dump_wait()
 
-def z_instant_input(itm, msg):
-    z_prot_input(itm, msg)
+def z_instant_input(z2p, msg):
+    z_prot_input(z2p, msg)
 
-def z_tx_inputs(adv, ledger, msg, simparty, *itms):
-    for itm in itms:
-        z_instant_input(itm, msg)
-    z_set_delays(adv, ledger, [0 for _ in itms])
-    z_mine_blocks(1, simparty, ledger)
+#def z_tx_inputs(adv, ledger, msg, simparty, *itms):
+def z_tx_inputs(z2a, adv, ledger, msg, z2sp, *z2ps):
+    #for itm in itms:
+    for z2p in z2ps:
+        #z_instant_input(itm, msg)
+        z_instant_input(z2p, msg)
+    #z_set_delays(adv, ledger, [0 for _ in itms])
+    z_set_delays(z2a, adv, ledger, [0 for _ in z2ps])
+    #z_mine_blocks(1, simparty, ledger)
+    z_mine_blocks(1, z2sp, z2sp.to) 
 
-def z_inputs(msg, *itms):
-    for itm in itms:
-        z_instant_input(itm, msg)
+#def z_inputs(msg, *itms):
+def z_inputs(msg, *z2ps):
+    #for itm in itms:
+    for z2p in z2ps:
+        z_instant_input(z2p, msg)
 
-def z_mint_mine(itm, adv, ledger, *to):
+#def z_mint_mine(itm, adv, ledger, *to):
+def z_mint_mine(z2p, z2a, adv, ledger, *to):
     for t in to:
-        z_send_money(10, t, itm, ledger)
-    z_set_delays(adv, ledger, [0 for _ in range(len(to))])
-    z_mine_blocks(1, itm, ledger)
+        #z_send_money(10, t, itm, ledger)
+        z_send_money(10, t, z2p)
+    #z_set_delays(adv, ledger, [0 for _ in range(len(to))])
+    z_set_delays(z2a, adv, ledger, [0 for _ in range(len(to))]) 
+    #z_mine_blocks(1, itm, ledger)
+    z_mine_blocks(1, z2p, z2p.to)
 
 def z_start_ledger(sid, pid, cledger, cwrapperitm, a2f, f2f, p2f):
     g_ledger = cledger(sid,pid)
@@ -180,9 +199,9 @@ def z_ideal_parties(sid,pids,itm,f, a2ps, p2fs, z2ps):
         gevent.spawn(party.run)
     return iparties
 
-def z_real_parties(sid,pids,citm,protocol,functionality,G,C):
-    prots = [protocol(sid,pid,functionality,G,C) for pid in pids]
-    parties = [citm(sid,pid) for pid in pids]
+def z_real_parties(sid,pids,citm,protocol,functionality,G,C, a2ps, p2fs, z2ps):
+    prots = [protocol(sid,pid,functionality,G,C, p2f) for pid,p2f in zip(pids,p2fs)]
+    parties = [citm(sid,pid,a2p,p2f,z2p) for pid,a2p,p2f,z2p in zip(pids,a2ps,p2fs,z2ps)]
     assert len(prots) == len(parties)
     for prot,p in zip(prots,parties):
         p.init(prot)

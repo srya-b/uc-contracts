@@ -74,9 +74,10 @@ class ITMFunctionality(object):
 
 class ITMProtocol(object):
 
-    def __init__(self, sid, pid):
+    def __init__(self, sid, pid, a2p, p2f, z2p):
         self.sid = sid
         self.pid = pid
+        self.a2p = a2p; self.p2f = p2f; self.z2p = z2p
         self.sender = (sid,pid)
         self.input = AsyncResult()
         self.subroutine = AsyncResult()
@@ -95,22 +96,35 @@ class ITMProtocol(object):
 
     def run(self):
         while True:
+            #ready = gevent.wait(
+            #    objects=[self.input, self.backdoor],
+            #    count=1
+            #)
             ready = gevent.wait(
-                objects=[self.input, self.backdoor],
+                objects=[self.a2p, self.z2p],
                 count=1
             )
-            
             assert len(ready) == 1
             r = ready[0]
-            sender,reveal,msg = r.get()
-            if r == self.input:
-                self.F.input_msg(None if not reveal else sender, msg)
-                self.input = AsyncResult()
-            elif r == self.backdoor:
-                self.F.adversary_msg(None if not reveal else sender, msg)
-                self.backdoor = AsyncResult()
-            else:
-                dump.dump()
+            msg = r.read()
+            if r == self.a2p:
+                self.F.adversary_msg( msg )
+                self.a2p.reset()
+            elif r == self.z2p:
+                self.F.input_msg((0,0), msg)
+                self.z2p.reset()
+            else: dump.dump()
+
+
+            #sender,reveal,msg = r.get()
+            #if r == self.input:
+            #    self.F.input_msg(None if not reveal else sender, msg)
+            #    self.input = AsyncResult()
+            #elif r == self.backdoor:
+            #    self.F.adversary_msg(None if not reveal else sender, msg)
+            #    self.backdoor = AsyncResult()
+            #else:
+            #    dump.dump()
 
 class ITMPassthrough(object):
 
