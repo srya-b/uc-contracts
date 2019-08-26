@@ -81,7 +81,7 @@ class Contract_Pay(object):
         return 1
 
 class Pay_Protocol(object):
-    def __init__(self,sid,pid,F_state,G,C, p2f ):
+    def __init__(self,sid,pid,F_state,G,C, p2f, p2g ):
         self.sid = sid
         self.pid = pid
         self.sender = (sid,pid)
@@ -90,11 +90,14 @@ class Pay_Protocol(object):
 
         self.G = G
         self.C = C
+        self.p2f = p2f; self.p2g = p2g
         self.outputs = defaultdict(Queue)
 
         self.arr = []
+        self.oldarr = []
         self.pay = 0
         self.wd = 0
+        self.oldwd = 0
         self.paid = 0
         self._state = None
     
@@ -116,6 +119,7 @@ class Pay_Protocol(object):
             #print('Appending to arr')
             self.arr.append(amt)
             self.pay += amt
+        #print('** input_pay dump **')
         dump.dump()
 
     def input_withdraw(self, amt):
@@ -129,22 +133,29 @@ class Pay_Protocol(object):
 
         if amt <= deposit_i + self.paid - self.pay - self.wd:
             self.wd += amt
+        else:
+            print('im a real twat arent i')
+        #print('** input_withdraw dump **')
         dump.dump()
 
     def input_deposit(self, amt):
         #print('depositing amt', amt)
         self.write(self.G, ('deposit',()))
-        self.G.input.set((
-            self.sender, 
-            True, 
-            ('transfer', self.C, amt, ('deposit',()), 'doesntmatter')
-        ))
+        #self.G.input.set((
+        #    self.sender, 
+        #    True, 
+        #    ('transfer', self.C, amt, ('deposit',()), 'doesntmatter')
+        #))
+
+        self.p2g.write( ('transfer', self.C, amt, ('deposit',()), 'doesntmatter') )
 
     def input_input(self, msg):
         self.write(self.F_state, msg)
-        self.F_state.input.set((
-            self.sender, True, msg
-        ))
+        #self.F_state.input.set((
+        #    self.sender, True, msg
+        #))
+        #print('Writing the input')
+        self.p2f.write( msg )
 
     def input_f_state(self, state):
         cred_l,new_l,cred_r,new_r = state
@@ -160,11 +171,16 @@ class Pay_Protocol(object):
             self.outputs[0] = ('receive', e)
             self.paid += e
 
+        #if self.arr != self.arr or self.wd != self.wd:
         msg = ('input', (self.arr,self.wd))
         self.write(self.F_state, msg)
-        self.F_state.input.set((
-            self.sender, True, msg
-        ))
+        #self.F_state.input.set((
+        #    self.sender, True, msg
+        #))
+        self.oldarr = list(self.arr); self.oldwd = self.wd
+        self.p2f.write( msg )
+        #else:
+        #    dump.dump()
         
 
     def check_f_state(self):
@@ -178,7 +194,12 @@ class Pay_Protocol(object):
                     self._state = o
                     break
             self.input_f_state(o)
+        else:
+            dump.dump()
     
+    def input_ping(self):
+        self.check_f_state() 
+
     def input_msg(self, sender, msg):
         sid,pid = None,None
         if sender:
@@ -193,7 +214,7 @@ class Pay_Protocol(object):
         #    ))
     
         if sid == self.sid and pid == self.pid:
-            self.check_f_state()
+            #self.check_f_state()
             if msg[0] == 'pay':
                 self.input_pay(msg[1])
             elif msg[0] == 'deposit':
@@ -201,7 +222,10 @@ class Pay_Protocol(object):
             elif msg[0] == 'withdraw':
                 self.input_withdraw(msg[1])
             elif msg[0] == 'input':
+                #print('INPUT MSG AT PAYPROT', msg)
                 self.input_input(msg)
+            elif msg[0] == 'ping':
+                self.input_ping()
             else: dump.dump()
         else: dump.dump()
 
@@ -269,6 +293,7 @@ class Adv:
         elif msg[0] == 'tick':
             self.input_tick(msg[1])
         else:
+            #print('** adv input_msg dump **')
             dump.dump()
 
     def subroutine_msg(self, msg):

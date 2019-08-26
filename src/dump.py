@@ -6,11 +6,14 @@ _dump = AsyncResult()
 
 def dump_clear():
     global _dump
-    print('')
+    #print('')
     _dump = AsyncResult()
+
+import inspect
 
 def dump():
     global _dump
+    if _dump.ready(): print('\n\n\tDUMP ALREADY CALED ****')
     _dump.set(0)
 
 def dump_check():

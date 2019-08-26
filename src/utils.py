@@ -154,7 +154,7 @@ def z_mint(itm, adv, ledger, *to):
 def z_prot_input(z2p, msg):
     _write(z2p.to, msg)
     #itm.input.set( (itm.sender, True, msg) )
-    z2p.write( (z2p.to, True, msg) )
+    z2p.write( msg )
     dump.dump_wait()
 
 def z_instant_input(z2p, msg):
@@ -199,8 +199,8 @@ def z_ideal_parties(sid,pids,itm,f, a2ps, p2fs, z2ps):
         gevent.spawn(party.run)
     return iparties
 
-def z_real_parties(sid,pids,citm,protocol,functionality,G,C, a2ps, p2fs, z2ps):
-    prots = [protocol(sid,pid,functionality,G,C, p2f) for pid,p2f in zip(pids,p2fs)]
+def z_real_parties(sid,pids,citm,protocol,functionality,G,C, a2ps, p2fs, p2gs, z2ps):
+    prots = [protocol(sid,pid,functionality,G,C, p2f, p2g) for pid,p2f,p2g in zip(pids,p2fs,p2gs)]
     parties = [citm(sid,pid,a2p,p2f,z2p) for pid,a2p,p2f,z2p in zip(pids,a2ps,p2fs,z2ps)]
     assert len(prots) == len(parties)
     for prot,p in zip(prots,parties):

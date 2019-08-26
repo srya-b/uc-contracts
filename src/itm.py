@@ -37,11 +37,14 @@ class ITMFunctionality(object):
             #    objects=[self.input, self.backdoor],
             #    count=1
             #)
-           
+            
+            #print('P2F ready 1:', self.p2f.is_set(), 'to:', self.sender)
+            #print(str(self), '2F ready before wait:', self.f2f.is_set(), self.p2f.is_set(), self.a2f.is_set())
             ready = gevent.wait(
                 objects=[self.f2f, self.p2f, self.a2f],
                 count=1
             )
+            #print(str(self), '2F ready after wait:', self.f2f.is_set(), self.p2f.is_set(), self.a2f.is_set())
             assert len(ready) == 1
             r = ready[0]
             sender,reveal,msg = r.read()
@@ -50,17 +53,29 @@ class ITMFunctionality(object):
                 #self.F.inputf2f(r.get()
                 self.F.input_msg(None if not reveal else sender, msg)
                 self.f2f.reset()
+                #print(str(self), '** f2f DUMPING ITM')
+                #dump.dump()
             elif r == self.a2f:
                 #print('A2F Message', msg)
                 #self.F.inputa2f(r.get())
                 self.F.adversary_msg(None if not reveal else sender, msg)
                 self.a2f.reset()
+                #print(str(self), '** a2f DUMPING ITM')
+                #dump.dump()
             elif r == self.p2f:
-                #print('P2F MESSAGE', msg)
+                #print(str(self), "P2F message", msg, sender)
+                #print(str(self), 'P2F ready', self.p2f.is_set(), ready, 'to:', self.sender)
                 #self.F.inputp2f(r.get())
                 self.F.input_msg(None if not reveal else sender, msg)
+                #print(str(self), 'P2F ready after work:', self.p2f.is_set())
                 self.p2f.reset()
-            else: dump.dump()
+                #print('\t\t Waiting for p2f')
+                #r = gevent.wait(objects=[self.p2f],count=1)
+                #print('READY BIAATTCH!!!', r)
+                ######
+                #print(str(self), '** p2f DUMPING ITM')
+                #dump.dump()
+            else: print('eLsE dUmPiNg LiKe A rEtArD'); dump.dump()
 
             #sender,reveal,msg = r.get()
             #if r == self.input:
@@ -111,9 +126,10 @@ class ITMProtocol(object):
                 self.F.adversary_msg( msg )
                 self.a2p.reset()
             elif r == self.z2p:
-                self.F.input_msg((0,0), msg)
+                print('ENVIRONMENT INPUT', msg)
+                self.F.input_msg(self.sender, msg)
                 self.z2p.reset()
-            else: dump.dump()
+            else: print('else dumping at itmprotocol'); dump.dump()
 
 
             #sender,reveal,msg = r.get()
@@ -183,7 +199,7 @@ class ITMPassthrough(object):
                 self.p2f.write( msg )
                 self.a2p.reset()
             else:
-                dump.dump()
+                print('else dumping somewhere ive never been'); dump.dump()
 
             #if r == self.input:
             #    self.write(self.F, msg)
@@ -350,10 +366,10 @@ class ITMAdversary(object):
                 #print('leak leaks', self.leakbuffer)
                 self.leakbuffer.append(msg)
                 #print('leak leaks', self.leakbuffer)
-                dump.dump()
+                print('elif r == self.leak'); dump.dump()
                 self.leak = AsyncResult()
             else:
-                dump.dump()
+                print('else dumping right after leak'); dump.dump()
 
             #r = AsyncResult()
 

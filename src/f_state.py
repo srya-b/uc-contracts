@@ -110,6 +110,7 @@ class StateChannel_Functionality(object):
         self.lastblock = blockno
     
         # check for ending round with input
+        print('CHECKING INPUTS', self.inputs)
         if blockno > self.deadline or self.allinputs():
             self.deadline = self.lastblock + self.DELTA
             self.execute()
@@ -118,14 +119,16 @@ class StateChannel_Functionality(object):
     def input_input(self, sid, pid, inp):
         msg = inp
         #if i != self.round: dump.dump(); return
-        if self.pinput(pid): dump.dump(); return
+        if self.pinput(pid): print('pinput dumping'); dump.dump(); return
         
         self.inputs[self.pmap[pid]] = msg
         self.leak(('input',pid,self.round,msg))
         self.tx_check()
+        #print('\t f_state input input dump')
         dump.dump()
 
     def input_msg(self, sender, msg):
+        #print('FSTATE INPUTS MSG', sender, msg)
         sid,pid = None,None
         if sender:
             sid,pid = sender
@@ -137,11 +140,13 @@ class StateChannel_Functionality(object):
             return
         self.tx_check()
         if msg[0] == 'input':
+            #print('F_State got an INPUT', msg, sender)
             self.input_input(sid, pid, msg[1])
         else:
             dump.dump()
 
     def subroutine_msg(self, sender, msg):
+        #print('FSTATE SUBROUTINE', msg)
         self.tx_check()
         if sender: sid,pid = sender
         else: sid,pid = None,None
