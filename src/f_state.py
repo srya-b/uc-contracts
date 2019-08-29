@@ -93,7 +93,7 @@ class StateChannel_Functionality(object):
             True,
             (False, ('get-txs', self.C , blockno-1, self.lastblock))
         ))
-        #print('LASTBLOCK={}, BLOCK={}, BLOCK-1={}'.format(self.lastblock, blockno, blockno-1))
+        print('LASTBLOCK={}, BLOCK={}, BLOCK-1={}'.format(self.lastblock, blockno, blockno-1))
         if txs:
             for tx in txs:
                 to,fro,val,data,nonce = tx
@@ -111,8 +111,12 @@ class StateChannel_Functionality(object):
     
         # check for ending round with input
         print('CHECKING INPUTS', self.inputs)
+        print('blockno', blockno, 'deadline', self.deadline, 'lastblock', self.lastblock)
         if blockno > self.deadline or self.allinputs():
-            self.deadline = self.lastblock + self.DELTA
+            if blockno > self.deadline: self.deadline = self.deadline + self.DELTA
+            elif self.allinputs(): self.deadline = self.lastblock + self.DELTA
+            #self.deadline = self.lastblock + self.DELTA
+            #self.deadline = self.deadline + self.DELTA
             self.execute()
             self.round = self.round + 1
 
@@ -144,6 +148,10 @@ class StateChannel_Functionality(object):
             self.input_input(sid, pid, msg[1])
         else:
             dump.dump()
+
+    def adversary_msg(self, msg):
+        if msg[0] == 'ping': self.tx_check(); dump.dump()
+        else: dump.dump()
 
     def subroutine_msg(self, sender, msg):
         #print('FSTATE SUBROUTINE', msg)
