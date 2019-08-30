@@ -36,7 +36,9 @@ def U_Pay(state, inputs, aux_in, rnd):
             e = arr_i.pop(0)
             #print('While loop, e:', e, 'deposits:', deposits[p_i])
             if e+pay[p_i] <= deposits[p_i] + cred[p_i]:
-                newarr[p_i].append(e)
+                if p_i == p_l: newarr[p_r].append(e)
+                elif p_i == p_r: newarr[p_l].append(e)
+                #newarr[p_i].append(e)
                 pay[p_i] += e
         if wd_i > deposits[p_i] + cred[p_i] - pay[p_i]: wd[p_i] = 0
         else: wd[p_i] = wd_i
@@ -116,9 +118,9 @@ class Pay_Protocol(object):
         elif contract.p_r == myaddr:
             deposit_i = contract.deposits_r
         if amt <= deposit_i + self.paid - self.pay - self.wd:
-            #print('Appending to arr')
             self.arr.append(amt)
             self.pay += amt
+            print('PAY PROCESSED', self.arr)
         #print('** input_pay dump **')
         dump.dump()
 
@@ -172,11 +174,14 @@ class Pay_Protocol(object):
             self.paid += e
 
         #if self.arr != self.arr or self.wd != self.wd:
-        msg = ('input', (self.arr,self.wd))
+        msg = ('input', (list(self.arr),self.wd-self.oldwd))
+        print('giving input to f_state', msg)
+        self.oldarr = list(self.arr); self.oldwd = self.wd
         self.write(self.F_state, msg)
         #self.F_state.input.set((
         #    self.sender, True, msg
         #))
+        self.arr = list(); self.wd = 0
         self.oldarr = list(self.arr); self.oldwd = self.wd
         self.p2f.write( msg )
         #else:
@@ -185,6 +190,7 @@ class Pay_Protocol(object):
 
     def check_f_state(self):
         outputs = self.F_state.subroutine_call( (self.sender, True, ('get-output',)))
+        print('[CHECK_F_STATE] outputs:', len(outputs))
         if len(outputs):
             print('New state from F_state', outputs)
             while len(outputs):

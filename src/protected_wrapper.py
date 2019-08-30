@@ -287,18 +287,18 @@ class Protected_Wrapper(object):
         Unlike honest parties, adversary doesn't need to use the protected
         mode.
     '''
-    def adversary_msg(self, sender, _msg):
-        sid,pid = sender
+    def adversary_msg(self, _msg):
+        #sid,pid = sender
         #print('PROTECTED MODE MESSAGE', _msg)
         wrapper,msg = _msg
         #print('DEBUG: adversary msg', msg)
         if not wrapper:
-            self.ledger.adversary_msg(sender, msg)
+            self.ledger.adversary_msg(msg)
         else:
             if msg[0] == 'tick':
                 addr = self.genym(sender)
                 msg = (msg[0], addr, msg[1])
-            self.ledger.adversary_msg(sender, msg)
+            self.ledger.adversary_msg(msg)
 
 from comm import Channel
 def ProtectedITM(sid,pid, G, a2f, f2f, p2f):

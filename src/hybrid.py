@@ -81,22 +81,30 @@ print('pladdr', pladdr, 'praddr', praddr)
 '''Deploy Contract_Pay'''
 caddr = z_deploy_contract(z2sp, z2a, simparty, advitm, ledger_itm, Contract_Pay, pladdr, praddr)
 
+'''
+Ping F_state when you want the state to progress with an update.
+Ping a party when you want its input to get sent to F_state
+'''
+
 
 z_inputs(('input',([],0)), z2p1, z2p2)
-z_ping(z2p1)
+z_ping(z2p1); z_ping(z2p2)
 z_mint_mine(z2sp, z2a, advitm, ledger_itm, pl, pr)
 z_tx_inputs(z2a, advitm, ledger_itm, ('deposit', 10), z2sp, z2p1, z2p2)
-z_ping(z2p2)
+z_ping(a2fstate)
 z_inputs(('pay', 2), z2p1)
 z_ping(z2p1)
-z_mine_blocks(8, z2sp, z2sp.to)
-z_mine_blocks(1, z2sp, z2sp.to)
-z_ping(z2p1)
+z_mine_blocks(9, z2sp, z2sp.to)
+z_ping(a2fstate)
 z_inputs(('withdraw',5), z2p2)
-z_ping(z2p2)
 z_inputs(('pay',2), z2p2)
 z_ping(z2p2)
 z_mine_blocks(9, z2sp, z2sp.to)
+z_ping(a2fstate)
+z_inputs(('pay',2), z2p2)
 z_ping(z2p2)
+z_mine_blocks(9, z2sp, z2sp.to)
+z_ping(a2fstate)
+z_ping(z2p2)
+z_ping(z2p1)
 
-#print('outputs outputs', state_itm.outputs)

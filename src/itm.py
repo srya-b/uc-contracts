@@ -33,59 +33,24 @@ class ITMFunctionality(object):
 
     def run(self):
         while True:
-            #ready = gevent.wait(
-            #    objects=[self.input, self.backdoor],
-            #    count=1
-            #)
-            
-            #print('P2F ready 1:', self.p2f.is_set(), 'to:', self.sender)
-            #print(str(self), '2F ready before wait:', self.f2f.is_set(), self.p2f.is_set(), self.a2f.is_set())
             ready = gevent.wait(
                 objects=[self.f2f, self.p2f, self.a2f],
                 count=1
             )
-            #print(str(self), '2F ready after wait:', self.f2f.is_set(), self.p2f.is_set(), self.a2f.is_set())
             assert len(ready) == 1
             r = ready[0]
             sender,reveal,msg = r.read()
             if r == self.f2f:
-                #print('F2F MESSAE', msg)
-                #self.F.inputf2f(r.get()
                 self.F.input_msg(None if not reveal else sender, msg)
                 self.f2f.reset()
-                #print(str(self), '** f2f DUMPING ITM')
-                #dump.dump()
             elif r == self.a2f:
-                #print('A2F Message', msg)
-                #self.F.inputa2f(r.get())
-                self.F.adversary_msg(None if not reveal else sender, msg)
+                self.F.adversary_msg(msg)
                 self.a2f.reset()
-                #print(str(self), '** a2f DUMPING ITM')
-                #dump.dump()
             elif r == self.p2f:
-                #print(str(self), "P2F message", msg, sender)
-                #print(str(self), 'P2F ready', self.p2f.is_set(), ready, 'to:', self.sender)
-                #self.F.inputp2f(r.get())
                 self.F.input_msg(None if not reveal else sender, msg)
-                #print(str(self), 'P2F ready after work:', self.p2f.is_set())
                 self.p2f.reset()
-                #print('\t\t Waiting for p2f')
-                #r = gevent.wait(objects=[self.p2f],count=1)
-                #print('READY BIAATTCH!!!', r)
-                ######
-                #print(str(self), '** p2f DUMPING ITM')
-                #dump.dump()
             else: print('eLsE dUmPiNg LiKe A rEtArD'); dump.dump()
 
-            #sender,reveal,msg = r.get()
-            #if r == self.input:
-            #    self.F.input_msg(None if not reveal else sender, msg)
-            #    self.input = AsyncResult()
-            #elif r == self.backdoor:
-            #    self.F.adversary_msg(None if not reveal else sender, msg)
-            #    self.backdoor = AsyncResult()
-            #else:
-            #    dump.dump()
 
 class ITMProtocol(object):
 
