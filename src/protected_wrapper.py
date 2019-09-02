@@ -121,7 +121,7 @@ class Protected_Wrapper(object):
         # if functionality, it can choose wrapper/no-wrapper
         # adversary can also decide which he wants to talk to
         if comm.isf(sid,pid) or comm.isadversary(sid,pid):
-            #print('msg', _msg)
+            print('msg', _msg)
             wrapper,msg = _msg
         else:
             msg = _msg

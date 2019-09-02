@@ -152,7 +152,8 @@ class Ledger_Functionality(object):
     def read_output(self, sid, pid, indices):
         ret = []
         for sender,nonce in indices:
-            ret.append(self.output[sender,nonce])
+            try: ret.append(self.output[sender,nonce])
+            except KeyError: continue
         return ret
 
     def input_delay_tx(self, fro, nonce, rounds):

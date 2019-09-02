@@ -79,7 +79,8 @@ class StateChannel_Functionality(object):
         if o:
             # create on-chain transaction for aux contract
             print('some contract output')
-        dump.dump()
+            self.f2g.write( (True,('transfer', self.C, 0, ('output', (o,)), 'doesntmatter')) )
+        else: dump.dump()
 
     def allinputs(self):
         for inp in self.inputs:
@@ -104,6 +105,7 @@ class StateChannel_Functionality(object):
                     (False, ('read-output', [(fro,nonce)]))
                 ))
                 print('Output for (fro,nonce)={}, outputs={}'.format((fro,nonce), output))
+                if not output: continue
                 for o in output[0]:
                     self.aux_in.append(o[1:])
                 #print('aux in after update', self.aux_in)
