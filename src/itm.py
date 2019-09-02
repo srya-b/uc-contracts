@@ -91,7 +91,7 @@ class ITMProtocol(object):
                 self.F.adversary_msg( msg )
                 self.a2p.reset()
             elif r == self.z2p:
-                print('ENVIRONMENT INPUT', msg)
+                #print('ENVIRONMENT INPUT', msg)
                 self.F.input_msg(self.sender, msg)
                 self.z2p.reset()
             else: print('else dumping at itmprotocol'); dump.dump()

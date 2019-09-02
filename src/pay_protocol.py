@@ -120,7 +120,6 @@ class Pay_Protocol(object):
         if amt <= deposit_i + self.paid - self.pay - self.wd:
             self.arr.append(amt)
             self.pay += amt
-            print('PAY PROCESSED', self.arr)
         #print('** input_pay dump **')
         dump.dump()
 
@@ -175,7 +174,6 @@ class Pay_Protocol(object):
 
         #if self.arr != self.arr or self.wd != self.wd:
         msg = ('input', (list(self.arr),self.wd-self.oldwd))
-        print('giving input to f_state', msg)
         self.oldarr = list(self.arr); self.oldwd = self.wd
         self.write(self.F_state, msg)
         #self.F_state.input.set((
@@ -190,9 +188,8 @@ class Pay_Protocol(object):
 
     def check_f_state(self):
         outputs = self.F_state.subroutine_call( (self.sender, True, ('get-output',)))
-        print('[CHECK_F_STATE] outputs:', len(outputs))
         if len(outputs):
-            print('New state from F_state', outputs)
+            #print('New state from F_state', outputs)
             while len(outputs):
                 o = outputs.get()
                 if o != self._state:

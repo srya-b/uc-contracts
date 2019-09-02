@@ -74,12 +74,13 @@ class StateChannel_Functionality(object):
             self.outputs[i].put(state)
         #print('get output', self.outputs)
 
+        self.past_inputs[self.round] = self.inputs
+        self.inputs = [None for _ in range(len(self._p))]
         if o:
             # create on-chain transaction for aux contract
             print('some contract output')
-        self.past_inputs[self.round] = self.inputs
-        self.inputs = [None for _ in range(len(self._p))]
-       
+        dump.dump()
+
     def allinputs(self):
         for inp in self.inputs:
             if inp is None:
@@ -93,7 +94,7 @@ class StateChannel_Functionality(object):
             True,
             (False, ('get-txs', self.C , blockno-1, self.lastblock))
         ))
-        print('LASTBLOCK={}, BLOCK={}, BLOCK-1={}'.format(self.lastblock, blockno, blockno-1))
+        #print('LASTBLOCK={}, BLOCK={}, BLOCK-1={}'.format(self.lastblock, blockno, blockno-1))
         if txs:
             for tx in txs:
                 to,fro,val,data,nonce = tx
@@ -110,8 +111,8 @@ class StateChannel_Functionality(object):
         self.lastblock = blockno
     
         # check for ending round with input
-        print('CHECKING INPUTS', self.inputs)
-        print('blockno', blockno, 'deadline', self.deadline, 'lastblock', self.lastblock)
+        #print('CHECKING INPUTS', self.inputs)
+        #print('blockno', blockno, 'deadline', self.deadline, 'lastblock', self.lastblock)
         if blockno > self.deadline or self.allinputs():
             if blockno > self.deadline: self.deadline = self.deadline + self.DELTA
             elif self.allinputs(): self.deadline = self.lastblock + self.DELTA
@@ -119,6 +120,7 @@ class StateChannel_Functionality(object):
             #self.deadline = self.deadline + self.DELTA
             self.execute()
             self.round = self.round + 1
+        else: dump.dump()
 
     def input_input(self, sid, pid, inp):
         msg = inp
@@ -127,7 +129,7 @@ class StateChannel_Functionality(object):
         
         self.inputs[self.pmap[pid]] = msg
         self.leak(('input',pid,self.round,msg))
-        self.tx_check()
+        #self.tx_check()
         #print('\t f_state input input dump')
         dump.dump()
 
@@ -142,7 +144,7 @@ class StateChannel_Functionality(object):
         if not self.isplayer(pid): 
             dump.dump()
             return
-        self.tx_check()
+        #self.tx_check()
         if msg[0] == 'input':
             #print('F_State got an INPUT', msg, sender)
             self.input_input(sid, pid, msg[1])
@@ -150,12 +152,12 @@ class StateChannel_Functionality(object):
             dump.dump()
 
     def adversary_msg(self, msg):
-        if msg[0] == 'ping': self.tx_check(); dump.dump()
+        if msg[0] == 'ping': self.tx_check()
         else: dump.dump()
 
     def subroutine_msg(self, sender, msg):
         #print('FSTATE SUBROUTINE', msg)
-        self.tx_check()
+        #self.tx_check()
         if sender: sid,pid = sender
         else: sid,pid = None,None
         assert sid == self.sid 

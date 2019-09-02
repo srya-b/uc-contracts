@@ -13,7 +13,7 @@ import inspect
 
 def dump():
     global _dump
-    if _dump.ready(): print('\n\n\tDUMP ALREADY CALED ****')
+    if _dump.ready(): print('\n\n\t****** DUMP ALREADY CALED ****')
     _dump.set(0)
 
 def dump_check():
