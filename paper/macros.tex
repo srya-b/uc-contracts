@@ -1,11 +1,16 @@
 \newcommand{\msf}[1]{\ensuremath{{\mathsf {#1}}}}
 \newcommand{\f}[1]{\ensuremath{\mathcal{#1}}}
 \newcommand{\F}{\f{F}}
+\newcommand{\C}{\mathcal{C}}
+\newcommand{\con}[1]{\msf{Contract_{#1}}}
+\newcommand{\Fstate}{\ensuremath{\F_{\msf{state}}}}
+\newcommand{\Gledger}{\ensuremath{\f{G}_{\msf{ledger}}}}
 \newcommand{\globalf}[1]{\ensuremath{{\overline{\mathcal{#1}}}}}
 \newcommand{\todo}[1]{\textcolor{red}{#1}}
 \newcommand{\edict}{\{\}}
 \newcommand{\lar}{\leftarrow}
 \newcommand{\rar}{\rightarrow}
+\newcommand{\Init}{{\bf \color{Cerulean} Init}~}
 \newcommand{\OnInput}{{\bf \color{Cerulean} On input}~}
 \newcommand{\OnAdvInput}{{\bf \color{BrickRed} On input}~}
 
@@ -20,8 +25,13 @@
 \newcommand{\createmsg}{\inmsg{contract \ create}{addr}{val}{data}{private}{from}}
 \newcommand{\reject}{\textbf{reject}~}
 \newcommand{\For}{\textbf{For}~}
+\newcommand{\Env}{\ensuremath{\mathcal{Z}}}
+\newcommand{\While}{\textbf{While}~}
+\newcommand{\Send}{\textbf{Send}~}
 \newcommand{\In}{\textbf{in}~}
 \newcommand{\If}{\textbf{If}~}
+\newcommand{\Else}{\textbf{Else}~}
+\newcommand{\Return}{\textbf{Return}~}
 \newcommand{\pluseq}{\ensuremath{\mathrel{+}=}}
 \newcommand{\Adv}{\ensuremath{\mathcal{A}}}
 \newcommand{\Partyi}{$\mathbf{P_i=(sid,pid)}$}

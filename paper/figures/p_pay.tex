@@ -1,0 +1,44 @@
+\begin{bbox}[title=$\Pi_{pay}$]
+
+Initialize $\msf{arr_i} = \emptyset, \msf{pay_i} = 0, \msf{wd_i} = 0, \msf{paid_i} = 0$
+
+$\msf{Contract_{pay}}$ identifier $\mathcal{C}$ 
+
+\Send $(\emptyset, 0) \rightarrow \F_{state}$
+
+% New state from F_state
+\OnInput $(\msf{cred_L}, \msf{new_L}, \msf{cred_R}, \msf{new_R})$ from $\Fstate$:
+
+	\quad \For $e \in \msf{new_i}$:
+
+		\qquad \textbf{Output} $(\msf{receive}, e)$
+
+		\qquad $\msf{paid_i} += e$
+	
+	\quad \Send $(\msf{arr_i}, \msf{wd}-\msf{wdn}) \rightarrow \Fstate$
+
+	\quad $\msf{arr_i} \leftarrow \emptyset$
+
+	\quad $\msf{wdn_i} \leftarrow \msf{wd_i}$
+
+% Pay($X)
+\OnInput \inmsg{pay}{\$X} from \Env:
+
+	\quad $\msf{Contract_{Pay}} \leftarrow \Gledger.\msf{contract}(\mathcal{C})$
+
+	\quad \If $\$X \leq \msf{Contract_{Pay}}.\msf{deposits_i} + \msf{paid_i} - \msf{pay_i} - \msf{wd_i}$:
+
+		\qquad $\msf{arr_i} \leftarrow \$X$
+
+		\qquad $\msf{pay_i} += \$X$
+
+% Withdraw($X)
+\OnInput \inmsg{withdraw}{\$X} from \Env:
+
+	\quad $\msf{Contract_{Pay}} \leftarrow \Gledger.\msf{contract}(\C)$
+
+	\quad \If $\$X \leq \con{Pay}.\msf{deposits_i} + \msf{paid_i} - \msf{pay_i} - \msf{wd_i}$:
+
+		\qquad $\sf{wd_i} += \$X$
+
+\end{bbox}

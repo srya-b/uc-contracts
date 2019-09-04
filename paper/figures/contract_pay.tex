@@ -1,0 +1,21 @@
+\begin{bbox}[title=$\Pi_{pay}$: $\msf{Contract_{pay}}$]
+
+\Init $(\msf{P_L}, \msf{P_R})$:
+
+\quad $\msf{deposits}_L, \msf{deposits}_R := 0$
+
+% deposit($X)
+\OnInput \inmsg{deposit}(tx) from \Partyi:
+
+	\quad $\msf{deposits}_i += \msf{tx.value}$
+
+	\quad $\msf{out}(\msf{deposits}_L, \msf{deposits}_R)$
+
+% aux_out 
+\OnInput \inmsg{output}{\msf{aux_{out}}}{\msf{tx}}:
+
+	\quad parse $\msf{aux_{out}}$ as $(\msf{wd_L},\msf{wd_R})$
+
+	\quad \For $i \in \{L,R\}$: $\msf{send}(P_i, \msf{wd_i})$
+
+\end{bbox}
