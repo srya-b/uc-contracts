@@ -173,14 +173,16 @@ class Pay_Protocol(object):
             self.paid += e
 
         #if self.arr != self.arr or self.wd != self.wd:
+        print('1111 wd', self.wd, 'oldwd', self.oldwd, 'arr', self.arr, 'oldarr', self.oldarr)
         msg = ('input', (list(self.arr),self.wd-self.oldwd))
         self.oldarr = list(self.arr); self.oldwd = self.wd
         self.write(self.F_state, msg)
         #self.F_state.input.set((
         #    self.sender, True, msg
         #))
-        self.arr = list(); self.wd = 0
-        self.oldarr = list(self.arr); self.oldwd = self.wd
+        self.arr = list();# self.wd = 0
+        self.oldarr = list(self.arr); #self.oldwd = self.wd
+        print('2222 wd', self.wd, 'oldwd', self.oldwd, 'arr', self.arr, 'oldarr', self.oldarr)
         self.p2f.write( msg )
         #else:
         #    dump.dump()
@@ -248,14 +250,14 @@ class Adv:
     def write(self, to, msg):
         print('\033[91m{:>20}\033[0m -----> {}, msg={}'.format('Adversary (%s,%s)' % (self.sid, self.pid), str(to), msg))
 
-    def input_delay_tx(self, fro, nonce, rounds):
-        msg=('delay-tx', fro, nonce, rounds)
-        self.write(self.G, msg)
-        self.G.backdoor.set((
-            self.sender,
-            True,
-            (False, msg)
-        ))
+    #def input_delay_tx(self, fro, nonce, rounds):
+    #    msg=('delay-tx', fro, nonce, rounds)
+    #    self.write(self.G, msg)
+    #    self.G.backdoor.set((
+    #        self.sender,
+    #        True,
+    #        (False, msg)
+    #    ))
     
     def input_tick(self, permutation):
         msg = (self.sender, True, (True, ('tick', perm)))

@@ -309,7 +309,7 @@ class Sim_Payment:
         self.crony = crony
         self.cronysid = crony.sid
         self.cronypid = crony.pid
-        #self.adv = adv('na', 0, self.a2g, self.a2g, self.a2p, c_payment)
+        self.adv = adv('na',-1,G,F,crony,c_payment,a2g)
         self.G = G
         self.F = F
         self.a2p = a2p; self.a2g = a2g

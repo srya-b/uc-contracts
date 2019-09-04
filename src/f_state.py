@@ -1,7 +1,7 @@
 import dump 
 import gevent
 from itm import ITMFunctionality
-from comm import ishonest, isdishonest, isadversary
+from comm import ishonest, isdishonest, isadversary, setFunctionality
 from queue import Queue as qqueue
 from hashlib import sha256
 from collections import defaultdict
@@ -172,6 +172,7 @@ def StateITM(sid, pid, G, C, U, a2f, f2f, f2g, p2f, *p):
     f = StateChannel_Functionality(sid,pid,G,C,U,f2g, *p)
     itm = ITMFunctionality(sid,pid,a2f,f2f,p2f)
     itm.init(f)
+    setFunctionality(itm)
     return f,itm
 
 class Sim_State:

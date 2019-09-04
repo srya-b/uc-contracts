@@ -2,7 +2,7 @@ import dump
 import comm
 import gevent
 from itm import ITMFunctionality, ITMPassthrough, ITMAdversary, createParties, ITMPrinterAdversary, ITMProtocol
-from comm import P2F, P2G, F2G, A2G, A2P, M2FChannel, M2F, Z2P, A2P, Z2A
+from comm import P2F, P2G, F2G, A2G, A2P, Many2FChannel, M2F, Z2P, A2P, Z2A
 from utils import z_mine_blocks, z_send_money, z_get_balance, z_get_leaks, z_tx_leak, z_tx_leaks, z_delay_tx, z_set_delays, z_deploy_contract, z_mint, z_start_ledger, z_ideal_parties, z_sim_party, z_genym, z_real_parties, z_mint_mine, z_prot_input, z_instant_input, z_inputs, z_tx_inputs, z_ping, print
 from g_ledger import Ledger_Functionality, LedgerITM
 from collections import defaultdict
@@ -28,13 +28,13 @@ zid = (0,0)
 ''' All of the channels for the functionalities '''
 a2ledger = A2G(ledgerid,advid)
 f2ledger = F2G(ledgerid,('sid2',1))
-m2ledger = M2FChannel(ledgerid)
+m2ledger = Many2FChannel(ledgerid)
 p2ledger1 = M2F(p1id,m2ledger)
 p2ledger2 = M2F(p2id,m2ledger)
 
 a2fstate = A2G(fstateid, advid)
 f2fstate = F2G(fstateid, ('none',-1))
-m2fstate = M2FChannel(fstateid)
+m2fstate = Many2FChannel(fstateid)
 p2fstate1 = M2F(p1id, m2fstate)
 p2fstate2 = M2F(p2id, m2fstate)
 
@@ -53,20 +53,20 @@ z2a = Z2A(advid, zid)
 '''Blockchain Functionality'''
 #g_ledger, protected, ledger_itm = z_start_ledger('sid1',0,Ledger_Functionality,ProtectedITM)
 g_ledger, protected, ledger_itm = z_start_ledger(ledgerid[0],ledgerid[1],Ledger_Functionality,ProtectedITM, a2ledger, f2ledger, m2ledger)
-comm.setFunctionality(ledger_itm)
+#comm.setFunctionality(ledger_itm)
 '''sim'd party'''
 #simparty = z_sim_party('sid2',23,ITMPassthrough,ledger_itm)
 simparty = z_sim_party(simpartyid[0], simpartyid[1], ITMPassthrough, ledger_itm, a2sp, sp2f, z2sp)
-comm.setParty(simparty)
+#comm.setParty(simparty)
 caddr = simparty.subroutine_call( ('get-caddress',) )
 '''State Functionality'''
 #idealf, state_itm = StateITM('sid2', 1, ledger_itm, caddr, U_Pay, f2ledger, 2,3)
 idealf, state_itm = StateITM('sid2', 1, ledger_itm, caddr, U_Pay, a2fstate, f2fstate, f2ledger, m2fstate, 2,3)
-comm.setFunctionality(state_itm)
+#comm.setFunctionality(state_itm)
 gevent.spawn(state_itm.run)
 ''' Parites'''
 rparties = z_real_parties('sid2', [2,3], ITMProtocol, Pay_Protocol, state_itm, ledger_itm, caddr, [a2p1,a2p2], [p2fstate1,p2fstate2], [p2ledger1, p2ledger2], [z2p1,z2p2])
-comm.setParties(rparties)
+#comm.setParties(rparties)
 pl = rparties[0]; pr = rparties[1]
 '''Adversary'''
 adversary = Adv('sid', 7, ledger_itm, state_itm, pr, Contract_Pay, a2fstate)

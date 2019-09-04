@@ -139,7 +139,7 @@ class Channel(Event):
     def read(self): return self._data
     def reset(self): self.clear()
 
-class M2FChannel(Event):
+class Many2FChannel(Event):
     def __init__(self, to):
         Event.__init__(self)
         self.to = to
