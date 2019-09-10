@@ -13,17 +13,18 @@ from protected_wrapper import Protected_Wrapper, ProtectedITM
 
 # COMMON
 ledgersid = 'sid1'; ledgerpid = 0; ledgerid = (ledgersid,ledgerpid)
-p1pid = 2; p1id = (fstatesid, p1pid)
-p2pid = 3; p2id = (fstatesid, p2pid)
-spsid = 'abcd'; sppid = 23; spid = (spsid,spipid)
+idealfsid = 'sid2'
+p1pid = 2; p1id = (idealfsid, p1pid)
+p2pid = 3; p2id = (idealfsid, p2pid)
+spsid = 'abcd'; sppid = 23; spid = (spsid,sppid)
 zid = (0,0)
 
 # REAL WORLD INIT
-fstatesid = 'sid2'; fstatepid = 1; fstateid = (fstatesid, fstatepid)
+fstatepid = 1; fstateid = (idealfsid, fstatepid)
 advsid = 'sid'; advpid = 7; advid = (advsid,advpid)
 
 # IDEAL WORLD INIT
-fpaysid = 'sid2'; fpaypid = 1; fpayid = (fpaysid,fpaypid)
+fpaypid = 1; fpayid = (idealfsid,fpaypid)
 simsid = 'sid'; simpid = 7; simid = (simsid,simpid)
 
 # Real World Channels - Ledger
@@ -59,10 +60,10 @@ i_p22ledger = M2F(p2id,i_m2ledger)
 i_sp2ledger = M2F(spid,i_m2ledger)
 
 # Ideal World Channels - Fpay
-i_a2fstate = A2G(fpayid,simid)
-i_m2fstate = Many2FChannel(fpayid)
-i_p12fstate = M2F(p1id, i_m2fpay)
-i_p22fstate = M2F(p2id, i_m2fpay)
+i_a2fpay = A2G(fpayid,simid)
+i_m2fpay = Many2FChannel(fpayid)
+i_p12fpay = M2F(p1id, i_m2fpay)
+i_p22fpay = M2F(p2id, i_m2fpay)
 
 # Ideal World Channels - Env
 i_z2p1 = Z2P(p1id, zid)
@@ -75,8 +76,18 @@ i_a2p1 = A2P(p1id, simid)
 i_a2p2 = A2P(p2id, simid)
 
 
-
-
+# Real Ledger
+r_ledger,_,r_ledger_itm = z_start_ledger(*ledgerid, Ledger_Functionality, ProtectedITM, r_a2ledger, r_f2ledger, r_m2ledger)
+# Ideal Ledger
+i_ledger,_,i_ledger_itm = z_start_ledger(*ledgerid, Ledger_Functionality, ProtectedITM, i_a2ledger, i_f2ledger, i_m2ledger)
+# Honest Party Simulated by Environment - Real
+r_simparty = z_sim_party(*spid, ITMPassthrough, r_ledger_itm, "NONE", r_sp2ledger, r_z2sp)
+# Honest Party - Ideal
+i_simparty = z_sim_party(*spid, ITMPassthrough, i_ledger_itm, None, i_sp2ledger, i_z2sp)
+# F_state - Real
+r_fstate,state_itm = StateITM(*fstateid, r_ledger_itm, "TODO", U_Pay, r_a2fstate, "TODO", r_f2ledger, r_m2fstate, p1pid, p2pid)
+# F_pay - Ideal
+i_fpay,pay_itm = PayITM(*fpayid, i_ledger_itm, p1pid, p2pid, i_a2fpa, None, 
 
 
 

@@ -82,7 +82,7 @@
 
 \begin{figure}
 	\input{figures/u_pay}
-	\caption{Protocol pay}
+	\caption{Update function for a payment channel. Given as a parameter to \Fstate. It defines the format of the \msf{state} and its updates.}
 \end{figure}
 
 \begin{figure}
@@ -92,12 +92,17 @@
 
 \begin{figure}
 	\input{figures/p_pay}
-	\caption{Local prot pay}
+	\caption{Local protocol for parties to follow for a payment channel between two parties. Parties can pay, deposit into, or withdraw from the channel.}
 \end{figure}
 
 \begin{figure}
 	\input{figures/f_state}
-	\caption{fstate}
+	\caption{The ideal functionality \Fstate. The functionality proceeds in rounds and waits for parties to provide input. When all parties have provided input or the round deadline has passed, a state update is executed. Contract output is given to \Gledger in the form of a transaction. Parties must explicitly \msf{ping} the functionality in order to make progress. }
+\end{figure}
+
+\begin{figure}
+	\input{figures/f_pay}
+	\caption{fpay}
 \end{figure}
 %\begin{bbox}[title=asd]
 %hello

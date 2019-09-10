@@ -1,3 +1,38 @@
-\begin{bbox}[title={$\Fstate (U, C)$}]
+\begin{bbox}[title={$\Fstate (U, \mathcal{C}, \mathcal{P} = \{P_1,...,P_N\}, \Delta)$}]
+
+Initialize $\msf{aux}_{in} := [\bot]$, $\msf{ptr} := 0$, $\msf{state} := \emptyset$, $\msf{buf} := \emptyset, \msf{rnd} := 0$
+
+\OnInput \inmsg{ping} from \Partyi:
+
+	\quad $\msf{aux}_{in} := \Gledger.\msf{coutput}(\mathcal{C})$
+
+	\quad append $\msf{aux}_{in}$ to $\msf{buf}$
+
+	\quad $j := |\msf{buf}| - 1$
+
+	\quad $\msf{ptr} := \msf{max}(\msf{ptr},j)$ 
+
+\vspace{1mm} \hrule \vspace{1mm}
+
+Proceed in rounds starting at $\msf{rnd} := 0$:
+
+	$v_{\msf{rnd},i} := \bot, \forall i \in \mathcal{P}$
+
+	\quad \OnInput \inmsg{m} from \Partyi:
+	
+		\qquad \If $v_{\msf{rnd},i} = \bot$:
+
+			\qqquad $v_{\msf{rnd},i} := m$
+
+	\quad \OnInput \inmsg{\msf{step}} from \Partyi:
+
+		\qquad \If $\left( \bigwedge_{i \in \mathcal{P}} v_{\msf{rnd},i} \neq \bot \right) \vee \left( \bigvee_{i \in \mathcal{P}} v_{\msf{rnd},i} \neq \bot \wedge \Gledger.\msf{rnd} > \msf{deadline} \right)$:
+
+
+			\qqquad $(\msf{state},o) := U(\msf{state}, \{v_{\msf{rnd},i}\}_{i\in\mathcal{P}}, \msf{aux}_{in}[\msf{ptr}])$
+
+			\qqquad \Send $(\msf{transfer},\mathcal{C},0,(output, o), \bot) \rightarrow \Gledger$ 
+			
+			\qqquad $\msf{rnd} := \msf{rnd} + 1$, $\msf{deadline} := \Gledger.\msf{rnd} + \Delta$	
 
 \end{bbox}

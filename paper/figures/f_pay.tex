@@ -1,0 +1,26 @@
+\begin{bbox}[title={$\Fpay (P_L,P_R)$}]
+
+Initialize $\msf{bal_L} := 0, \msf{bal_R} := 0$
+
+\OnInput \inmsg{pay}{\$X} from \Partyi:
+
+	\quad \If $\msf{bal}_i < \$X$: ignore  
+
+	\quad \Leak $(\msf{pay},P_i,\$X) \rightarrow \mathcal{A}$
+
+	\quad $\msf{bal}_i -= \$X$
+
+	\quad \If $P_{\neg i}$ is honest: $\msf{bal}_i += \$X$
+
+	\quad \Else: \Buffer $(\msf{receive},\$X) \rightarrow P_{\neg i}$ 
+
+\OnInput \inmsg{withdraw}{\$X} from \Partyi:
+
+	\quad \If $\msf{bal}_i < \$X$: ignore
+
+	\quad Leak $(\msf{withdraw},P_i,\$X) \rightarrow \mathcal{A}$
+
+	\quad $\msf{bal}_i -= \$X$
+
+	\quad \Send $(\msf{transfer}, (\mathbf{sid},\mathbf{pid}), \$X, \bot, \msf{mysidsomehow}) \rightarrow \Gledger$
+\end{bbox}
