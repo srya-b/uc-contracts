@@ -102,8 +102,14 @@
 
 \begin{figure}
 	\input{figures/f_pay}
-	\caption{fpay}
+	\caption{The payment channel functionality. Unlike $\Fstate$, doesn't need any notion of rounds until it must deal with on-chain transactions for deposits. Buffering for $O(\Delta)$ rounds implies the adversary can choose the number.}
 \end{figure}
+
+\begin{figure}
+	\input{figures/wrapper}
+	\caption{The wrapper $\mathcal{W}$ that provides common function for all functionalities. In $\Fstate$ for example, the wrapper enables functionalities to buffer sending output to the parties in the protocol. When the wrapper sends a message to its functionality $\F$, it does not constitute an \msf{ITM} to \msf{ITM} write as they are both running on the same \msf{ITM}.}
+\end{figure}
+
 %\begin{bbox}[title=asd]
 %hello
 %\end{bbox}

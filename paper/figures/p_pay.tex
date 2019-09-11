@@ -6,6 +6,10 @@ $\msf{Contract_{pay}}$ identifier $\mathcal{C}$
 
 \Send $(\emptyset, 0) \rightarrow \F_{state}$
 
+\OnInput \inmsg{ping} from \Env:
+
+	\quad $\Send (\msf{read}) \rightarrow \Fstate$
+
 % New state from F_state
 \OnInput $(\msf{cred_L}, \msf{new_L}, \msf{cred_R}, \msf{new_R})$ from $\Fstate$:
 
