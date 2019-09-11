@@ -102,13 +102,19 @@ class Pay_Protocol(object):
         self.oldwd = 0
         self.paid = 0
         self._state = None
-    
+        self.buffer = defaultdict(list)
+
     def __str__(self):
         return '\033[92mProt_pay(%s,%s)\033[0m' % (self.sid, self.pid)
 
     def write(self, to, msg):
         print(u'\033[92m{:>20}\033[0m -----> {}, msg={}'.format('Protpay(%s,%s)' % (self.sid,self.pid), str(to), msg))
 
+    def round_number(self):
+        return self.G.subroutine_call((
+            (self.sid,self.pid), True,
+            (True, ('block-number',))
+        ))
 
     def input_pay(self, amt):
         contract = self.G.subroutine_call( (self.sender, True, ('contract-ref', self.C)) )    
@@ -173,7 +179,7 @@ class Pay_Protocol(object):
             self.paid += e
 
         #if self.arr != self.arr or self.wd != self.wd:
-        print('1111 wd', self.wd, 'oldwd', self.oldwd, 'arr', self.arr, 'oldarr', self.oldarr)
+        #print('1111 wd', self.wd, 'oldwd', self.oldwd, 'arr', self.arr, 'oldarr', self.oldarr)
         msg = ('input', (list(self.arr),self.wd-self.oldwd))
         self.oldarr = list(self.arr); self.oldwd = self.wd
         self.write(self.F_state, msg)
@@ -182,7 +188,7 @@ class Pay_Protocol(object):
         #))
         self.arr = list();# self.wd = 0
         self.oldarr = list(self.arr); #self.oldwd = self.wd
-        print('2222 wd', self.wd, 'oldwd', self.oldwd, 'arr', self.arr, 'oldarr', self.oldarr)
+        #print('2222 wd', self.wd, 'oldwd', self.oldwd, 'arr', self.arr, 'oldarr', self.oldarr)
         self.p2f.write( msg )
         #else:
         #    dump.dump()

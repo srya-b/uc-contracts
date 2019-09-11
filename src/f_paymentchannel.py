@@ -28,6 +28,7 @@ class PaymentChannel_Functionality(object):
         self.transfers = []
 
         self.buffer_changes = []
+        self.buffer = defaultdict(list)
         self.DELTA = self.G.F.DELTA
         self.adversary_out = qqueue()
         self.blockno = -1
@@ -101,10 +102,15 @@ class PaymentChannel_Functionality(object):
             (True, ('block-number',))
         ))
 
+    def round_number(self): return self.subroutine_block_number()
+
     ''' Buffer the output to the other party'''
     def buffer_output(self, sid, pid, msg):
         blockno = self.subroutine_block_number()
         self.buffer_changes.append((blockno+self.DELTA, sid, pid, msg))
+
+    def buffer(self, msg, delta, p):
+        self.buffer[ self.round_number + delta ].append(msg,p) 
 
     def write_output(self, sid, pid, msg):
         self.outputs[sid,pid].put(msg)
