@@ -195,11 +195,14 @@ class Pay_Protocol(object):
         
 
     def check_f_state(self):
-        outputs = self.F_state.subroutine_call( (self.sender, True, ('get-output',)))
+        #outputs = self.F_state.subroutine_call( (self.sender, True, ('get-output',)))
+        outputs = self.F_state.subroutine_call( (self.sender, True, ('read',)))
+        print('outputs', outputs)
         if len(outputs):
             #print('New state from F_state', outputs)
-            while len(outputs):
-                o = outputs.get()
+            #while len(outputs):
+            for o in outputs:
+                #o = outputs.get()
                 if o != self._state:
                     print("(%s,%s) Finally a new state from F_state" % (self.sid,self.pid), o, self._state)
                     self._state = o

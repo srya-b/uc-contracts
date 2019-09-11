@@ -142,8 +142,9 @@ def z_deploy_contract(z2sp, z2a, itm, adv, ledger, contract, *args):
     return caddr
 
 #def z_ping(itm):
-def z_ping(z2p):
-    z_inputs(('ping',),z2p)
+def z_ping(*z2ps):
+    for z2p in z2ps:
+        z_inputs(('ping',),z2p)
 
 def z_mint(itm, adv, ledger, *to):
     for t in to:

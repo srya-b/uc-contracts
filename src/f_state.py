@@ -3,6 +3,7 @@ import gevent
 from itm import ITMFunctionality
 from comm import ishonest, isdishonest, isadversary, setFunctionality
 from queue import Queue as qqueue
+from queue import Empty
 from hashlib import sha256
 from collections import defaultdict
 from gevent.queue import Queue, Channel
@@ -33,6 +34,7 @@ class StateChannel_Functionality(object):
         self.past_inputs = {}
         self.pmap = dict( (p,i) for i,p in enumerate(self._p))
         self.adversary_out = qqueue()
+        self.buffer_output = defaultdict(list)
 
     def p(self,i):
         return self.pmap[i]
@@ -45,10 +47,7 @@ class StateChannel_Functionality(object):
 
     def __str__(self):
         return '\033[92mF_state\033[0m'
-
-    def write(self, to, msg):
-        print(u'\033[92m{:>20}\033[0m -----> {}, msg={}'.format('F_state', str(to), msg))
-
+    
     def subroutine_block_number(self):
         return self.G.subroutine_call((
             (self.sid, self.pid),
@@ -56,26 +55,60 @@ class StateChannel_Functionality(object):
             ('block-number',)
         ))
 
+    def buffer(self, msg, delta, p):
+        self.buffer_output[ self.subroutine_block_number()+delta ].append((msg,p))
+
+    def write(self, to, msg):
+        print(u'\033[92m{:>20}\033[0m -----> {}, msg={}'.format('F_state', str(to), msg))
+
     def leak(self, msg):
         self.adversary_out.put(msg)
+
+
+    def process_buffer(self):
+        rnd = self.subroutine_block_number()
+        for i in range(0,rnd+1):
+            for m,p in self.buffer_output[i]:
+                self.outputs[p].put(m)
+            self.buffer_output[i] = []
+
+    def subroutine_read(self, pid):
+        o = []
+        while True:
+            try:
+                m = self.outputs[pid].get_nowait()
+                o.append(m)
+            except:
+                print('done with inputs for', pid); break
+        return o
+
 
     def execute(self):
         print('state:', self.state, 'inputs:', self.inputs, 'auxin:', self.aux_in)
         state,o = self.U(self.state, self.inputs, self.aux_in[-1] if self.aux_in else [], self.round)
         print("state':", state)
-        for p in range(len(self._p)):
-            if isdishonest(self.sid,p):
-                # deliver updated state in O(delta) rounds
-                return
+        #for p in range(len(self._p)):
+        #    if isdishonest(self.sid,p):
+        #        # deliver updated state in O(delta) rounds
+        #        return
 
         self.state = state
+       
+        delta = 1
+        for i in self._p:
+            if isdishonest(self.sid,i):
+                delta = self.DELTA; break
         
         for i in self._p:
-            self.outputs[i].put(state)
+            self.buffer(state, delta, i)
+
+        #for i in self._p:
+        #    self.outputs[i].put(state)
         #print('get output', self.outputs)
 
         self.past_inputs[self.round] = self.inputs
         self.inputs = [None for _ in range(len(self._p))]
+        print('execute')
         if o:
             # create on-chain transaction for aux contract
             print('some contract output')
@@ -88,6 +121,43 @@ class StateChannel_Functionality(object):
                 return False
         return True
 
+#    def tx_check(self):
+#        blockno = self.subroutine_block_number()
+#        txs = self.G.subroutine_call((
+#            (self.sid, self.pid),
+#            True,
+#            (False, ('get-txs', self.C , blockno-1, self.lastblock))
+#        ))
+#        #print('LASTBLOCK={}, BLOCK={}, BLOCK-1={}'.format(self.lastblock, blockno, blockno-1))
+#        if txs:
+#            for tx in txs:
+#                to,fro,val,data,nonce = tx
+#                output = self.G.subroutine_call((
+#                    self.sender,
+#                    True,
+#                    (False, ('read-output', [(fro,nonce)]))
+#                ))
+#                print('Output for (fro,nonce)={}, outputs={}'.format((fro,nonce), output))
+#                if not output: continue
+#                for o in output[0]:
+#                    self.aux_in.append(o[1:])
+#                #print('aux in after update', self.aux_in)
+#
+#        self.lastblock = blockno
+#    
+#        # check for ending round with input
+#        #print('CHECKING INPUTS', self.inputs)
+#        #print('blockno', blockno, 'deadline', self.deadline, 'lastblock', self.lastblock)
+#        if blockno > self.deadline or self.allinputs():
+#            if blockno > self.deadline: self.deadline = self.deadline + self.DELTA
+#            elif self.allinputs(): self.deadline = self.lastblock + self.DELTA
+#            #self.deadline = self.lastblock + self.DELTA
+#            #self.deadline = self.deadline + self.DELTA
+#            self.execute()
+#            self.round = self.round + 1
+#        else: dump.dump()
+
+    
     def tx_check(self):
         blockno = self.subroutine_block_number()
         txs = self.G.subroutine_call((
@@ -109,31 +179,31 @@ class StateChannel_Functionality(object):
                 for o in output[0]:
                     self.aux_in.append(o[1:])
                 #print('aux in after update', self.aux_in)
-
         self.lastblock = blockno
-    
-        # check for ending round with input
-        #print('CHECKING INPUTS', self.inputs)
-        #print('blockno', blockno, 'deadline', self.deadline, 'lastblock', self.lastblock)
-        if blockno > self.deadline or self.allinputs():
-            if blockno > self.deadline: self.deadline = self.deadline + self.DELTA
-            elif self.allinputs(): self.deadline = self.lastblock + self.DELTA
-            #self.deadline = self.lastblock + self.DELTA
-            #self.deadline = self.deadline + self.DELTA
+        dump.dump()
+
+    def state_check(self):
+        blockno = self.subroutine_block_number()
+        
+        if self.allinputs() or blockno > self.deadline:
+            self.deadline = blockno + self.DELTA
             self.execute()
             self.round = self.round + 1
-        else: dump.dump()
+        else:
+            dump.dump()
+
 
     def input_input(self, sid, pid, inp):
         msg = inp
         #if i != self.round: dump.dump(); return
         if self.pinput(pid): print('pinput dumping'); dump.dump(); return
-        
+              
         self.inputs[self.pmap[pid]] = msg
         self.leak(('input',pid,self.round,msg))
         #self.tx_check()
+        self.state_check()
         #print('\t f_state input input dump')
-        dump.dump()
+        #dump.dump()
 
     def input_msg(self, sender, msg):
         #print('FSTATE INPUTS MSG', sender, msg)
@@ -147,6 +217,7 @@ class StateChannel_Functionality(object):
             dump.dump()
             return
         #self.tx_check()
+        self.process_buffer()
         if msg[0] == 'input':
             #print('F_State got an INPUT', msg, sender)
             self.input_input(sid, pid, msg[1])
@@ -160,11 +231,14 @@ class StateChannel_Functionality(object):
     def subroutine_msg(self, sender, msg):
         #print('FSTATE SUBROUTINE', msg)
         #self.tx_check()
+        self.process_buffer()
         if sender: sid,pid = sender
         else: sid,pid = None,None
         assert sid == self.sid 
         if msg[0] == 'get-output':
             return self.outputs[pid]
+        elif msg[0] == 'read':
+            return self.subroutine_read(pid)
         else:
             return self.G.subroutine_call( (self.sender, True, msg) )
 
