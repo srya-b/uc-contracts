@@ -180,11 +180,11 @@ class StateChannel_Functionality(object):
                     self.aux_in.append(o[1:])
                 #print('aux in after update', self.aux_in)
         self.lastblock = blockno
-        dump.dump()
+        #dump.dump()
 
     def state_check(self):
         blockno = self.subroutine_block_number()
-        
+        print('blockno', blockno, 'deadline', self.deadline, 'allinputs', self.allinputs()) 
         if self.allinputs() or blockno > self.deadline:
             self.deadline = blockno + self.DELTA
             self.execute()
@@ -192,6 +192,9 @@ class StateChannel_Functionality(object):
         else:
             dump.dump()
 
+    def ping(self):
+        self.tx_check()
+        self.state_check()
 
     def input_input(self, sid, pid, inp):
         msg = inp
@@ -201,6 +204,7 @@ class StateChannel_Functionality(object):
         self.inputs[self.pmap[pid]] = msg
         self.leak(('input',pid,self.round,msg))
         #self.tx_check()
+        print('state check')
         self.state_check()
         #print('\t f_state input input dump')
         #dump.dump()
@@ -216,7 +220,7 @@ class StateChannel_Functionality(object):
         if not self.isplayer(pid): 
             dump.dump()
             return
-        #self.tx_check()
+        self.tx_check()
         self.process_buffer()
         if msg[0] == 'input':
             #print('F_State got an INPUT', msg, sender)
@@ -225,7 +229,7 @@ class StateChannel_Functionality(object):
             dump.dump()
 
     def adversary_msg(self, msg):
-        if msg[0] == 'ping': self.tx_check()
+        if msg[0] == 'ping': self.ping()
         else: dump.dump()
 
     def subroutine_msg(self, sender, msg):

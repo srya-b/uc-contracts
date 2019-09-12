@@ -85,27 +85,51 @@ Ping F_state when you want the state to progress with an update.
 Ping a party when you want its input to get sent to F_state
 '''
 z_inputs(('input',([],0)), z2p1, z2p2)
-z_ping(z2p1, z2p2, a2fstate)
 z_mine_blocks(1, z2sp, z2sp.to)
+z_ping(z2p1,z2p2)
 
 z_mint_mine(z2sp, z2a, advitm, ledger_itm, pl, pr)
 
 print('[GET BALANCE] \n\t', z_get_balance(pl, simparty, ledger_itm), '\n\t', z_get_balance(pr, simparty, ledger_itm), '\n\t', z_get_balance(simparty, simparty, ledger_itm))
 
 z_tx_inputs(z2a, advitm, ledger_itm, ('deposit', 10), z2sp, z2p1, z2p2)
-z_ping(z2p1, z2p2, a2fstate)
 
+# Only one input
 z_inputs(('pay', 2), z2p1)
-z_mine_blocks(9, z2sp, z2sp.to)
-z_ping(z2p1, z2p2, a2fstate)
+z_ping(z2p1)
+z_mine_blocks(8, z2sp, z2sp.to)
+z_ping(a2fstate)
 z_mine_blocks(1, z2sp, z2sp.to)
+#z_ping(z2p1, z2p2)
+#z_mine_blocks(1, z2sp, z2sp.to)
 
+# Only one input by pr
 z_inputs(('withdraw',5), z2p2)
 z_inputs(('pay',2), z2p2)
-z_mine_blocks(9, z2sp, z2sp.to)
-z_ping(z2p1, z2p2, a2fstate)
+z_ping(z2p2)
+z_mine_blocks(8, z2sp, z2sp.to)
+z_ping(a2fstate)
 z_mine_blocks(1, z2sp, z2sp.to)
-z_ping(z2p1, z2p2, a2fstate)
+
+# two input
+z_inputs(('pay',2), z2p1)
+z_ping(z2p1, z2p2)
+z_mine_blocks(1, z2sp, z2sp.to)
+
+# one input
+z_inputs(('pay',1), z2p1)
+z_ping(z2p1)
+z_mine_blocks(8, z2sp, z2sp.to)
+z_ping(a2fstate)
+z_mine_blocks(1, z2sp, z2sp.to)
+
+#z_ping(a2fstate, z2p2)
+#z_ping(a2fstate, z2p1, z2p2)
+#
+#
+#z_ping(z2p1, z2p2, a2fstate)
+#z_mine_blocks(1, z2sp, z2sp.to)
+#z_ping(z2p1, z2p2, a2fstate)
 ##one_input(z2p1)
 #
 #print('[GET BALANCE] \n\t', z_get_balance(pl, simparty, ledger_itm), '\n\t', z_get_balance(pr, simparty, ledger_itm), '\n\t', z_get_balance(simparty, simparty, ledger_itm))
