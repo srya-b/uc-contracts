@@ -109,6 +109,7 @@ z_inputs(('pay',2), z2p2)
 z_ping(z2p2)
 z_mine_blocks(8, z2sp, z2sp.to)
 z_ping(a2fstate)
+z_set_delays(z2a, advitm, ledger_itm, [0])
 z_mine_blocks(1, z2sp, z2sp.to)
 
 # two input
@@ -123,31 +124,4 @@ z_mine_blocks(8, z2sp, z2sp.to)
 z_ping(a2fstate)
 z_mine_blocks(1, z2sp, z2sp.to)
 
-#z_ping(a2fstate, z2p2)
-#z_ping(a2fstate, z2p1, z2p2)
-#
-#
-#z_ping(z2p1, z2p2, a2fstate)
-#z_mine_blocks(1, z2sp, z2sp.to)
-#z_ping(z2p1, z2p2, a2fstate)
-##one_input(z2p1)
-#
-#print('[GET BALANCE] \n\t', z_get_balance(pl, simparty, ledger_itm), '\n\t', z_get_balance(pr, simparty, ledger_itm), '\n\t', z_get_balance(simparty, simparty, ledger_itm))
-#
-#z_inputs(('withdraw',5), z2p2)
-#z_inputs(('pay',2), z2p2)
-#z_ping(z2p2) # get and send state to and from F_state
-#
-#z_mine_blocks(9, z2sp, z2sp.to)
-#z_ping(a2fstate)
-#z_set_delays(z2a, advitm, ledger_itm, [0]) # set delay for withdraw tx
-#z_mine_blocks(1, z2sp, z2sp.to)
-#
-#z_inputs(('pay',2), z2p2)
-
-#one_input(z2p2)
-#
-#z_ping(z2p2)
-#z_ping(z2p1)
-#
-#print('[GET BALANCE] \n\t', z_get_balance(pl, simparty, ledger_itm), '\n\t', z_get_balance(pr, simparty, ledger_itm), '\n\t', z_get_balance(simparty, simparty, ledger_itm))
+print('[GET BALANCE] \n\t', z_get_balance(pl, simparty, ledger_itm), '\n\t', z_get_balance(pr, simparty, ledger_itm), '\n\t', z_get_balance(simparty, simparty, ledger_itm))
