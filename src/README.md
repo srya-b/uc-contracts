@@ -99,4 +99,4 @@ When both parties give input, the code is much simpler. Environment gives the in
 Finally this just checkes the coin balances of all parties to confirm the withdraw was correctly processed. 
 
 ### Easier Way
-This might seem pretty complicated, but once you understand the rules of the functionality, every round follows a similar structure depending on how many parties are giving input. **Even if you don't give input to both parties, if you ping both parties it will force a default input and force a state transition in F_state. This is also a good option for easy of use.
+This might seem pretty complicated, but once you understand the rules of the functionality, every round follows a similar structure depending on how many parties are giving input. **Even if you don't give input to both parties, if you ping both parties it will force a default input and force a state transition in F_state. This is also a good option for easy of use.**
