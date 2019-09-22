@@ -3,7 +3,7 @@ import comm
 import gevent
 from itm import ITMFunctionality, ITMPassthrough, ITMAdversary, createParties, ITMPrinterAdversary, ITMProtocol
 from comm import P2F, P2G, F2G, A2G, A2P, Many2FChannel, M2F, Z2P, A2P, Z2A
-from utils import z_mine_blocks, z_send_money, z_get_balance, z_get_leaks, z_tx_leak, z_tx_leaks, z_delay_tx, z_set_delays, z_deploy_contract, z_mint, z_start_ledger, z_ideal_parties, z_sim_party, z_genym, z_real_parties, z_mint_mine, z_prot_input, z_instant_input, z_inputs, z_tx_inputs, z_ping, print
+from utils import z_mine_blocks, z_send_money, z_get_balance, z_get_leaks, z_tx_leak, z_tx_leaks, z_delay_tx, z_set_delays, z_deploy_contract, z_mint, z_start_ledger, z_ideal_parties, z_sim_party, z_genym, z_real_parties, z_mint_mine, z_prot_input, z_instant_input, z_inputs, z_tx_inputs, z_ping, z_read, print
 from g_ledger import Ledger_Functionality, LedgerITM
 from collections import defaultdict
 from gevent.queue import Queue, Channel
@@ -70,7 +70,7 @@ gevent.spawn(advitm.run)
 
 pladdr = z_genym((pl.sid,pl.pid), ledger_itm)
 praddr = z_genym((pr.sid,pr.pid),ledger_itm)
-print('pladdr', pladdr, 'praddr', praddr)
+#print('pladdr', pladdr, 'praddr', praddr)
 
 # Deploy contract_pay 
 caddr = z_deploy_contract(z2sp, z2a, simparty, advitm, ledger_itm, Contract_Pay, pladdr, praddr)
@@ -90,38 +90,119 @@ z_ping(z2p1,z2p2)
 
 z_mint_mine(z2sp, z2a, advitm, ledger_itm, pl, pr)
 
-print('[GET BALANCE] \n\t', z_get_balance(pl, simparty, ledger_itm), '\n\t', z_get_balance(pr, simparty, ledger_itm), '\n\t', z_get_balance(simparty, simparty, ledger_itm))
+#print('[GET BALANCE] \n\t', z_get_balance(pl, simparty, ledger_itm), '\n\t', z_get_balance(pr, simparty, ledger_itm), '\n\t', z_get_balance(simparty, simparty, ledger_itm))
 
-z_tx_inputs(z2a, advitm, ledger_itm, ('deposit', 10), z2sp, z2p1, z2p2)
-
-# Only one input
-z_inputs(('pay', 2), z2p1)
-z_ping(z2p1)
-z_mine_blocks(8, z2sp, z2sp.to)
-z_ping(a2fstate)
-z_mine_blocks(1, z2sp, z2sp.to)
-#z_ping(z2p1, z2p2)
+#z_tx_inputs(z2a, advitm, ledger_itm, ('deposit', 10), z2sp, z2p1, z2p2)
+#
+## Only one input
+#z_inputs(('pay', 2), z2p1)
+#z_ping(z2p1); z_ping(z2p2)
+#z_mine_blocks(8, z2sp, z2sp.to)
+#z_ping(a2fstate)
 #z_mine_blocks(1, z2sp, z2sp.to)
+##z_ping(z2p1, z2p2)
+##z_mine_blocks(1, z2sp, z2sp.to)
+#
+## Only one input by pr
+#z_inputs(('withdraw',5), z2p2)
+#z_inputs(('pay',2), z2p2)
+#z_ping(z2p2); z_ping(z2p1)
+#z_mine_blocks(8, z2sp, z2sp.to)
+#z_ping(a2fstate)
+#z_set_delays(z2a, advitm, ledger_itm, [0])
+#z_mine_blocks(1, z2sp, z2sp.to)
+#
+## two input
+#z_inputs(('pay',2), z2p1)
+#z_ping(z2p1); z_ping(z2p2)
+#z_mine_blocks(1, z2sp, z2sp.to)
+#
+## one input
+#z_inputs(('pay',1), z2p1)
+#z_ping(z2p1); z_ping(z2p2)
+#z_mine_blocks(8, z2sp, z2sp.to)
+#z_ping(a2fstate)
+#z_mine_blocks(1, z2sp, z2sp.to)
+#z_ping(z2p1, z2p2)
 
-# Only one input by pr
-z_inputs(('withdraw',5), z2p2)
-z_inputs(('pay',2), z2p2)
-z_ping(z2p2)
-z_mine_blocks(8, z2sp, z2sp.to)
-z_ping(a2fstate)
-z_set_delays(z2a, advitm, ledger_itm, [0])
-z_mine_blocks(1, z2sp, z2sp.to)
+try:
+    import __builtin__
+except ImportError:
+    import builtins as __builtin__
 
-# two input
-z_inputs(('pay',2), z2p1)
-z_ping(z2p1, z2p2)
-z_mine_blocks(1, z2sp, z2sp.to)
+def print(*args, **kwargs):
+    return __builtin__.print(*args, **kwargs)
 
-# one input
-z_inputs(('pay',1), z2p1)
-z_ping(z2p1)
-z_mine_blocks(8, z2sp, z2sp.to)
-z_ping(a2fstate)
-z_mine_blocks(1, z2sp, z2sp.to)
+p1r = z_read(p1id)
+print(p1id, p1r)
+p2r = z_read(p2id)
+print(p2id, p2r)
 
-print('[GET BALANCE] \n\t', z_get_balance(pl, simparty, ledger_itm), '\n\t', z_get_balance(pr, simparty, ledger_itm), '\n\t', z_get_balance(simparty, simparty, ledger_itm))
+def mainmain(cmds):
+    p1i = 0; p2i = 0;
+    p1d = 0; p2d = 0;
+    p1w = 0; p2w = 0;
+    print(cmds)
+    
+    for _cmd in cmds:
+        cmd = _cmd.split(' ')
+        if cmd[0] == 'pay':
+            if cmd[1] == 'p1':
+                p1i = 1
+                z_inputs(('pay',int(cmd[2])), z2p1)
+                z_ping(z2p1)
+            elif cmd[1] == 'p2':
+                p2i = 1
+                z_inputs(('pay',int(cmd[2])), z2p2)
+                z_ping(z2p2)
+        elif cmd[0] == 'deposit':
+            if cmd[1] == 'p1':
+                p1d = 1;
+                z_instant_input(z2p1, ('deposit', int(cmd[2])))
+            elif cmd[1] == 'p2':
+                p2d = 1
+                z_instant_input(z2p2, ('deposit', int(cmd[2])))
+        elif cmd[0] == 'withdraw':
+            if cmd[1] == 'p1':
+                p1w = 1
+                z_inputs(('withdraw', int(cmd[2])), z2p1)
+                z_ping(z2p1)
+            elif cmd[1] == 'p2':
+                p2w = 1
+                z_inputs(('withdraw', int(cmd[2])), z2p2)
+                z_ping(z2p2)
+        elif cmd[0] == 'blocks':
+            # mine cmd[1] blocks
+            z_mine_blocks(int(cmd[1]), z2sp, z2sp.to)
+        elif cmd[0] == 'delay':
+            d = [int(i) for i in cmd[1:]]
+            z_set_delays(z2a, advitm, ledger_itm, d)
+        elif cmd[0] == 'read':
+            z_ping(a2fstate)
+            if cmd[1] == 'p1': # read output from p1
+                #z_ping(z2p1)
+                p1r = z_read(p1id)
+                print(p1id,p1r,'\n')
+            elif cmd[1] == 'p2': # read output from p2
+                #z_ping(z2p2)
+                p2r = z_read(p2id)
+                print(p2id, p2r, '\n')
+
+
+import sys
+fn = sys.argv[1]
+print('arguments', fn)
+f = open(fn)
+#cmds = [line.strip() for line in f]
+cmds = []
+for line in f:
+    if line == '\n':
+        print('done'); break
+    cmds.append( line.strip() )
+mainmain(cmds)
+
+gevent.wait()
+
+
+
+#print('[GET BALANCE] \n\t', z_get_balance(pl, simparty, ledger_itm), '\n\t', z_get_balance(pr, simparty, ledger_itm), '\n\t', z_get_balance(simparty, simparty, ledger_itm))

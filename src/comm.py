@@ -56,17 +56,17 @@ def setAdversary(itm):
     sid,pid = itm.sid,itm.pid
     cset(sid,pid,ADVERSARY,itm)
     adversary = itm
-    print('ADVERSARY', sid, pid)
+    #print('ADVERSARY', sid, pid)
 
 def setFunctionality(itm):
     sid,pid = itm.sid,itm.pid
     cset(sid,pid,FUNCTIONALITY,itm)
-    print('FUNCTIONALITY', sid, pid)
+    #print('FUNCTIONALITY', sid, pid)
 
 def setParty(p):
     sid,pid = p.sid,p.pid
     cset(sid,pid,PARTY,p)
-    print('PARTY', sid, pid)
+    #print('PARTY', sid, pid)
 
 def setParties(parties):
     for p in parties:

@@ -4,7 +4,7 @@ import copy
 import gevent
 import inspect
 from itm import ITMFunctionality
-from utils import print
+from utils import print, gwrite
 from queue import Queue as qqueue
 from hashlib import sha256
 from collections import defaultdict
@@ -57,7 +57,8 @@ class Ledger_Functionality(object):
         return int(self.round / 2)
 
     def write(self, to, msg):
-        print(u'\033[92m{:>20}\033[0m -----> {}, msg={}'.format('G_ledger', str(to), msg))
+        #print(u'\033[92m{:>20}\033[0m -----> {}, msg={}'.format('G_ledger', str(to), msg))
+        gwrite(u'92m', 'G_ledger', to, msg)
 
     def leak(self, msg):
         #self.write( comm.adversary, msg )
@@ -102,16 +103,18 @@ class Ledger_Functionality(object):
         return self._balances[addr]
 
     def get_txs(self, sid, pid, addr, to, fro):
-        if fro > to: return []
+        if fro > to: print('da fuck'); return []
         output = []
-#        print('txqueue round={}, queue={}'.format(fro-1, self.txqueue[fro-1]))
+        #print('txqueue round={}, queue={}'.format(fro-1, self.txqueue[fro-1]))
         for blockno in range(fro,to+1):
             txqueue = self.txqueue[blockno]
+            #print('Get tx round', blockno, 'txs', txqueue)
 #            print('txqueue round={}, queue={}, to={}, from={}'.format(blockno,txqueue,to,fro))
             for tx in txqueue:
                 if tx[0] == 'transfer':
                     ########
                     to,val,data,fro,nonce = tx[1:]
+                    print('to', to, 'from', fro, 'addr', addr)
                     if to == addr or fro == addr:
                         output.append((to,fro,val,data,nonce))
         #print('Returning transactions:', output)
@@ -233,6 +236,7 @@ class Ledger_Functionality(object):
                 self.exec_tx(tx[1], tx[2], tx[3], tx[4])
             elif tx[0] == 'contract-create':
                 self.exec_contract_create(tx[1], tx[2], tx[3], tx[4], tx[5])
+        #print('Next Round from', self.round-1, 'to', self.round, 'txs', self.txqueue[self.round-1])
         #print('** tick honest dump **')
         dump.dump()
                

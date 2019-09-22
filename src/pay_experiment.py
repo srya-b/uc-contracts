@@ -2,8 +2,8 @@ import dump
 import comm
 import gevent
 from itm import ITMFunctionality, ITMPassthrough, ITMAdversary, createParties, ITMPrinterAdversary
-from comm import P2F, P2G, F2G, A2G, A2P, M2FChannel, M2F, Z2P, A2P, Z2A
-from utils import z_mine_blocks, z_send_money, z_get_balance, z_get_leaks, z_tx_leak, z_tx_leaks, z_delay_tx, z_set_delays, z_start_ledger, z_ideal_parties, z_sim_party, print
+from comm import P2F, P2G, F2G, A2G, A2P, Many2FChannel, M2F, Z2P, A2P, Z2A
+from utils import z_mine_blocks, z_send_money, z_get_balance, z_get_leaks, z_tx_leak, z_tx_leaks, z_delay_tx, z_set_delays, z_start_ledger, z_ideal_parties, z_sim_party, z_mint_mine, z_inputs, z_tx_inputs, z_ping, z_read, z_instant_input, print
 from g_ledger import Ledger_Functionality, LedgerITM
 from collections import defaultdict
 from gevent.queue import Queue, Channel
@@ -48,13 +48,13 @@ zid = (0,0)
 ''' All of the channels for the functionalities '''
 a2ledger = A2G(ledgerid,advid)
 f2ledger = F2G(ledgerid,('sid2',1))
-m2ledger = M2FChannel(ledgerid)
+m2ledger = Many2FChannel(ledgerid)
 p2ledger1 = M2F(p1id,m2ledger)
 p2ledger2 = M2F(p2id,m2ledger)
 
 a2fpay = A2G(fpayid, advid)
 f2fpay = F2G(fpayid, ('none',-1))
-m2fpay = M2FChannel(fpayid)
+m2fpay = Many2FChannel(fpayid)
 p2fpay1 = M2F(p1id, m2fpay)
 p2fpay2 = M2F(p2id, m2fpay)
 
@@ -100,77 +100,176 @@ print('P2:', p2.sid, p2.pid)
 '''Start functionality itms'''
 gevent.spawn(pay_itm.run)
 
-'''p1 and p2 needs funds, so mine blocks and send them money'''
-#z_mine_blocks(1, simparty, ledger_itm)
-z_mine_blocks(1, z2sp, simparty.sender)
-#z_send_money(10, p1, simparty, ledger_itm)
-z_send_money(10, p1, z2sp)
-#z_send_money(10, p2, simparty, ledger_itm)
-z_send_money(10, p2, z2sp)
-#z_set_delays(simitm, ledger_itm, [0,0])
-z_set_delays(z2a, simitm, ledger_itm, [0,0])
-#z_mine_blocks(1, simparty, ledger_itm)
-z_mine_blocks(1, z2sp, simparty.sender)
+z_mine_blocks(1, z2sp, z2sp.to)
+z_mint_mine(z2sp, z2a, simitm, ledger_itm, p1, p2)
+#z_ping(z2p1); z_ping(z2p2)
+##'''p1 and p2 needs funds, so mine blocks and send them money'''
+###z_mine_blocks(1, simparty, ledger_itm)
+##z_mine_blocks(1, z2sp, simparty.sender)
+###z_send_money(10, p1, simparty, ledger_itm)
+##z_send_money(10, p1, z2sp)
+###z_send_money(10, p2, simparty, ledger_itm)
+##z_send_money(10, p2, z2sp)
+###z_set_delays(simitm, ledger_itm, [0,0])
+##z_set_delays(z2a, simitm, ledger_itm, [0,0])
+###z_mine_blocks(1, simparty, ledger_itm)
+##z_mine_blocks(1, z2sp, simparty.sender)
+#
+#
+#print('USERS DEPOSIT')
+#'''
+#Users deposit
+#'''
+#z_tx_inputs(z2a, simitm, ledger_itm, ('deposit',10), z2sp, z2p1, z2p2)
+#z_ping(a2fpay)
+#z_ping(z2p1); z_ping(z2p2)
+##z_inputs(('deposit',10), z2p1)
+###exe(p1.input.set( ('deposit', 10) ))
+###exe(z2p1.write( ('deposit', 10) ))
+##z_inputs(('deposit',1), z2p2)
+###exe(p2.input.set( ('deposit', 1) ))
+###exe(z2p2.write( ('deposit', 1) ))
+###z_set_delays(simitm, ledger_itm, [0,0])
+##z_set_delays(z2a, simitm, ledger_itm, [0,0])
+###z_mine_blocks(1, simparty, ledger_itm)
+##z_mine_blocks(1, z2sp, simparty.sender)
+#
+#'''Check channel balanace is correct'''
+#balance = p1.subroutine_call(
+#    ('balance',)
+#)
+#print('balance', balance)
+#assert balance[0] == 10 and balance[1] == 10
+#'''Send my homeboi p2 some money bruh
+#    ....ok....
+#'''
+#
+#z_inputs(('pay',2), z2p1)
+#z_mine_blocks(1, z2sp, z2sp.to)
+#z_ping(a2fpay)
+#z_ping(z2p1); z_ping(z2p2)
+###exe(p1.input.set(('pay', 2)))
+##exe(z2p1.write( ('pay',2) ))
+#balance = p2.subroutine_call(('balance',))
+#print('balance', balance)
+#assert balance[0] == 10-2 and balance[1] == 10+2, 'p1:(%d), p2:(%d)' % (balance[0], balance[1])
+#
+#
+#''' p1 multiple pays'''
+#z_inputs(('withdraw', 5), z2p2)
+#z_inputs(('pay',2), z2p2)
+#z_set_delays(z2a, simitm, ledger_itm, [8])
+#z_mine_blocks(9, z2sp, z2sp.to)
+#z_ping(a2fpay)
+#z_ping(z2p1); z_ping(z2p2)
+###exe(p1.input.set(('pay', 1)))
+###exe(p1.input.set(('pay', 1)))
+###exe(p1.input.set(('pay', 1)))
+###exe(p1.input.set(('pay', 1)))
+##exe(z2p1.write( ('pay',1) ))
+##exe(z2p1.write( ('pay',1) ))
+##exe(z2p1.write( ('pay',1) ))
+##exe(z2p1.write( ('pay',1) ))
+#
+try:
+    import __builtin__
+except ImportError:
+    import builtins as __builtin__
 
+def print(*args, **kwargs):
+    return __builtin__.print(*args, **kwargs)
 
-print('USERS DEPOSIT')
-'''
-Users deposit
-'''
-#exe(p1.input.set( ('deposit', 10) ))
-exe(z2p1.write( ('deposit', 10) ))
-#exe(p2.input.set( ('deposit', 1) ))
-exe(z2p2.write( ('deposit', 1) ))
-#z_set_delays(simitm, ledger_itm, [0,0])
-z_set_delays(z2a, simitm, ledger_itm, [0,0])
-#z_mine_blocks(1, simparty, ledger_itm)
-z_mine_blocks(1, z2sp, simparty.sender)
+#
+#p1r = z_read(p1id)
+#print(p1id, p1r)
+#print('\n')
+#p2r = z_read(p2id)
+#print(p2id, p2r)
+#
+#balance = p2.subroutine_call(
+#    ('balance',)
+#)
+##print('balance', balance)
+##assert balance[0] == 10+2-2 and balance[1] == 10+2-2-5, 'p1:(%d), p2:(%d)' % (balance[0], balance[1])
 
-'''Check channel balanace is correct'''
-balance = p1.subroutine_call(
-    ('balance',)
-)
-print('balance', balance)
-assert balance[0] == 10 and balance[1] == 1
-'''Send my homeboi p2 some money bruh
-    ....ok....
-'''
+def mainmain(cmds):
+    p1i = 0; p2i = 0
+    p1d = 0; p2d = 0
+    p1w = 0; p2w = 0
+    print('cmds', cmds)
+    for _cmd in cmds:
+        cmd = _cmd.split(' ')
+        if cmd[0] == 'pay':
+            if cmd[1] == 'p1': 
+                p1i = 1; 
+                z_inputs(('pay',int(cmd[2])),z2p1)
+                #z_ping(z2p1)
+            elif cmd[1] == 'p2': 
+                p2i = 1; 
+                z_inputs(('pay',int(cmd[2])),z2p2)
+                #z_ping(z2p2)
+            if p1i + p2i == 2:
+                z_ping(z2p1); z_ping(z2p2)
+                p1i = 0; p2i = 0
+        elif cmd[0] == 'deposit':
+            print('deposit', cmd)
+            if cmd[1] == 'p1':
+                p1d = 1
+                z_instant_input(z2p1, ('deposit', int(cmd[2])))
+            elif cmd[1] == 'p2': 
+                p2d = 1
+                z_instant_input(z2p2, ('deposit', int(cmd[2])))
+        elif cmd[0] == 'withdraw':
+            if cmd[1] == 'p1': 
+                p1w = 1
+                z_inputs(('withdraw', int(cmd[2])), z2p1)
+            elif cmd[1] == 'p2': 
+                p2w = 1
+                z_inputs(('withdraw', int(cmd[2])), z2p2)
+        elif cmd[0] == 'blocks':
+            # mine cmd[1] blocks
+            z_mine_blocks(int(cmd[1]), z2sp, z2sp.to)
+        elif cmd[0] == 'delay':
+            d = [int(i) for i in cmd[1:]]
+            print('delays', d)
+            z_set_delays(z2a, simitm, ledger_itm, d)
+        elif cmd[0] == 'read':
+            if cmd[1] == 'p1': # read output from p1
+                z_ping(z2p1)
+                p1r = z_read(p1id)
+                print(p1id,p1r,'\n')
+            elif cmd[1] == 'p2': # read output from p2
+                z_ping(z2p2)
+                p2r = z_read(p2id)
+                print(p2id, p2r, '\n')
 
-#exe(p1.input.set(('pay', 2)))
-exe(z2p1.write( ('pay',2) ))
-balance = p2.subroutine_call(('balance',))
-print('balance', balance)
-assert balance[0] == 10-2 and balance[1] == 1+2, 'p1:(%d), p2:(%d)' % (balance[0], balance[1])
+print('HELLO')
+#if __name__=='__main__':
+import sys
+fn = sys.argv[1]
+print('arguments', fn)
+f = open(fn)
+#cmds = [line.strip() for line in f]
+cmds = []
+for line in f:
+    if line == '\n':
+        print('done'); break
+    cmds.append( line.strip() )
+mainmain(cmds)
 
+gevent.wait()
 
-''' p1 multiple pays'''
-#exe(p1.input.set(('pay', 1)))
-#exe(p1.input.set(('pay', 1)))
-#exe(p1.input.set(('pay', 1)))
-#exe(p1.input.set(('pay', 1)))
-exe(z2p1.write( ('pay',1) ))
-exe(z2p1.write( ('pay',1) ))
-exe(z2p1.write( ('pay',1) ))
-exe(z2p1.write( ('pay',1) ))
-
-balance = p2.subroutine_call(
-    ('balance',)
-)
-print('balance', balance)
-assert balance[0] == 10-2-4 and balance[1] == 1+2+4, 'p1:(%d), p2:(%d)' % (balance[0], balance[1])
-
-
-print('ADVERSARY corrupting p2 and sending payment...')
-#exe(simitm.input.set(
-#    ('party-input', (p2.sid, p2.pid), ('pay', 2))
+#print('ADVERSARY corrupting p2 and sending payment...')
+##exe(simitm.input.set(
+##    ('party-input', (p2.sid, p2.pid), ('pay', 2))
+##))
+#exe(z2a.write( 
+#    ('party-input', (p2.sid, p2.sid), ('pay',2))
 #))
-exe(z2a.write( 
-    ('party-input', (p2.sid, p2.sid), ('pay',2))
-))
-#z_set_delays(simitm, ledger_itm, [8])
-z_set_delays(z2a, simitm, ledger_itm, [8])
-#z_mine_blocks(8, simparty, ledger_itm)
-z_mine_blocks(8, z2sp, simparty.sender)
-
-balance = p1.subroutine_call(('balance',))
-print(balance)
+##z_set_delays(simitm, ledger_itm, [8])
+#z_set_delays(z2a, simitm, ledger_itm, [8])
+##z_mine_blocks(8, simparty, ledger_itm)
+#z_mine_blocks(8, z2sp, simparty.sender)
+#
+#balance = p1.subroutine_call(('balance',))
+#print(balance)

@@ -3,6 +3,7 @@ import random
 import dump
 import comm
 from itm import ITMFunctionality
+from utils import print
 from hashlib import sha256
 from g_ledger import Ledger_Functionality
 from collections import defaultdict
@@ -181,7 +182,7 @@ class Protected_Wrapper(object):
             return self.addresses[key]
 
     def rgenym(self, image):
-        assert image in self.raddresses
+        assert image in self.raddresses, "{} no in self.raddresses {}".format(image, self.raddresses)
         return self.raddresses[image]
 
     def subroutine_genym(self, key):
@@ -261,7 +262,16 @@ class Protected_Wrapper(object):
             elif msg[0] == 'get-txs':
                 _,_addr,blockto,blockfro = msg
                 addr = self.genym(_addr)
-                return self.subroutine_gettx(addr, blockto, blockfro)
+                #print('get-txs', _addr, addr, blockto, blockfro)
+                #return self.subroutine_gettx(addr, blockto, blockfro)
+                txs = self.ledger.subroutine_msg(sender, ('get-txs',addr,blockto,blockfro))
+                o = []
+                for tx in txs:
+                    to,fro,val,data,nonce = tx
+                    to = self.rgenym(to); 
+                    fro = self.rgenym(fro)
+                    o.append( (to,fro,val,data,nonce)  )
+                return o
             elif msg[0] == 'read-output':
                 _,_outputs = msg
                 outputs = []

@@ -6,7 +6,7 @@ import identity
 import dump
 import gevent
 import comm
-from utils import print
+from utils import gwrite, z_write
 
 class ITMFunctionality(object):
 
@@ -124,7 +124,8 @@ class ITMPassthrough(object):
         return '\033[1mITM(%s, %s)\033[0m' % (self.sid, self.pid)
 
     def write(self, to, msg):
-        print('\033[1m{:>20}\033[0m -----> {}, msg={}'.format('ITM(%s, %s)' % (self.sid,self.pid), str(to), msg))
+        #print('\033[1m{:>20}\033[0m -----> {}, msg={}'.format('ITM(%s, %s)' % (self.sid,self.pid), str(to), msg))
+        gwrite(u'1m', 'ITM(%s, %s)'%(self.sid,self.pid), to, msg)
         #print('%s:<15 -----> %s\tmsg=%s' % (str(self), str(to), msg))
 
     def init(self, functionality):
@@ -137,7 +138,17 @@ class ITMPassthrough(object):
             True,
             inp
         ))
-    
+   
+    def ping(self):
+        o = self.F.subroutine_call((
+            (self.sid, self.pid),
+            True,
+            ('read',)
+        ))
+        if o:
+            z_write((self.sid,self.pid), o)
+        dump.dump()
+
     def run(self):
         while True:
             #ready = gevent.wait(
@@ -154,8 +165,11 @@ class ITMPassthrough(object):
             msg = r.read()
             if r == self.z2p:
                 #print('PASSTHROUGH MESSAGE', msg) 
-                self.write(self.F, msg)
-                self.p2f.write( msg )
+                if msg[0] == 'ping':
+                    self.ping()
+                else:
+                    self.write(self.F, msg)
+                    self.p2f.write( msg )
                 #dump.dump(); continue
                 self.z2p.reset()
             elif r == self.a2p:
@@ -331,7 +345,7 @@ class ITMAdversary(object):
                 #print('leak leaks', self.leakbuffer)
                 self.leakbuffer.append(msg)
                 #print('leak leaks', self.leakbuffer)
-                print('elif r == self.leak'); dump.dump()
+                dump.dump()
                 self.leak = AsyncResult()
             else:
                 print('else dumping right after leak'); dump.dump()

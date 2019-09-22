@@ -2,6 +2,7 @@ import dump
 import gevent
 from itm import ITMFunctionality
 from comm import ishonest, isdishonest, isadversary, setFunctionality
+from utils import gwrite, print
 from queue import Queue as qqueue
 from queue import Empty
 from hashlib import sha256
@@ -49,6 +50,7 @@ class StateChannel_Functionality(object):
         return '\033[92mF_state\033[0m'
     
     def subroutine_block_number(self):
+        #print('calling blockno')
         return self.G.subroutine_call((
             (self.sid, self.pid),
             True,
@@ -59,7 +61,8 @@ class StateChannel_Functionality(object):
         self.buffer_output[ self.subroutine_block_number()+delta ].append((msg,p))
 
     def write(self, to, msg):
-        print(u'\033[92m{:>20}\033[0m -----> {}, msg={}'.format('F_state', str(to), msg))
+        #print(u'\033[92m{:>20}\033[0m -----> {}, msg={}'.format('F_state', str(to), msg))
+        gwrite(u'92m', 'F_state', to, msg)
 
     def leak(self, msg):
         self.adversary_out.put(msg)
@@ -79,12 +82,12 @@ class StateChannel_Functionality(object):
                 m = self.outputs[pid].get_nowait()
                 o.append(m)
             except:
-                print('done with inputs for', pid); break
+                break
         return o
 
 
     def execute(self):
-        print('state:', self.state, 'inputs:', self.inputs, 'auxin:', self.aux_in)
+        #print('state:', self.state, 'inputs:', self.inputs, 'auxin:', self.aux_in)
         state,o = self.U(self.state, self.inputs, self.aux_in[-1] if self.aux_in else [], self.round)
         print("state':", state)
         #for p in range(len(self._p)):
@@ -108,7 +111,6 @@ class StateChannel_Functionality(object):
 
         self.past_inputs[self.round] = self.inputs
         self.inputs = [None for _ in range(len(self._p))]
-        print('execute')
         if o:
             # create on-chain transaction for aux contract
             print('some contract output')
@@ -165,7 +167,7 @@ class StateChannel_Functionality(object):
             True,
             (False, ('get-txs', self.C , blockno-1, self.lastblock))
         ))
-        #print('LASTBLOCK={}, BLOCK={}, BLOCK-1={}'.format(self.lastblock, blockno, blockno-1))
+        print('LASTBLOCK={}, BLOCK={}, BLOCK-1={}'.format(self.lastblock, blockno, blockno-1))
         if txs:
             for tx in txs:
                 to,fro,val,data,nonce = tx
@@ -264,7 +266,8 @@ class Sim_State:
         return '\033[91mSimulator (%s, %s)\033[0m' % (self.sid, self.pid) 
 
     def write(self, to, msg):
-        print('\033[91m{:>20}\033[0m -----> {}, msg={}'.format('Simulator (%s,%s)' % (self.sid, self.pid), str(to), msg))
+        #print('\033[91m{:>20}\033[0m -----> {}, msg={}'.format('Simulator (%s,%s)' % (self.sid, self.pid), str(to), msg))
+        gwrite(u'91m', 'Simulator (%s,%s)'%(self.sid,self.pid), to, msg)
 
     def input_delay_tx(self, fro, nonce, rounds):
         msg=('delay-tx', fro, nonce, rounds)

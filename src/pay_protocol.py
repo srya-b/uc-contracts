@@ -3,6 +3,7 @@ import gevent
 from itm import ITMFunctionality
 from comm import ishonest, isdishonest, isadversary
 from queue import Queue as qqueue
+from utils import print, gwrite, z_write 
 from hashlib import sha256
 from collections import defaultdict
 from gevent.queue import Queue, Channel
@@ -108,7 +109,8 @@ class Pay_Protocol(object):
         return '\033[92mProt_pay(%s,%s)\033[0m' % (self.sid, self.pid)
 
     def write(self, to, msg):
-        print(u'\033[92m{:>20}\033[0m -----> {}, msg={}'.format('Protpay(%s,%s)' % (self.sid,self.pid), str(to), msg))
+        #print(u'\033[92m{:>20}\033[0m -----> {}, msg={}'.format('Protpay(%s,%s)' % (self.sid,self.pid), str(to), msg))
+        gwrite(u'92m', 'Protpay(%s,%s)' % (self.sid,self.pid), to, msg)
 
     def round_number(self):
         return self.G.subroutine_call((
@@ -119,6 +121,7 @@ class Pay_Protocol(object):
     def input_pay(self, amt):
         contract = self.G.subroutine_call( (self.sender, True, ('contract-ref', self.C)) )    
         myaddr = self.G.subroutine_call( (self.sender, True, ('get-addr', self.sender)) )
+        print("Deposits", contract.deposits_l, contract.deposits_r)
         if contract.p_l == myaddr:
             deposit_i = contract.deposits_l
         elif contract.p_r == myaddr:
@@ -126,7 +129,6 @@ class Pay_Protocol(object):
         if amt <= deposit_i + self.paid - self.pay - self.wd:
             self.arr.append(amt)
             self.pay += amt
-        #print('** input_pay dump **')
         dump.dump()
 
     def input_withdraw(self, amt):
@@ -175,7 +177,10 @@ class Pay_Protocol(object):
             new_i = new_r
 
         for e in new_i:
-            self.outputs[0] = ('receive', e)
+            #self.outputs[0] = ('receive', e)
+            print('\n\t\t', (self.sid,self.pid), ('receive', e), '\n')
+            z_write( (self.sid,self.pid), ('receive',e) )
+
             self.paid += e
 
         #if self.arr != self.arr or self.wd != self.wd:
@@ -199,7 +204,7 @@ class Pay_Protocol(object):
         outputs = self.F_state.subroutine_call( (self.sender, True, ('read',)))
         print('outputs', outputs)
         if len(outputs):
-            #print('New state from F_state', outputs)
+            print('New state from F_state', outputs)
             #while len(outputs):
             for o in outputs:
                 #o = outputs.get()
@@ -257,7 +262,8 @@ class Adv:
         return '\033[91mAdversary (%s, %s)\033[0m' % (self.sid, self.pid) 
 
     def write(self, to, msg):
-        print('\033[91m{:>20}\033[0m -----> {}, msg={}'.format('Adversary (%s,%s)' % (self.sid, self.pid), str(to), msg))
+        #print('\033[91m{:>20}\033[0m -----> {}, msg={}'.format('Adversary (%s,%s)' % (self.sid, self.pid), str(to), msg))
+        gwrite(u'91m', 'Adversary (%s,%s)' %(self.sid,self.pid), to, msg)
 
     #def input_delay_tx(self, fro, nonce, rounds):
     #    msg=('delay-tx', fro, nonce, rounds)

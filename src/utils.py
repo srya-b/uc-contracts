@@ -3,9 +3,33 @@ import inspect
 import dump
 import gevent 
 import comm
+from collections import defaultdict
+
+global pouts
+pouts = defaultdict(list)
+
+def z_write(fro, msg):
+    global pouts
+    pouts[fro].append(msg)
+
+def z_read(fro):
+    global pouts
+    return pouts[fro]
+
+def gwrite(color, fro, to, msg):
+    print(u'\033[{}{:>20}\033[0m -----> {}, msg={}'.format(color, fro, str(to), msg))
 
 def _write(to, msg):
-    print('\033[94m{:>20}\033[0m -----> {}, msg={}'.format('Environment', str(comm.getitm(*to)), msg))
+#    print('\033[94m{:>20}\033[0m -----> {}, msg={}'.format('Environment', str(comm.getitm(*to)), msg))
+    gwrite(u'94m', 'Environment', comm.getitm(*to), msg)
+
+try:
+    import __builtin__
+except ImportError:
+    import builtins as __builtin__
+
+def print(*args, **kwargs):
+    return __builtin__.print(*args, **kwargs)
 
 def contracts_same(contract1, contract2):
     type1 = type(contract1)
@@ -161,7 +185,6 @@ def z_prot_input(z2p, msg):
 def z_instant_input(z2p, msg):
     z_prot_input(z2p, msg)
 
-#def z_tx_inputs(adv, ledger, msg, simparty, *itms):
 def z_tx_inputs(z2a, adv, ledger, msg, z2sp, *z2ps):
     #for itm in itms:
     for z2p in z2ps:
@@ -172,13 +195,11 @@ def z_tx_inputs(z2a, adv, ledger, msg, z2sp, *z2ps):
     #z_mine_blocks(1, simparty, ledger)
     z_mine_blocks(1, z2sp, z2sp.to) 
 
-#def z_inputs(msg, *itms):
 def z_inputs(msg, *z2ps):
     #for itm in itms:
     for z2p in z2ps:
         z_instant_input(z2p, msg)
 
-#def z_mint_mine(itm, adv, ledger, *to):
 def z_mint_mine(z2p, z2a, adv, ledger, *to):
     for t in to:
         #z_send_money(10, t, itm, ledger)
@@ -218,12 +239,4 @@ def z_sim_party(sid,pid,citm,itm, a2p, p2f, z2p):
     gevent.spawn(simparty.run)
     comm.setParty(simparty)
     return simparty
-
-try:
-    import __builtin__
-except ImportError:
-    import builtins as __builtin__
-
-def print(*args, **kwargs):
-    return __builtin__.print(*args, **kwargs)
 
