@@ -90,6 +90,7 @@ class Pay_Protocol(object):
         self.sender = (sid,pid)
         self.F_state = F_state
         self.first = True
+        self.sendinput = False
 
         self.G = G
         self.C = C
@@ -215,7 +216,20 @@ class Pay_Protocol(object):
             self.input_f_state(o)
         else:
             dump.dump()
-    
+   
+#    def check_f_state(self):
+#        outputs = self.F_state.subroutine_call( (self.sender, True, ('read',)))
+#        print('outputs', outputs)
+#        if len(outputs):
+#            print('New state from F_state', outputs)
+#            for o in outputs:
+#                if o != self.state:
+#                    self.sendinput = True
+#                    print("(%s,%s) Finally a new state from F_state" % (self.sid,self.pid), o, self._state)
+#                    self._state = o
+#                    break
+#        dump.dump()
+
     def input_ping(self):
         self.check_f_state() 
 

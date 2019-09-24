@@ -102,7 +102,7 @@ gevent.spawn(pay_itm.run)
 
 z_mine_blocks(1, z2sp, z2sp.to)
 z_mint_mine(z2sp, z2a, simitm, ledger_itm, p1, p2)
-#z_ping(z2p1); z_ping(z2p2)
+z_ping(z2p1); z_ping(z2p2)
 ##'''p1 and p2 needs funds, so mine blocks and send them money'''
 ###z_mine_blocks(1, simparty, ledger_itm)
 ##z_mine_blocks(1, z2sp, simparty.sender)
@@ -179,7 +179,7 @@ except ImportError:
 def print(*args, **kwargs):
     return __builtin__.print(*args, **kwargs)
 
-#
+
 #p1r = z_read(p1id)
 #print(p1id, p1r)
 #print('\n')
@@ -189,8 +189,8 @@ def print(*args, **kwargs):
 #balance = p2.subroutine_call(
 #    ('balance',)
 #)
-##print('balance', balance)
-##assert balance[0] == 10+2-2 and balance[1] == 10+2-2-5, 'p1:(%d), p2:(%d)' % (balance[0], balance[1])
+#print('balance', balance)
+#assert balance[0] == 10+2-2 and balance[1] == 10+2-2-5, 'p1:(%d), p2:(%d)' % (balance[0], balance[1])
 
 def mainmain(cmds):
     p1i = 0; p2i = 0
@@ -211,6 +211,13 @@ def mainmain(cmds):
             if p1i + p2i == 2:
                 z_ping(z2p1); z_ping(z2p2)
                 p1i = 0; p2i = 0
+        if cmd[0] == 'pass':
+            if cmd[1] == 'p1':
+                p1i = 1
+                z_inputs(('input',[],0), z2p1)
+            elif cmd[1] == 'p2':
+                p2i = 1
+                z_inputs(('input', [],0), z2p2)
         elif cmd[0] == 'deposit':
             print('deposit', cmd)
             if cmd[1] == 'p1':
@@ -237,11 +244,11 @@ def mainmain(cmds):
             if cmd[1] == 'p1': # read output from p1
                 z_ping(z2p1)
                 p1r = z_read(p1id)
-                print(p1id,p1r,'\n')
+                if p1r: print(p1id,p1r,'\n')
             elif cmd[1] == 'p2': # read output from p2
                 z_ping(z2p2)
                 p2r = z_read(p2id)
-                print(p2id, p2r, '\n')
+                if p2r: print(p2id, p2r, '\n')
 
 print('HELLO')
 #if __name__=='__main__':
