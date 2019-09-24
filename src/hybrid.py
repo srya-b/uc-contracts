@@ -168,27 +168,33 @@ def mainmain(cmds):
                 z_inputs(('pay',0), z2p2)
         elif cmd[0] == 'deposit':
             if cmd[1] == 'p1':
-                p1d = 1;
+                p1d = 1; p1i = 1;
                 z_instant_input(z2p1, ('deposit', int(cmd[2])))
             elif cmd[1] == 'p2':
-                p2d = 1
+                p2d = 1; p2i = 0
                 z_instant_input(z2p2, ('deposit', int(cmd[2])))
         elif cmd[0] == 'withdraw':
             if cmd[1] == 'p1':
-                p1w = 1
+                p1w = 1; p1i = 1
                 z_inputs(('withdraw', int(cmd[2])), z2p1)
                 z_ping(z2p1)
             elif cmd[1] == 'p2':
-                p2w = 1
+                p2w = 1; p2i = 1
                 z_inputs(('withdraw', int(cmd[2])), z2p2)
                 z_ping(z2p2)
         elif cmd[0] == 'blocks':
             # mine cmd[1] blocks
             #print('\n\n\tneed to ping\n\n')
+            if p1i+p2i != 2:
+                if p1i == 0: 
+                    print('HOLY SHIT P1 JUST GOT PWNED!')
+                else:
+                    print("WTF P2 PWNED?!?!?")
             z_ping(z2p1); z_ping(z2p2)
             #z_ping(a2fstate)
             z_mine_blocks(int(cmd[1]), z2sp, z2sp.to)
             z_ping(a2fstate)
+            p1i = 0; p2i = 0;
         elif cmd[0] == 'delay':
             d = [int(i) for i in cmd[1:]]
             z_set_delays(z2a, advitm, ledger_itm, d)

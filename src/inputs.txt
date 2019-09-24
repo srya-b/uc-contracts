@@ -20,6 +20,10 @@ pass p2
 blocks 1
 read p1 
 read p2
+pay p1 1
+blocks 1
+read p1
+read p2
 
 comments
 ---------
