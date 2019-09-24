@@ -133,9 +133,9 @@ except ImportError:
 def print(*args, **kwargs):
     return __builtin__.print(*args, **kwargs)
 
-p1r = z_read(p1id)
+p1r = z_read(p1id, pl)
 print(p1id, p1r)
-p2r = z_read(p2id)
+p2r = z_read(p2id, pr)
 print(p2id, p2r)
 
 def mainmain(cmds):
@@ -150,20 +150,22 @@ def mainmain(cmds):
             if cmd[1] == 'p1':
                 p1i = 1
                 z_inputs(('pay',int(cmd[2])), z2p1)
-                z_ping(z2p1)
+                #z_ping(z2p1)
             elif cmd[1] == 'p2':
                 p2i = 1
                 z_inputs(('pay',int(cmd[2])), z2p2)
-                z_ping(z2p2)
+                #z_ping(z2p2)
         if cmd[0] == 'pass':
             if cmd[1] == 'p1':
                 p1i = 1
-                z_ping(z2p1)
+                #z_ping(z2p1)
                 #z_inputs(('input',[],0), z2p1)
+                z_inputs(('pay',0), z2p1)
             elif cmd[1] == 'p2':
                 p2i = 1
-                z_ping(z2p2)
+                #z_ping(z2p2)
                 #z_inputs(('input', [],0), z2p2)
+                z_inputs(('pay',0), z2p2)
         elif cmd[0] == 'deposit':
             if cmd[1] == 'p1':
                 p1d = 1;
@@ -182,20 +184,24 @@ def mainmain(cmds):
                 z_ping(z2p2)
         elif cmd[0] == 'blocks':
             # mine cmd[1] blocks
+            #print('\n\n\tneed to ping\n\n')
+            z_ping(z2p1); z_ping(z2p2)
+            #z_ping(a2fstate)
             z_mine_blocks(int(cmd[1]), z2sp, z2sp.to)
+            z_ping(a2fstate)
         elif cmd[0] == 'delay':
             d = [int(i) for i in cmd[1:]]
             z_set_delays(z2a, advitm, ledger_itm, d)
         elif cmd[0] == 'read':
             print('READING!')
-            z_ping(a2fstate)
+            #z_ping(a2fstate)
             if cmd[1] == 'p1': # read output from p1
-                z_ping(z2p1)
-                p1r = z_read(p1id)
+                #z_ping(z2p1)
+                p1r = z_read(p1id,pl)
                 if p1r: print(p1id,p1r,'\n')
             elif cmd[1] == 'p2': # read output from p2
-                z_ping(z2p2)
-                p2r = z_read(p2id)
+                #z_ping(z2p2)
+                p2r = z_read(p2id,pr)
                 if p2r: print(p2id, p2r, '\n')
 
 

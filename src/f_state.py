@@ -29,7 +29,8 @@ class StateChannel_Functionality(object):
         print("LASTBLOCK:", self.lastblock)
 
         self.round = 0
-        self.outputs = defaultdict(Queue)
+        #self.outputs = defaultdict(Queue)
+        self.outputs = defaultdict(list)
         self.deadline = self.lastblock + self.DELTA
         self.inputs = [None for _ in range(len(p))]
         self.past_inputs = {}
@@ -58,6 +59,7 @@ class StateChannel_Functionality(object):
         ))
 
     def buffer(self, msg, delta, p):
+        print('writing to buffer f_state', self.subroutine_block_number(), delta, msg, p)
         self.buffer_output[ self.subroutine_block_number()+delta ].append((msg,p))
 
     def write(self, to, msg):
@@ -69,21 +71,26 @@ class StateChannel_Functionality(object):
 
 
     def process_buffer(self):
+        #print('\nprocessing f_state buffer\n')
         rnd = self.subroutine_block_number()
+        #print('RND', rnd)
+        #print('5', self.buffer_output[5])
         for i in range(0,rnd+1):
             for m,p in self.buffer_output[i]:
-                self.outputs[p].put(m)
+                #self.outputs[p].put(m)
+                self.outputs[p].append(m)
             self.buffer_output[i] = []
 
     def subroutine_read(self, pid):
-        o = []
-        while True:
-            try:
-                m = self.outputs[pid].get_nowait()
-                o.append(m)
-            except:
-                break
-        return o
+#        o = []
+#        while True:
+#            try:
+#                m = self.outputs[pid].get_nowait()
+#                o.append(m)
+#            except:
+#                break
+#        return o
+        return self.outputs[pid]
 
 
     def execute(self):
@@ -196,6 +203,7 @@ class StateChannel_Functionality(object):
 
     def ping(self):
         self.tx_check()
+        self.process_buffer()
         self.state_check()
 
     def input_input(self, sid, pid, inp):

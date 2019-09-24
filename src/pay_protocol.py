@@ -105,6 +105,7 @@ class Pay_Protocol(object):
         self.paid = 0
         self._state = None
         self.buffer = defaultdict(list)
+        self.outputidx = 0
 
     def __str__(self):
         return '\033[92mProt_pay(%s,%s)\033[0m' % (self.sid, self.pid)
@@ -179,8 +180,8 @@ class Pay_Protocol(object):
 
         for e in new_i:
             #self.outputs[0] = ('receive', e)
-            print('\n\t\t', (self.sid,self.pid), ('receive', e), '\n')
-            z_write( (self.sid,self.pid), ('receive',e) )
+            #print('\n\t\t', (self.sid,self.pid), ('receive', e), '\n')
+            #z_write( (self.sid,self.pid), ('receive',e) )
 
             self.paid += e
 
@@ -200,35 +201,74 @@ class Pay_Protocol(object):
         #    dump.dump()
         
 
-    def check_f_state(self):
-        #outputs = self.F_state.subroutine_call( (self.sender, True, ('get-output',)))
-        outputs = self.F_state.subroutine_call( (self.sender, True, ('read',)))
-        print('outputs', outputs)
-        if len(outputs):
-            print('New state from F_state', outputs)
-            #while len(outputs):
-            for o in outputs:
-                #o = outputs.get()
-                if o != self._state:
-                    print("(%s,%s) Finally a new state from F_state" % (self.sid,self.pid), o, self._state)
-                    self._state = o
-                    break
-            self.input_f_state(o)
-        else:
-            dump.dump()
-   
 #    def check_f_state(self):
+#        #outputs = self.F_state.subroutine_call( (self.sender, True, ('get-output',)))
 #        outputs = self.F_state.subroutine_call( (self.sender, True, ('read',)))
 #        print('outputs', outputs)
 #        if len(outputs):
 #            print('New state from F_state', outputs)
+#            #while len(outputs):
 #            for o in outputs:
-#                if o != self.state:
-#                    self.sendinput = True
+#                #o = outputs.get()
+#                if o != self._state:
 #                    print("(%s,%s) Finally a new state from F_state" % (self.sid,self.pid), o, self._state)
 #                    self._state = o
 #                    break
-#        dump.dump()
+#            self.input_f_state(o)
+#        else:
+#            dump.dump()
+   
+    def check_f_state(self):
+        #outputs = self.F_state.subroutine_call( (self.sender, True, ('get-output',)))
+        outputs = self.F_state.subroutine_call( (self.sender, True, ('read',)))
+        print('outputs', outputs)
+        #print('New state from F_state', outputs)
+        for o in outputs[self.outputidx:]:
+            if o != self._state:
+                print("(%s,%s) Finally a new state from F_state" % (self.sid,self.pid), o, self._state)
+                self._state = o
+                break
+        if len(outputs[self.outputidx:]):
+            self.outputidx = len(outputs)
+            self.input_f_state(o)
+        else:
+            dump.dump()
+
+    def check_f_state_only(self):
+        outputs = self.F_state.subroutine_call( (self.sender, True, ('read',)))
+        print('outputs', outputs)
+        #print('New state from F_state', outputs)
+        _s = None
+        for o in outputs[self.outputidx:]:
+            if o != self._state:
+                print("(%s,%s) Finally a new state from F_state" % (self.sid,self.pid), o, self._state)
+                _s = o
+                break
+        return _s
+
+    def subroutine_read(self):
+        _s = self.check_f_state_only()
+
+        if _s:
+            cred_l,new_l,cred_r,new_r = _s
+            contract = self.G.subroutine_call( (self.sender, True, ('contract-ref', self.C)) )    
+            myaddr = self.G.subroutine_call( (self.sender, True, ('get-addr', self.sender)) )
+
+            if contract.p_l == myaddr:
+                new_i = new_l
+            elif contract.p_r == myaddr:
+                new_i = new_r
+
+            for e in new_i:
+                #self.outputs[0] = ('receive', e)
+                if e != 0: 
+                    print('\n\t\t', (self.sid,self.pid), ('receive', e), '\n')
+                    z_write( (self.sid,self.pid), ('receive',e) )
+         
+
+    def subroutine_msg(self, sender, msg):
+        if msg[0] == 'read':
+            return self.subroutine_read()
 
     def input_ping(self):
         self.check_f_state() 

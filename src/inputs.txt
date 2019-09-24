@@ -1,0 +1,28 @@
+deposit p1 10
+deposit p2 10
+delay 0 0
+blocks 1
+pay p1 2
+pass p2
+blocks 1 
+read p1
+read p2
+pay p2 3
+withdraw p2 5
+pass p1
+blocks 1
+delay 0
+read p1
+read p2
+pay p1 1
+pay p1 1
+pass p2
+blocks 1
+read p1 
+read p2
+
+comments
+---------
+instead prot_pay shall check for new state on round progress and send input to F_state
+ping at end of round to get latest state and send latest input
+

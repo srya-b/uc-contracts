@@ -12,12 +12,13 @@ def z_write(fro, msg):
     global pouts
     pouts[fro].append(msg)
 
-def z_read(fro):
+def z_read(fro,p):
+    p.subroutine_call( ((-1,-1),True,('read',)))
     global pouts
     return pouts[fro]
 
 def gwrite(color, fro, to, msg):
-    print(u'\033[{}{:>20}\033[0m -----> {}, msg={}'.format(color, fro, str(to), msg))
+    pass#print(u'\033[{}{:>20}\033[0m -----> {}, msg={}'.format(color, fro, str(to), msg))
 
 def _write(to, msg):
 #    print('\033[94m{:>20}\033[0m -----> {}, msg={}'.format('Environment', str(comm.getitm(*to)), msg))
@@ -29,7 +30,7 @@ except ImportError:
     import builtins as __builtin__
 
 def print(*args, **kwargs):
-    return __builtin__.print(*args, **kwargs)
+    pass#return __builtin__.print(*args, **kwargs)
 
 def contracts_same(contract1, contract2):
     type1 = type(contract1)
