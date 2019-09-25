@@ -1,3 +1,4 @@
+crupt p2
 deposit p1 10
 deposit p2 10
 delay 0 0
@@ -30,3 +31,4 @@ comments
 instead prot_pay shall check for new state on round progress and send input to F_state
 ping at end of round to get latest state and send latest input
 
+static corruptions at the beginning, explicit Z restrictions on inputs

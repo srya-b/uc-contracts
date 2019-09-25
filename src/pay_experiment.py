@@ -244,11 +244,11 @@ def mainmain(cmds):
             if cmd[1] == 'p1': # read output from p1
                 z_ping(z2p1)
                 p1r = z_read(p1id,p1)
-                if p1r: print(p1id,p1r,'\n')
+                if p1r: print('p1', p1id,p1r,'\n')
             elif cmd[1] == 'p2': # read output from p2
                 z_ping(z2p2)
                 p2r = z_read(p2id,p2)
-                if p2r: print(p2id, p2r, '\n')
+                if p2r: print('p2', p2id, p2r, '\n')
 
 print('HELLO')
 #if __name__=='__main__':
