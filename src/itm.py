@@ -2,7 +2,6 @@ import os
 import sys
 from gevent.queue import Queue, Channel, Empty
 from gevent.event import AsyncResult
-import identity
 import dump
 import gevent
 import comm
@@ -119,6 +118,7 @@ class ITMPassthrough(object):
         self.input = AsyncResult()
         self.subroutine = AsyncResult()
         self.backdoor = AsyncResult()
+        self.outputidx = 0
        
     def __str__(self):
         return '\033[1mITM(%s, %s)\033[0m' % (self.sid, self.pid)
@@ -133,11 +133,15 @@ class ITMPassthrough(object):
         self.outputs = self.F.outputs
 
     def subroutine_call(self, inp):
-        return self.F.subroutine_call((
-            (self.sid, self.pid),
-            True,
-            inp
-        ))
+        sender,reveal,msg = inp
+        if msg[0] == 'read':
+            return self.subroutine_read()
+        else:
+            return self.F.subroutine_call((
+                (self.sid, self.pid),
+                True,
+                msg
+            ))
    
     def ping(self):
         o = self.F.subroutine_call((
@@ -148,6 +152,24 @@ class ITMPassthrough(object):
         if o:
             z_write((self.sid,self.pid), o)
         dump.dump()
+
+    def subroutine_read(self):
+        outputs = self.F.subroutine_call( (self.sender, True, ('read',)))
+        #print('itm passthrough outputs', outputs)
+        for o in outputs[self.outputidx:]:
+            #print((self.sid,self.pid), o, '\n')
+            #print('\t\twritign to z', o)
+            z_write( (self.sid,self.pid), o )
+        self.outputidx = len(outputs)
+
+    #def subroutine_call(self, inp):
+    #    sender,reveal,msg = inp
+
+    #    if msg[0] == 'read':
+    #        return self.subroutine_read()
+    
+    def input_write(self, p2_, msg):
+        p2_.write( msg )
 
     def run(self):
         while True:
@@ -167,6 +189,8 @@ class ITMPassthrough(object):
                 #print('PASSTHROUGH MESSAGE', msg) 
                 if msg[0] == 'ping':
                     self.ping()
+                elif msg[0] == 'write':
+                    self.input_write(msg[1], msg[2])
                 else:
                     self.write(self.F, msg)
                     self.p2f.write( msg )
