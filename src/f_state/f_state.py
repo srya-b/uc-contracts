@@ -37,6 +37,7 @@ class StateChannel_Functionality(object):
         self.pmap = dict( (p,i) for i,p in enumerate(self._p))
         self.adversary_out = qqueue()
         self.buffer_output = defaultdict(list)
+        self.p2c = None; self.clock = None
 
     def p(self,i):
         return self.pmap[i]
@@ -49,7 +50,10 @@ class StateChannel_Functionality(object):
 
     def __str__(self):
         return '\033[92mF_state\033[0m'
-    
+   
+    def set_clock(self, p2c, clock):
+        self.p2c = p2c; self.clock = clock
+
     def subroutine_block_number(self):
         #print('calling blockno')
         return self.G.subroutine_call((
@@ -259,8 +263,8 @@ class StateChannel_Functionality(object):
         else:
             return self.G.subroutine_call( (self.sender, True, msg) )
 
-def StateITM(sid, pid, G, C, U, a2f, f2f, f2g, p2f, *p):
-    f = StateChannel_Functionality(sid,pid,G,C,U,f2g, *p)
+def StateITM(sid, pid, G, C, U, a2f, f2f, f2g, p2f, f2c, *p):
+    f = StateChannel_Functionality(sid,pid,G,C,U,f2g,f2c, *p)
     itm = ITMFunctionality(sid,pid,a2f,f2f,p2f)
     itm.init(f)
     setFunctionality(itm)

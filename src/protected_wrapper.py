@@ -40,6 +40,7 @@ class Protected_Wrapper(object):
         self.addresses = {}
         self.raddresses = {}
         self.private = {}
+        self.clock = None; self.c2c = None
 
         self.outputs = self.ledger.outputs
         self.adversary_out = self.ledger.adversary_out
@@ -51,6 +52,9 @@ class Protected_Wrapper(object):
 
     def iscontract(self, addr):
         return addr in self.ledger.contracts
+
+    def set_clock(self, c2c, clock):
+        self.c2c = c2c; self.clock = clock
 
     '''
         All honest parties must access the protected mode.
@@ -311,7 +315,7 @@ class Protected_Wrapper(object):
             self.ledger.adversary_msg(msg)
 
 from comm import Channel
-def ProtectedITM(sid,pid, G, a2f, f2f, p2f):
+def ProtectedITM(sid,pid, G, a2f, f2f, p2f, g2c):
     p = Protected_Wrapper(G)
     p_itm = ITMFunctionality(sid,pid,a2f,f2f,p2f)
     p_itm.init(p)

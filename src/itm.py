@@ -18,6 +18,7 @@ class ITMFunctionality(object):
         self.input = AsyncResult()
         self.subroutine = AsyncResult()
         self.backdoor = AsyncResult()
+        self.f2c = None; self.clock = None
        
     def __str__(self):
         return str(self.F)
@@ -25,6 +26,10 @@ class ITMFunctionality(object):
     def init(self, functionality):
         self.F = functionality
         self.outputs = self.F.outputs
+
+    def set_clock(self, f2c, clock):
+        self.f2c = f2c; self.clock = clock
+        self.F.set_clock(f2c, clock)
 
     def subroutine_call(self, inp):
         sender,reveal,msg = inp
@@ -38,22 +43,23 @@ class ITMFunctionality(object):
             )
             assert len(ready) == 1
             r = ready[0]
-            sender,reveal,msg = r.read()
+            sender,reveal,msg = r.read()    
+            print('\n\t** functionality msg', sender, reveal, msg)
             if r == self.f2f:
                 self.F.input_msg(None if not reveal else sender, msg)
                 self.f2f.reset()
             elif r == self.a2f:
                 self.F.adversary_msg(msg)
                 self.a2f.reset()
-            elif r == self.p2f:
-                self.F.input_msg(None if not reveal else sender, msg)
+            elif r == self.p2f: 
+                self.F.input_msg(sender, msg)   
                 self.p2f.reset()
             else: print('eLsE dUmPiNg LiKe A rEtArD'); dump.dump()
 
 
 class ITMProtocol(object):
 
-    def __init__(self, sid, pid, a2p, p2f, z2p):
+    def __init__(self, sid, pid, a2p, p2f, z2p, p2c):
         self.sid = sid
         self.pid = pid
         self.a2p = a2p; self.p2f = p2f; self.z2p = z2p
@@ -61,7 +67,9 @@ class ITMProtocol(object):
         self.input = AsyncResult()
         self.subroutine = AsyncResult()
         self.backdoor = AsyncResult()
-       
+        self.extras = []
+        self.p2c = None; self.clock = None
+
     def __str__(self):
         return str(self.F)
     
@@ -69,9 +77,17 @@ class ITMProtocol(object):
         self.F = functionality
         self.outputs = self.F.outputs
 
+    def set_clock(self, p2c, clock):
+        self.p2c = p2c; self.clock = clock
+        self.F.set_clock(p2c, clock)
+
     def subroutine_call(self, inp):
         sender,reveal,msg = inp
         return self.F.subroutine_msg(sender if reveal else None, msg)
+
+    def add_channels(self, *channels):
+        for channel in channels:
+            self.extras.append(channel)
 
     def run(self):
         while True:
@@ -80,7 +96,7 @@ class ITMProtocol(object):
             #    count=1
             #)
             ready = gevent.wait(
-                objects=[self.a2p, self.z2p],
+                objects=[self.a2p, self.z2p, *self.extras],
                 count=1
             )
             assert len(ready) == 1
@@ -90,9 +106,15 @@ class ITMProtocol(object):
                 self.F.adversary_msg( msg )
                 self.a2p.reset()
             elif r == self.z2p:
-                #print('ENVIRONMENT INPUT', msg)
-                self.F.input_msg(self.sender, msg)
+                print('ENVIRONMENT INPUT', msg)
+                self.F.input_msg((-1,-1), msg)
                 self.z2p.reset()
+            elif r in self.extras:
+                sender,_,_msg = msg
+                print('msg', msg)
+                self.F.input_msg(sender,_msg)
+                for _r in self.extras: _r.reset()
+                #dump.dump()
             else: print('else dumping at itmprotocol'); dump.dump()
 
 
@@ -108,12 +130,14 @@ class ITMProtocol(object):
 
 class ITMPassthrough(object):
 
-    def __init__(self, sid, pid, a2p, p2f, z2p):
+    def __init__(self, sid, pid, a2p, p2f, z2p, p2c):
         self.sid = sid
         self.pid = pid
         self.sender = (sid,pid)
 
         self.a2p = a2p; self.p2f = p2f; self.z2p = z2p 
+        self.p2c = p2c
+        self.p2c = None; self.clock = None
 
         self.input = AsyncResult()
         self.subroutine = AsyncResult()
@@ -131,6 +155,9 @@ class ITMPassthrough(object):
     def init(self, functionality):
         self.F = functionality
         self.outputs = self.F.outputs
+
+    def set_clock(self, p2c, clock):
+        self.p2c = p2c; self.clock = clock
 
     def subroutine_call(self, inp):
         sender,reveal,msg = inp
@@ -222,10 +249,10 @@ class ITMPassthrough(object):
 
             #r = AsyncResult()
 
-def createParties(sid, r, f, a2ps, p2fs, z2ps):
+def createParties(sid, r, f, a2ps, p2fs, z2ps, p2cs):
     parties = []
-    for i,a2p,p2f,z2p in zip(r, a2ps, p2fs, z2ps):
-        p = ITMPassthrough(sid,i,a2p,p2f,z2p)
+    for i,a2p,p2f,z2p,p2c in zip(r, a2ps, p2fs, z2ps, p2cs):
+        p = ITMPassthrough(sid,i,a2p,p2f,z2p,p2c)
         p.init(f)
         parties.append(p)
     return parties

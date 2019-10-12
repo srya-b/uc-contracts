@@ -22,6 +22,12 @@ def z_read(fro,p):
     global pouts
     return pouts[fro]
 
+def z_read_print(fro,p,s):
+    p.subroutine_call( ((-1,-1), True, ('read',)))
+    global pouts
+    if pouts[fro]:
+        print(s, pouts[fro], '\n')
+
 def gwrite(color, fro, to, msg):
     print(u'\033[{}{:>20}\033[0m -----> {}, msg={}'.format(color, fro, str(to), msg))
 
@@ -215,17 +221,22 @@ def z_mint_mine(z2p, z2a, adv, ledger, *to):
     #z_mine_blocks(1, itm, ledger)
     z_mine_blocks(1, z2p, z2p.to)
 
-def z_start_ledger(sid, pid, cledger, cwrapperitm, a2f, f2f, p2f):
-    g_ledger = cledger(sid,pid)
-    protected, ledger_itm = cwrapperitm(sid,pid,g_ledger, a2f, f2f, p2f)
-    gevent.spawn(ledger_itm.run)
+def z_start_ledger(sid, pid, cledger, cwrapperitm, a2f, f2f, p2f, g2c):
+    g_ledger = cledger(sid,pid, g2c)
+    protected, ledger_itm = cwrapperitm(sid,pid,g_ledger, a2f, f2f, p2f, g2c)
+    #gevent.spawn(ledger_itm.run)
     comm.setFunctionality(ledger_itm)
     return g_ledger, protected, ledger_itm
 
-def z_ideal_parties(sid,pids,itm,f, a2ps, p2fs, z2ps):
-    iparties = f(sid,pids,itm, a2ps, p2fs, z2ps)
-    for party in iparties:
-        gevent.spawn(party.run)
+def z_start_clock(sid, pid, cclock, citm, a2f, f2f, p2f):
+    g_clock, clock_itm = citm(sid, pid, a2f)
+    comm.setFunctionality(clock_itm)
+    return g_clock, clock_itm
+
+def z_ideal_parties(sid,pids,itm,f, a2ps, p2fs, z2ps, p2cs):
+    iparties = f(sid,pids,itm, a2ps, p2fs, z2ps, p2cs)
+    #for party in iparties:
+    #    gevent.spawn(party.run)
     return iparties
 
 def z_real_parties(sid,pids,citm,protocol,functionality,G,C, a2ps, p2fs, p2gs, z2ps):
@@ -239,10 +250,10 @@ def z_real_parties(sid,pids,citm,protocol,functionality,G,C, a2ps, p2fs, p2gs, z
     comm.setParties(parties)
     return parties
 
-def z_sim_party(sid,pid,citm,itm, a2p, p2f, z2p):
-    simparty = citm(sid,pid, a2p, p2f, z2p)
+def z_sim_party(sid,pid,citm,itm, a2p, p2f, z2p, p2c):
+    simparty = citm(sid,pid, a2p, p2f, z2p, p2c)
     simparty.init(itm)
-    gevent.spawn(simparty.run)
+    #gevent.spawn(simparty.run)
     comm.setParty(simparty)
     return simparty
 

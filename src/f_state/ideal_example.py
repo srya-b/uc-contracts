@@ -3,8 +3,9 @@ import comm
 import gevent
 from itm import ITMFunctionality, ITMPassthrough, ITMAdversary, createParties, ITMPrinterAdversary, ITMProtocol
 from comm import P2F, P2G, F2G, A2G, A2P, Many2FChannel, M2F, Z2P, A2P, Z2A
-from utils import z_mine_blocks, z_send_money, z_get_balance, z_get_leaks, z_tx_leak, z_tx_leaks, z_delay_tx, z_set_delays, z_deploy_contract, z_mint, z_start_ledger, z_ideal_parties, z_sim_party, z_genym, z_real_parties, z_mint_mine, z_prot_input, z_instant_input, z_inputs, z_tx_inputs, z_ping, z_read, print
+from utils import z_mine_blocks, z_send_money, z_get_balance, z_get_leaks, z_tx_leak, z_tx_leaks, z_delay_tx, z_set_delays, z_deploy_contract, z_mint, z_start_ledger, z_ideal_parties, z_sim_party, z_genym, z_real_parties, z_mint_mine, z_prot_input, z_instant_input, z_inputs, z_tx_inputs, z_ping, z_read, z_start_clock, print
 from g_ledger import Ledger_Functionality, LedgerITM
+from g_clock import Clock_Functionality, ClockITM
 from collections import defaultdict
 from gevent.queue import Queue, Channel
 from f_state import StateChannel_Functionality, StateITM, Sim_State
@@ -12,6 +13,7 @@ from protected_wrapper import Protected_Wrapper, ProtectedITM
 from contract1 import Contract1, U1
 
 ledgerid = ('sid1',0)
+clockid = ('sidc', 1)
 fstatesid = 'sid2'
 fstateid = (fstatesid,1)
 advid = ('sid',7)
@@ -29,6 +31,16 @@ m2ledger = Many2FChannel(ledgerid)
 p2ledger1 = M2F(p1id,m2ledger)
 p2ledger2 = M2F(p2id,m2ledger)
 p2ledger3 = M2F(p3id,m2ledger)
+
+a2clock = A2G(clockid, advid)
+m2clock = Many2FChannel(clockid)
+p2clock1 = M2F(p1id, m2clock)
+p2clock2 = M2F(p2id, m2clock)
+p2clock3 = M2F(p3id, m2clock)
+p2clocks = [p2clock1, p2clock2, p2clock3]
+ledger2clock = M2F(ledgerid, m2clock)
+fstate2clock = M2F(fstateid, m2clock)
+sp2clock = M2F(simpartyid, m2clock)
 
 a2fstate = A2G(fstateid, advid)
 f2fstate = F2G(fstateid, ('none',-1))
@@ -49,16 +61,18 @@ a2sp = A2P(simpartyid, advid)
 sp2f = M2F(simpartyid, m2ledger)
 z2a = Z2A(advid, zid)
 
+# clock
+g_clock, clock_itm = z_start_clock(clockid[0], clockid[1], Clock_Functionality, ClockITM, a2clock, None, m2clock) 
 # Ledger
-g_ledger, protected, ledger_itm = z_start_ledger(ledgerid[0],ledgerid[1],Ledger_Functionality,ProtectedITM, a2ledger, f2ledger, m2ledger)
+g_ledger, protected, ledger_itm = z_start_ledger(ledgerid[0],ledgerid[1],Ledger_Functionality,ProtectedITM, a2ledger, f2ledger, m2ledger, ledger2clock)
 # Simulated honest party
-simparty = z_sim_party(simpartyid[0], simpartyid[1], ITMPassthrough, ledger_itm, a2sp, sp2f, z2sp)
+simparty = z_sim_party(simpartyid[0], simpartyid[1], ITMPassthrough, ledger_itm, a2sp, sp2f, z2sp, sp2clock)
 caddr = simparty.subroutine_call( ((-1,-1), True, ('get-caddress',)) )
 # F_state
-idealf, state_itm = StateITM('sid2', 1, ledger_itm, caddr, U1, a2fstate, f2fstate, f2ledger, m2fstate, 2,3,4)
-gevent.spawn(state_itm.run)
+idealf, state_itm = StateITM('sid2', 1, ledger_itm, caddr, U1, a2fstate, f2fstate, f2ledger, m2fstate, fstate2clock, 2,3,4)
+#gevent.spawn(state_itm.run)
 # Parties
-iparties = z_ideal_parties(fstatesid, fstatepartyids, state_itm, createParties, [a2p1,a2p2,a2p3], [p2fstate1,p2fstate2,p2fstate3], [z2p1,z2p2,z2p3])
+iparties = z_ideal_parties(fstatesid, fstatepartyids, state_itm, createParties, [a2p1,a2p2,a2p3], [p2fstate1,p2fstate2,p2fstate3], [z2p1,z2p2,z2p3], [p2clock1,p2clock2,p2clock3])
 comm.setParties(iparties)
 p1 = iparties[0]; p2 = iparties[1]; p3 = iparties[2]
 # '''Simulator spawn'''
@@ -66,6 +80,19 @@ simulator = Sim_State(advid[0], advid[1], ledger_itm, state_itm, p2, Contract1, 
 simitm = ITMAdversary(advid[0], advid[1], z2a, a2p2, a2fstate, a2ledger)
 simitm.init(simulator)
 comm.setAdversary(simitm)
+
+# set clocks
+ledger_itm.set_clock(ledger2clock, g_clock)
+state_itm.set_clock(fstate2clock, g_clock)
+for party,p2c in zip(iparties,p2clocks): party.set_clock(p2c, g_clock)
+simparty.set_clock(sp2clock, g_clock)
+
+# spawn all the itms
+gevent.spawn(clock_itm.run)
+gevent.spawn(ledger_itm.run)
+gevent.spawn(simparty.run)
+gevent.spawn(state_itm.run)
+for party in iparties: gevent.spawn(party.run)
 gevent.spawn(simitm.run)
 
 p1addr = z_genym((p1.sid,p1.pid), ledger_itm)

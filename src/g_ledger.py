@@ -15,7 +15,7 @@ ADVERSARY = -1
 DELTA = 8
 
 class Ledger_Functionality(object):
-    def __init__(self, sid, pid):
+    def __init__(self, sid, pid, g2c):
         self.txqueue = defaultdict(list)
         self.newtxs = dict()
         self._balances = defaultdict(int)
@@ -27,6 +27,9 @@ class Ledger_Functionality(object):
         self.sid = sid
         self.pid = pid
         self.DELTA = 1
+        self.g2c = g2c
+        self.clock = None
+        self.t_L = 0
 
         self.outputs = defaultdict(Queue)
         self.input = Channel()
@@ -55,6 +58,9 @@ class Ledger_Functionality(object):
     @property
     def nu(self):
         return int(self.round / 2)
+
+    def set_clock(self, c2c, clock):
+        self.g2c = c2c; self.clock = clock
 
     def write(self, to, msg):
         #print(u'\033[92m{:>20}\033[0m -----> {}, msg={}'.format('G_ledger', str(to), msg))
@@ -261,6 +267,9 @@ class Ledger_Functionality(object):
             print("Miner:", sender, "balance:",self._balances[sender])
             self.input_tick_honest(sid)
 
+#    def util_read_clock(self, sid):
+          
+
     def allowed(self, sender):
         _sid,_pid = sender
         return _sid == self.sid
@@ -278,6 +287,17 @@ class Ledger_Functionality(object):
             self.input_delay_tx(msg[1],msg[2],msg[3])
         else:
             dump.dump()
+
+    '''
+    An extant problem that I will ignore for now:
+    in the composable treatmnet paper the ledger does clock interaction whenever it receives any 
+    input from a party. The purpose really is to collect and know how many times each party has been
+    activated so that it can be simulated. This should happen for subroutines as well since
+    the party is being activated by the environment, but for now just leave it for input tape
+    writes only.
+    
+    To globalize, the ledger must check clock read for the sid sending the input.
+    '''
 
     def input_msg(self, sender, msg):
         sid,pid = None,None
