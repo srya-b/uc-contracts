@@ -27,6 +27,7 @@ def z_read_print(fro,p,s):
     global pouts
     if pouts[fro]:
         print(s, pouts[fro], '\n')
+        return pouts[fro]
 
 def gwrite(color, fro, to, msg):
     print(u'\033[{}{:>20}\033[0m -----> {}, msg={}'.format(color, fro, str(to), msg))

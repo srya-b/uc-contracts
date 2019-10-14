@@ -41,8 +41,11 @@ class State_Protocol(object):
         self.expectbatch = False
         self.expectcommit = False
         self.expectsign = False
-        self.state = None
-        self.outr = None
+        #self.state = None
+        #self.outr = None
+        # TODO: running U once here to get initial state
+        self.state, self.outr = self.U(None, [], None, 0)
+        z_write( self.sender, self.state )
 
         self.p2c = None; self.clock = None
 
@@ -85,7 +88,9 @@ class State_Protocol(object):
             self.write( self.pleader, (v_i,r) ) 
             self.inputsent = True; self.expectbatch = True
             self.p2l.write( ('input',v_i,r) )
-        else: dump.dump()
+        else: 
+            print('Input from wrong round, round={}  v_i={}, r_i={}'.format(self.round, v_i, r))
+            dump.dump()
  
     # TODO check contract with different variable than self.lastround
     def check_contract(self):
@@ -149,12 +154,18 @@ class State_Protocol(object):
 
     def subroutine_read(self):
         # read from broadcast functionality for input
-        o = self.F_bc.subroutine_call((
-            (self.sid,self.pid),True,
-            ('read',)
-        ))
-        z_write( (self.sid,self.pid), o )
-        print('\n\n', o, '\n\n')
+        #o = self.F_bc.subroutine_call((
+        #    (self.sid,self.pid),True,
+        #    ('read',)
+        #))
+        #z_write( (self.sid,self.pid), o )
+        #print('\n\n', o, '\n\n')
+        # TODO: not quite right
+        if not self.lastcommit:
+            z_write( self.sender, self.state )
+        else:
+            z_write( (self.sid, self.pid), self.lastcommit[0])
+        #return self.lastcommit[0]
        
     def execute(self, inputs, aux_in):
         _s, _o = self.U(self.state, inputs, aux_in, self.round)
@@ -178,27 +189,35 @@ class State_Protocol(object):
         assert currround == self.clockround + 1
         
         print('\n\n', o)
-        for bcast in o[currround]:
-            msg = bcast[1]
-            if msg[0] == 'BATCH' and self.expectbatch:
-                _round,_auxin,_inputs = msg[1:]
-                self.expectbatch = False
-                print('Expected Batch and got it')
-                # TODO check to make sure my input is in there
-                # TODO check that aux in is "a recent version of aux_in"
-                self.execute(_inputs, _auxin)
-            elif msg[0] == 'COMMIT' and self.expectcommit:
-                _r,_sigs = msg[1:]
-                print('hey hey hey got a commit message {}'.format(self.sender), _sigs)
-                # TODO check commit message
-                self.lastcommit = (self.state, self.outr, _sigs) 
-                self.lastround = _r 
-                print('Last commit={}, lastround={}'.format(self.lastcommit, self.lastround))
-                # TODO if outr is not None, do an on-chain transaction
-                dump.dump()
-            else:
-                print('Got an unexpected message!', msg)
-                dump.dump()
+        try:
+            for bcast in o[currround]:
+                msg = bcast[1]
+                if msg[0] == 'BATCH' and self.expectbatch:
+                    _round,_auxin,_inputs = msg[1:]
+                    self.expectbatch = False
+                    print('Expected Batch and got it')
+                    # TODO check to make sure my input is in there
+                    # TODO check that aux in is "a recent version of aux_in"
+                    self.execute(_inputs, _auxin)
+                elif msg[0] == 'COMMIT' and self.expectcommit:
+                    self.expectcommit = False
+                    _r,_sigs = msg[1:]
+                    print('hey hey hey got a commit message {}'.format(self.sender), _sigs)
+                    # TODO check commit message
+                    self.lastcommit = (self.state, self.outr, _sigs) 
+                    self.lastround = _r 
+                    assert self.lastround == self.round, 'lastround={} round={}'.format(self.lastround, self.round)
+                    self.round = self.lastround + 1
+                    self.inputsent = False
+                    print('Last commit={}, lastround={}'.format(self.lastcommit, self.lastround))
+                    # TODO if outr is not None, do an on-chain transaction
+                    dump.dump()
+                else:
+                    print('Got an unexpected message!', msg)
+                    dump.dump()
+        except KeyError:
+            print('NO OUTPUT FOR ROUND', currround)
+            dump.dump()
         self.clockround = currround
 
     
