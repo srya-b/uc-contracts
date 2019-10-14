@@ -229,7 +229,7 @@ def z_start_ledger(sid, pid, cledger, cwrapperitm, a2f, f2f, p2f, g2c):
     return g_ledger, protected, ledger_itm
 
 def z_start_clock(sid, pid, cclock, citm, a2f, f2f, p2f):
-    g_clock, clock_itm = citm(sid, pid, a2f)
+    g_clock, clock_itm = citm(sid, pid, a2f, f2f, p2f)
     comm.setFunctionality(clock_itm)
     return g_clock, clock_itm
 

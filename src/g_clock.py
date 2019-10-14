@@ -72,6 +72,7 @@ class Clock_Functionality(object):
         dump.dump()
 
     def input_msg(self, sender, msg):
+        print('CLOCK MSG', msg, 'SENDER', sender, 'PARTY', comm.isparty(*sender), 'F', comm.isf(*sender))
         if msg[0] == 'clock-update':
             if comm.isf(*sender): self.input_fclock_update(sender)
             elif comm.isparty(*sender): self.input_pclock_update(sender)
@@ -91,9 +92,9 @@ class Clock_Functionality(object):
             return self.subroutine_clock_read(sender)
 
 
-def ClockITM(sid, pid, a2f):
+def ClockITM(sid, pid, a2f, f2f, p2f):
     f = Clock_Functionality(sid,pid, a2f)
-    itm = ITMFunctionality(sid,pid,a2f,None,None)
+    itm = ITMFunctionality(sid,pid,a2f,f2f,p2f)
     itm.init(f)
     comm.setFunctionality(itm)
     return f,itm

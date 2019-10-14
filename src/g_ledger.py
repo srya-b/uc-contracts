@@ -29,7 +29,8 @@ class Ledger_Functionality(object):
         self.DELTA = 1
         self.g2c = g2c
         self.clock = None
-        self.t_L = 0
+        #self.t_L = 0
+        self.t_L = defaultdict(int)
 
         self.outputs = defaultdict(Queue)
         self.input = Channel()
@@ -60,6 +61,7 @@ class Ledger_Functionality(object):
         return int(self.round / 2)
 
     def set_clock(self, c2c, clock):
+        print('LEDGER SET CLOCK', c2c, clock)
         self.g2c = c2c; self.clock = clock
 
     def write(self, to, msg):
@@ -111,11 +113,12 @@ class Ledger_Functionality(object):
     def get_txs(self, sid, pid, addr, to, fro):
         if fro > to: print('da fuck'); return []
         output = []
+        print('Searching txs, fro={}, to={}, addr={:.10}'.format(fro, to, addr))
         #print('txqueue round={}, queue={}'.format(fro-1, self.txqueue[fro-1]))
         for blockno in range(fro,to+1):
             txqueue = self.txqueue[blockno]
             #print('Get tx round', blockno, 'txs', txqueue)
-#            print('txqueue round={}, queue={}, to={}, from={}'.format(blockno,txqueue,to,fro))
+            print('txqueue round={}, queue={}, to={}, from={}'.format(blockno,txqueue,to,fro))
             for tx in txqueue:
                 if tx[0] == 'transfer':
                     ########
@@ -123,7 +126,7 @@ class Ledger_Functionality(object):
                     print('to', to, 'from', fro, 'addr', addr)
                     if to == addr or fro == addr:
                         output.append((to,fro,val,data,nonce))
-        #print('Returning transactions:', output)
+        print('Returning transactions:', output)
         return output
 
     def CALL(self,to,fro,data,amt):
@@ -237,11 +240,14 @@ class Ledger_Functionality(object):
         self.round += 1
         # WHAT DOES DELAY LOOK LIKE IN PYTHON
         self._balances[sender] += 100000
+        print('\n\tBLOCK #{}:'.format(self.round-1))
         for tx in self.txqueue[self.round-1]:
+            print('\t\t TX:to={:.10}, val={}, data={}, fro={:.10}'.format(tx[1],tx[2],tx[3],tx[4]))
             if tx[0] == 'transfer':
                 self.exec_tx(tx[1], tx[2], tx[3], tx[4])
             elif tx[0] == 'contract-create':
                 self.exec_contract_create(tx[1], tx[2], tx[3], tx[4], tx[5])
+        print('\n')
         #print('Next Round from', self.round-1, 'to', self.round, 'txs', self.txqueue[self.round-1])
         #print('** tick honest dump **')
         dump.dump()
@@ -267,8 +273,9 @@ class Ledger_Functionality(object):
             print("Miner:", sender, "balance:",self._balances[sender])
             self.input_tick_honest(sid)
 
-#    def util_read_clock(self, sid):
-          
+    def util_read_clock(self, sid):
+        t = self.clock.subroutine_msg( (sid,-1), ('clock-read',))
+        self.t_L[sid] = t 
 
     def allowed(self, sender):
         _sid,_pid = sender
@@ -303,7 +310,10 @@ class Ledger_Functionality(object):
         sid,pid = None,None
         if sender:
             sid,pid = sender
-        
+       
+        # only check and read the party input not functionality
+        if comm.isparty(sid,pid): self.util_read_clock(sid)
+
         if msg[0] == 'transfer':
             self.input_transfer(sid, pid, msg[1],msg[2],msg[3],msg[4])
         elif msg[0] == 'contract-create':

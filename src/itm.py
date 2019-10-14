@@ -44,7 +44,7 @@ class ITMFunctionality(object):
             assert len(ready) == 1
             r = ready[0]
             sender,reveal,msg = r.read()    
-            print('\n\t** functionality msg', sender, reveal, msg)
+            #print('\n\t** functionality msg', sender, reveal, msg)
             if r == self.f2f:
                 self.F.input_msg(None if not reveal else sender, msg)
                 self.f2f.reset()
@@ -59,7 +59,7 @@ class ITMFunctionality(object):
 
 class ITMProtocol(object):
 
-    def __init__(self, sid, pid, a2p, p2f, z2p, p2c):
+    def __init__(self, sid, pid, a2p, p2f, z2p):
         self.sid = sid
         self.pid = pid
         self.a2p = a2p; self.p2f = p2f; self.z2p = z2p
@@ -80,6 +80,15 @@ class ITMProtocol(object):
     def set_clock(self, p2c, clock):
         self.p2c = p2c; self.clock = clock
         self.F.set_clock(p2c, clock)
+
+    def clock_update(self):
+        self.p2c.write(('clock-update',))
+
+    def clock_register(self):
+        self.p2c.write(('register',))
+
+    def clock_read(self):
+        return self.clock.subroutine_msg( self.sender, ('clock-read',))
 
     def subroutine_call(self, inp):
         sender,reveal,msg = inp
@@ -106,9 +115,13 @@ class ITMProtocol(object):
                 self.F.adversary_msg( msg )
                 self.a2p.reset()
             elif r == self.z2p:
-                print('ENVIRONMENT INPUT', msg)
-                self.F.input_msg((-1,-1), msg)
-                self.z2p.reset()
+                if msg[0] == 'clock-update':
+                    self.clock_update()
+                elif msg[0] == 'register':
+                    self.clock_register()
+                else:
+                    self.F.input_msg((-1,-1), msg)
+                    self.z2p.reset()
             elif r in self.extras:
                 sender,_,_msg = msg
                 print('msg', msg)
@@ -158,6 +171,15 @@ class ITMPassthrough(object):
 
     def set_clock(self, p2c, clock):
         self.p2c = p2c; self.clock = clock
+
+    def clock_update(self):
+        self.p2c.write(('clock-update',))
+
+    def clock_register(self):
+        self.p2c.write(('register',))
+
+    def clock_read(self):
+        return self.clock.subroutine_msg( self.sender, ('clock-read',))
 
     def subroutine_call(self, inp):
         sender,reveal,msg = inp
@@ -218,6 +240,10 @@ class ITMPassthrough(object):
                     self.ping()
                 elif msg[0] == 'write':
                     self.input_write(msg[1], msg[2])
+                elif msg[0] == 'clock-update':
+                    self.clock_update()
+                elif msg[0] == 'register':
+                    self.clock_register()
                 else:
                     self.write(self.F, msg)
                     self.p2f.write( msg )

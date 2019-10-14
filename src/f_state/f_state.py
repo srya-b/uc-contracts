@@ -10,7 +10,7 @@ from collections import defaultdict
 from gevent.queue import Queue, Channel
 
 class StateChannel_Functionality(object):
-    def __init__(self, sid, pid, G, C, U, f2g, *p):
+    def __init__(self, sid, pid, G, C, U, f2g, f2c, *p):
         self.sid = sid
         self.pid = pid
         self.f2g = f2g
@@ -38,6 +38,7 @@ class StateChannel_Functionality(object):
         self.adversary_out = qqueue()
         self.buffer_output = defaultdict(list)
         self.p2c = None; self.clock = None
+        self.t_L = 0
 
     def p(self,i):
         return self.pmap[i]
@@ -62,9 +63,14 @@ class StateChannel_Functionality(object):
             ('block-number',)
         ))
 
+    def util_read_clock(self):
+        return self.clock.subroutine_msg( self.sender, ('clock-read',))
+
+    # when buffering, buffer according to clock rounds
     def buffer(self, msg, delta, p):
-        #print('writing to buffer f_state', '(block)',self.subroutine_block_number(), '(delta)',delta, '(msg)', msg, '(p)', p)
-        self.buffer_output[ self.subroutine_block_number()+delta ].append((msg,p))
+        print('writing to buffer f_state', '(block)',self.util_read_clock(), '(delta)',delta, '(msg)', msg, '(p)', p)
+#        self.buffer_output[ self.subroutine_block_number()+delta ].append((msg,p))
+        self.buffer_output[ self.util_read_clock() + delta ].append((msg,p))
 
     def write(self, to, msg):
         #print(u'\033[92m{:>20}\033[0m -----> {}, msg={}'.format('F_state', str(to), msg))
@@ -73,14 +79,15 @@ class StateChannel_Functionality(object):
     def leak(self, msg):
         self.adversary_out.put(msg)
 
-
+    # instead of waiting for on-chain rounds, wait for clock rounds
     def process_buffer(self):
         #print('\nprocessing f_state buffer\n')
-        rnd = self.subroutine_block_number()
-        #print('RND', rnd)
+        #rnd = self.subroutine_block_number()
+        rnd = self.util_read_clock()
+        print('curr round', rnd)
         for i in range(0,rnd+1):
             for m,p in self.buffer_output[i]:
-                #print('write to outputs', 'rnd', i, 'm', m, 'p', p)
+                print('write to outputs', 'rnd', i, 'm', m, 'p', p)
                 #self.outputs[p].put(m)
                 self.outputs[p].append(m)
                 print(self.outputs[p])
@@ -135,43 +142,8 @@ class StateChannel_Functionality(object):
                 return False
         return True
 
-#    def tx_check(self):
-#        blockno = self.subroutine_block_number()
-#        txs = self.G.subroutine_call((
-#            (self.sid, self.pid),
-#            True,
-#            (False, ('get-txs', self.C , blockno-1, self.lastblock))
-#        ))
-#        #print('LASTBLOCK={}, BLOCK={}, BLOCK-1={}'.format(self.lastblock, blockno, blockno-1))
-#        if txs:
-#            for tx in txs:
-#                to,fro,val,data,nonce = tx
-#                output = self.G.subroutine_call((
-#                    self.sender,
-#                    True,
-#                    (False, ('read-output', [(fro,nonce)]))
-#                ))
-#                print('Output for (fro,nonce)={}, outputs={}'.format((fro,nonce), output))
-#                if not output: continue
-#                for o in output[0]:
-#                    self.aux_in.append(o[1:])
-#                #print('aux in after update', self.aux_in)
-#
-#        self.lastblock = blockno
-#    
-#        # check for ending round with input
-#        #print('CHECKING INPUTS', self.inputs)
-#        #print('blockno', blockno, 'deadline', self.deadline, 'lastblock', self.lastblock)
-#        if blockno > self.deadline or self.allinputs():
-#            if blockno > self.deadline: self.deadline = self.deadline + self.DELTA
-#            elif self.allinputs(): self.deadline = self.lastblock + self.DELTA
-#            #self.deadline = self.lastblock + self.DELTA
-#            #self.deadline = self.deadline + self.DELTA
-#            self.execute()
-#            self.round = self.round + 1
-#        else: dump.dump()
-
-    
+    # tx check remains unchanged with the clock because we are still
+    # only checking the next on-chain round for new transactions
     def tx_check(self):
         blockno = self.subroutine_block_number()
         txs = self.G.subroutine_call((
@@ -196,11 +168,20 @@ class StateChannel_Functionality(object):
         self.lastblock = blockno
         #dump.dump()
 
+    # Clock update: state check needs to be updates because it should wait for 
+    # DELTA off-chain rounds when expecting input from the parties, not on-chain rounds
+    # similarly, t_L should update when a new clock round is detected
+    # expectation is that at least one activation every round, so should increase
+    # by only 1 every time, if not there's a problem, maybe insert an 'assert' for that?
     def state_check(self):
-        blockno = self.subroutine_block_number()
-        print('blockno', blockno, 'deadline', self.deadline, 'allinputs', self.allinputs()) 
-        if self.allinputs() or blockno > self.deadline:
-            self.deadline = blockno + self.DELTA
+        #blockno = self.subroutine_block_number()
+        rnd = self.util_read_clock()
+        #print('blockno', blockno, 'deadline', self.deadline, 'allinputs', self.allinputs()) 
+        print('clock', rnd, 'deadline', self.deadline, 'allinputs', self.allinputs())
+        #if self.allinputs() or blockno > self.deadline:
+        if self.allinputs() or rnd > self.deadline:
+            #self.deadline = blockno + self.DELTA
+            self.deadlines = rnd + self.DELTA
             self.execute()
             self.round = self.round + 1
         else:
@@ -219,7 +200,7 @@ class StateChannel_Functionality(object):
              
         self.inputs[self.pmap[pid]] = msg
         self.leak(('input',pid,self.round,msg))
-        print('ALL INPUTS?', self.allinputs())
+        print('ALL INPUTS?', self.allinputs(), self.inputs)
         #self.tx_check()
         print('state check')
         self.state_check()
