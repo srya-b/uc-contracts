@@ -11,7 +11,7 @@ from gevent.queue import Queue, Channel
 from protected_wrapper import Protected_Wrapper, ProtectedITM
 from f_state import StateChannel_Functionality, StateITM, Sim_State
 from f_broadcast import Broadcast_Functionality, BroadcastITM
-from state_protocol import State_Protocol, Adv
+from state_protocol import State_Protocol, Adv, State_Contract
 from contract1 import Contract1, U1
 
 ledgerid = ('sid1',0)
@@ -80,11 +80,16 @@ f_bc,bc_itm = BroadcastITM(bcid[0], bcid[1], ledger_itm, a2bc, f2bc, m2bc, *stat
 #gevent.spawn(bc_itm.run)
 # Simulated honest party
 simparty = z_sim_party(simpartyid[0], simpartyid[1], ITMPassthrough, ledger_itm, a2sp, sp2f, z2sp, sp2clock)
-caddr = simparty.subroutine_call( ((-1,-1), True, ('get-caddress',)) )
+#caddr1 = simparty.subroutine_call( ((-1,-1), True, ('get-caddress',)) )
+#caddr2 = simparty.subroutine_call( ((-1,-1), True, ('get-caddress',)) )
+simnonce = simparty.subroutine_call( ((-1,-1), True, ('get-nonce',)) )
+print('\t\nsimnonce={}\n'.format(simnonce))
+caddr1 = simparty.subroutine_call( ((-1,-1), True, ('compute-caddress',simnonce+1)) )
+caddr2 = simparty.subroutine_call( ((-1,-1), True, ('compute-caddress',simnonce+2)) )
 # real parties
 prots = []
 for pid,p2g,p2bc in zip(statepartyids,p2ledgers,p2bcs):
-    prots.append(State_Protocol(statesid, pid, ledger_itm, bc_itm, caddr, U1, p2g, p2bc, *statepartyids))
+    prots.append(State_Protocol(statesid, pid, ledger_itm, bc_itm, caddr2, U1, p2g, p2bc, *statepartyids))
 rparties = []
 
 #select leader
@@ -108,7 +113,7 @@ for p,p2l in zip(prots,p2leaders):
 comm.setParties(rparties)
 
 # Adversaries
-adversary = Adv(statesid, 7, ledger_itm, bc_itm, rparties[0], caddr, a2ledger)
+adversary = Adv(statesid, 7, ledger_itm, bc_itm, rparties[0], caddr2, a2ledger)
 advitm = ITMAdversary(statesid, 7, z2a, a2p1, a2bc, a2ledger)
 advitm.init(adversary); comm.setAdversary(advitm)
 #gevent.spawn(advitm.run)
@@ -129,7 +134,11 @@ gevent.spawn(advitm.run)
 gevent.spawn(bc_itm.run)
 
 paddrs = [z_genym((_p.sid,_p.pid), ledger_itm) for _p in rparties]
-caddr = z_deploy_contract(z2sp, z2a, simparty, advitm, ledger_itm, Contract1, *paddrs)
+#caddr = z_deploy_contract(z2sp, z2a, simparty, advitm, ledger_itm, Contract1, *paddrs)
+aux_caddr = z_deploy_contract(z2sp, z2a, simparty, advitm, ledger_itm, Contract1, *paddrs)
+assert aux_caddr == caddr1, '\tcaddr1={}, caddr2={}\n\taux={}\n'.format(caddr1,caddr2,aux_caddr)
+state_caddr = z_deploy_contract(z2sp, z2a, simparty, advitm, ledger_itm, State_Contract, U1, aux_caddr, 8, paddrs)
+assert state_caddr == caddr2, '\tcaddr1={}, caddr2={}\n\taux={} state={}\n'.format(caddr1,caddr2,aux_caddr,state_caddr)
 
 z_inputs(('register',), z2p1, z2p2, z2p3)
 
@@ -144,78 +153,85 @@ except ImportError:
 
 def print(*args, **kwargs):
     return __builtin__.print(*args, **kwargs)
-
+# TODO right now the clock starts at 0 for everyone when the first input is given by the environment
+# this need to change and be tested to ensure that whenever parties register that's all that matters
 z_inputs(('input','add', 0), z2p1)
 z_inputs(('input','add', 0), z2p2)
 z_inputs(('input','sub', 0), z2p3)
+z_ping(z2p1); z_ping(z2p1)
+z_ping(z2p2); z_ping(z2p2)
+z_ping(z2p3); z_ping(z2p3)
 z_inputs(('clock-update',), z2p1, z2p2, z2p3)
 #z_mine_blocks(1, z2sp, z2sp.to)
 z_ping(a2bc)
-z_ping(z2p1)
-z_ping(z2p2)
-z_ping(z2p3)
+z_ping(z2p1); z_ping(z2p1)
+z_ping(z2p2); z_ping(z2p2)
+z_ping(z2p3); z_ping(z2p3)
 z_inputs(('clock-update',), z2p1, z2p2, z2p3)
-z_ping(a2bc)
-z_ping(z2p1)
-z_ping(z2p2)
-z_ping(z2p3)
-
-p1r = z_read(p1id,rparties[0])
-p2r = z_read(p2id,rparties[1])
-p3r = z_read(p3id,rparties[2])
-print('\t\tREAD OUTPUT')
-print('p1', p1r, '\n')
-print('p1', p1r, '\n')
-print('p2', p2r, '\n')
-print('p3', p3r, '\n')
-
-
-z_inputs(('input','add', 1), z2p1)
-z_inputs(('input','add', 1), z2p2)
-z_inputs(('input','sub', 1), z2p3)
-z_inputs(('clock-update',), z2p1, z2p2, z2p3)
+#z_ping(a2bc)
+#z_ping(z2p1)
+#z_ping(z2p2)
+#z_ping(z2p3)
+#
+#p1r = z_read(p1id,rparties[0])
+#p2r = z_read(p2id,rparties[1])
+#p3r = z_read(p3id,rparties[2])
+#print('\t\tREAD OUTPUT')
+#print('p1', p1r, '\n')
+#print('p1', p1r, '\n')
+#print('p2', p2r, '\n')
+#print('p3', p3r, '\n')
+#
+#
+#z_inputs(('input','add', 1), z2p1)
+#z_inputs(('input','add', 1), z2p2)
+#z_inputs(('input','sub', 1), z2p3)
+#z_inputs(('clock-update',), z2p1, z2p2, z2p3)
+##z_mine_blocks(1, z2sp, z2sp.to)
+#z_ping(a2bc)
+#z_ping(z2p1)
+#z_ping(z2p2)
+#z_ping(z2p3)
+#z_inputs( ('write', p2ledger1, ('transfer', state_caddr, 0, ('dispute',(0,)), 'NA')), z2p1 )
+#z_set_delays(z2a, advitm, ledger_itm, [0])
+#z_inputs(('clock-update',), z2p1, z2p2, z2p3)
 #z_mine_blocks(1, z2sp, z2sp.to)
-z_ping(a2bc)
-z_ping(z2p1)
-z_ping(z2p2)
-z_ping(z2p3)
-z_inputs(('clock-update',), z2p1, z2p2, z2p3)
-z_ping(a2bc)
-z_ping(z2p1)
-z_ping(z2p2)
-z_ping(z2p3)
+#z_ping(a2bc)
+#z_ping(z2p1)
+#z_ping(z2p2)
+#z_ping(z2p3)
+#
+#p1r = z_read(p1id,rparties[0])
+#p2r = z_read(p2id,rparties[1])
+#p3r = z_read(p3id,rparties[2])
+#print('\t\tREAD OUTPUT')
+#print('p1', p1r, '\n')
+#print('p1', p1r, '\n')
+#print('p2', p2r, '\n')
+#print('p3', p3r, '\n')
 
-p1r = z_read(p1id,rparties[0])
-p2r = z_read(p2id,rparties[1])
-p3r = z_read(p3id,rparties[2])
-print('\t\tREAD OUTPUT')
-print('p1', p1r, '\n')
-print('p1', p1r, '\n')
-print('p2', p2r, '\n')
-print('p3', p3r, '\n')
-
-z_inputs(('input','sub', 2), z2p1)
-z_inputs(('input','sub', 2), z2p2)
-z_inputs(('input','sub', 2), z2p3)
-z_inputs(('clock-update',), z2p1, z2p2, z2p3)
-#z_mine_blocks(1, z2sp, z2sp.to)
-z_ping(a2bc)
-z_ping(z2p1)
-z_ping(z2p2)
-z_ping(z2p3)
-z_inputs(('clock-update',), z2p1, z2p2, z2p3)
-z_ping(a2bc)
-z_ping(z2p1)
-z_ping(z2p2)
-z_ping(z2p3)
-
-p1r = z_read(p1id,rparties[0])
-p2r = z_read(p2id,rparties[1])
-p3r = z_read(p3id,rparties[2])
-print('\t\tREAD OUTPUT')
-print('p1', p1r, '\n')
-print('p1', p1r, '\n')
-print('p2', p2r, '\n')
-print('p3', p3r, '\n')
-
-
+#z_inputs(('input','sub', 2), z2p1)
+#z_inputs(('input','sub', 2), z2p2)
+#z_inputs(('input','sub', 2), z2p3)
+#z_inputs(('clock-update',), z2p1, z2p2, z2p3)
+##z_mine_blocks(1, z2sp, z2sp.to)
+#z_ping(a2bc)
+#z_ping(z2p1)
+#z_ping(z2p2)
+#z_ping(z2p3)
+#z_inputs(('clock-update',), z2p1, z2p2, z2p3)
+#z_ping(a2bc)
+#z_ping(z2p1)
+#z_ping(z2p2)
+#z_ping(z2p3)
+#
+#p1r = z_read(p1id,rparties[0])
+#p2r = z_read(p2id,rparties[1])
+#p3r = z_read(p3id,rparties[2])
+#print('\t\tREAD OUTPUT')
+#print('p1', p1r, '\n')
+#print('p1', p1r, '\n')
+#print('p2', p2r, '\n')
+#print('p3', p3r, '\n')
+#
+#

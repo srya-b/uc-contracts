@@ -75,7 +75,7 @@ class Broadcast_Functionality(object):
         return self.poutputs[pid]
 
     def input_bcast(self, pid, msg):    
-        print('THIS NIGGA RIGHT HURRR TRYING TO BCAST', pid, msg)
+        #print('THIS NIGGA RIGHT HURRR TRYING TO BCAST', pid, msg)
         dump.dump()
         if not self.gave_input[pid]:
             self.buffer( msg, 1, pid )

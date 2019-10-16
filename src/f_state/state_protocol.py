@@ -18,7 +18,7 @@ class State_Protocol(object):
 
         self.G = G
         self.F_bc = F_bc
-        self.C = C
+        self.C = C          # C here is not the aux contract but contract_state
         self.U = U
         self.p2g = p2g
         self.p2bc = p2bc
@@ -29,11 +29,13 @@ class State_Protocol(object):
         self.p2l = None
         self.pinputs = defaultdict(dict)
         self.psigns = defaultdict(dict)
+        self.currentroundinput = None
         
         # flag \in {0=OK,1=PENDING}
         self.flag = 0
         self.round = 0
         self.lastround = -1
+        self.lastblock = self.subroutine_block_number()
         # TODO: get the current clock time for this sid
         self.clockround = 0
         self.lastcommit = None
@@ -46,6 +48,13 @@ class State_Protocol(object):
         # TODO: running U once here to get initial state
         self.state, self.outr = self.U(None, [], None, 0)
         z_write( self.sender, self.state )
+        
+        ''' The idea here is that state protocol won't send clock-update
+            until it has been activated at least twice, enough to check
+            for multicasts and to check for transactions to respond to
+        '''
+        self.activation_state = 0  # 0=wait for check tx, 1=wait for check bc, 2=ready
+        self.lastactivationround = 0  # TODO get current clock time
 
         self.p2c = None; self.clock = None
 
@@ -80,6 +89,15 @@ class State_Protocol(object):
 
     def clock_read(self):
         return self.clock.subroutine_call( self.sender, ('clock-read',))
+    
+    def subroutine_block_number(self):
+        #print('calling blockno')
+        return self.G.subroutine_call((
+            (self.sid, self.pid),
+            True,
+            ('block-number',)
+        ))
+
 
     def input_input(self, v_i, r):
         print('SUBMITTING FOR ROUND', self.round, r, v_i)
@@ -87,6 +105,7 @@ class State_Protocol(object):
             # send v_i,r --> leader
             self.write( self.pleader, (v_i,r) ) 
             self.inputsent = True; self.expectbatch = True
+            self.currentroundinput = v_i
             self.p2l.write( ('input',v_i,r) )
         else: 
             print('Input from wrong round, round={}  v_i={}, r_i={}'.format(self.round, v_i, r))
@@ -103,10 +122,10 @@ class State_Protocol(object):
 #        print("TXS", txs)
 
     def send_batch(self):
-        print('\tTIME FOR SOME BATCHIN BOIS!')
+        #print('\tTIME FOR SOME BATCHIN BOIS!')
         msg = ('BATCH', self.round, None, list(self.pinputs[self.round].values()))
-        print('BATCH MSG', ('bcast',msg))
-        print("BITTCIN", self.p2bc)
+        #print('BATCH MSG', ('bcast',msg))
+        #print("BITTCIN", self.p2bc)
         self.write(self.F_bc, ('bcast',msg))
         self.expectsign = True
         self.p2bc.write( ('bcast', msg) )
@@ -124,9 +143,9 @@ class State_Protocol(object):
         self.send_batch()
 
     def send_commit(self):
-        print('\tTIME FOR COMMITTING SOME UNSPEAKABLY GANGSTER SHIT')
+        #print('\tTIME FOR COMMITTING SOME UNSPEAKABLY GANGSTER SHIT')
         msg = ('COMMIT', self.round, list(self.pinputs[self.round].values()))
-        print('COMMIT MSG', ('bcast', msg))
+        #print('COMMIT MSG', ('bcast', msg))
         self.expectsig = False
         self.p2bc.write( ('bcast', msg) )
 
@@ -186,7 +205,12 @@ class State_Protocol(object):
         ))
         currround = self.util_read_clock()
         print('CURR ROUND', currround, 'LAST CLOCK ROUND', self.clockround)
-        assert currround == self.clockround + 1
+        #assert currround == self.clockround + 1
+        if currround == self.clockround:
+            dump.dump()
+            return
+        elif currround != self.clockround + 1:
+            raise Exception("Curr Round={} - self.clockround={} = {}".format(currround,self.clockround,currround - self.clockround))
         
         print('\n\n', o)
         try:
@@ -202,7 +226,7 @@ class State_Protocol(object):
                 elif msg[0] == 'COMMIT' and self.expectcommit:
                     self.expectcommit = False
                     _r,_sigs = msg[1:]
-                    print('hey hey hey got a commit message {}'.format(self.sender), _sigs)
+                    #print('hey hey hey got a commit message {}'.format(self.sender), _sigs)
                     # TODO check commit message
                     self.lastcommit = (self.state, self.outr, _sigs) 
                     self.lastround = _r 
@@ -220,9 +244,80 @@ class State_Protocol(object):
             dump.dump()
         self.clockround = currround
 
+    def handle_distpute(self, r, deadline):
+        if r <= self.lastround:
+            print('\t\t[ProtState{}] Dispute r={} <= lastRound={}'.format(self.sender,r,self.lastround))
+            # TODO call "evidence" on the contract and give evidence and actual sigs
+            self.p2g.write( ('transfer', self.C, 0, ('evidence',(self.lastround, *self.lastcommit)), 'NA') )
+        elif r == self.lastround+1:
+            print('\t\t[ProtState{}] Dispute r={} = lastRound+1={}'.format(self.sender,r,self.lastround+1))
+            # TODO update lastRound and do some more
+            self.flag = 1   # PENDING
+            # TODO set all flags to False, basically act as if nothing has happened in this round
+            #       buffer inputs already given until fast path starts again
+            self.p2g.write( ('transfer', self.C, 0, ('input',r,self.currentroundinput), 'NA') )
+        else:
+            raise Exception('r={}, self.lastround={}'.format(r, self.lastround))
+
+    def tx_check(self):
+        blockno = self.subroutine_block_number()
+        txs = self.G.subroutine_call((
+            (self.sid, self.pid), True,
+            ('get-txs', self.C, blockno-1, self.lastblock)
+        ))
+        print('[ProtState {}] Searching for C={} from {} to {} '.format(self.sender,self.C,self.lastblock,blockno-1))
+        if txs:
+            for tx in txs:
+                to,fro,val,data,nonce = tx
+                output = self.G.subroutine_call((
+                    self.sender, True,
+                    ('read-output', [(fro,nonce)])
+                ))
+                print('[State Prot {}] {}'.format(self.sender, output))
+                for e in output[0]:
+                    if e[0] == 'EventDispute':
+                        r,deadline = e[1:]
+                        self.handle_distpute(r,deadline)
+                        break
+                    else:
+                        dump.dump()
+                        raise Exception('No matching event', e)
+        else:
+            dump.dump()
+            print('No TXS found', txs)
+        self.lastblock = blockno
     
     def input_ping(self):
-        self.check_bc()
+        print('PING ProtState {}: activation_state={}'.format(self.sender, self.activation_state))
+        currround = self.util_read_clock()
+        #print('PING currround={}, lastactivationround={}'.format(currround, self.lastactivationround))
+        if currround > self.lastactivationround: # ready to reset activation state
+            self.activation_state = 0
+            assert currround == self.lastactivationround+1, 'curround={}, lastround={}'.format(currround,self.lastactivationround)
+            self.lastactivationround = currround
+        #print('2. PING ProtState {}: activation_state={}'.format(self.sender, self.activation_state))
+
+        if self.activation_state == 0:
+            self.tx_check()
+            self.activation_state = 1
+        elif self.activation_state == 1:
+            self.check_bc()
+            self.activation_state = 2
+        else: dump.dump()
+
+    ''' 
+        Raise exception here if the environment asks for clock-update without proper input
+        being sent 
+    '''
+    def clock_update_ready(self):
+        # clock update ready only after 2 activations
+        print('\t\t[Prot {}] update ready? activation_state={}'.format(self.sender,self.activation_state))
+        if self.activation_state > 1:
+            return True
+        return False    
+
+    #def clock_update_ready2(self):
+    #    
 
     def input_msg(self, sender, msg):   
         #print('INPUT MSG', sender, msg)
@@ -243,6 +338,64 @@ class State_Protocol(object):
     def subroutine_msg(self, sender, msg):
         if msg[0] == 'read':    
             return self.subroutine_read()
+
+class State_Contract(object):
+    def __init__(self, address, call, out):
+        self.address = address
+        self.call = call; self.out = out
+        self.bestRound = -1
+        self.state = None
+        self.flag = 0 #OK = 0 DISPUTE=1 PENDING=2
+        self.deadline = None
+        self.applied = []
+        self.ps = []
+        self.DELTA = -1
+        self.U = None
+        self.pinputs = defaultdict(dict)
+        self.C = ''
+
+    def init(self, U, C, d, ps, tx):
+        self.ps = ps
+        self.DELTA = d
+        self.U = U; self.C = C
+
+    def evidence(self, r, s_, out, sigs, tx):
+        if r < self.bestRound: return
+        # TODO check all sigs
+        if self.flag == 1: # DISPUTE
+            self.flag = 0  # OK
+            self.out( ('EventOffchain', self.bestRound+1), tx['sender'])
+        self.bestRound = r
+        self.state = s_
+        # TODO invoke C.aux_out(out)
+        self.applied.append(r)
+
+    def dispute(self, r, tx):
+        print('\t\tDISPUTE r={}, self.bestRound+1={}, self.flag={}\n'.format(r, self.bestRound+1, self.flag))
+        if r != self.bestRound + 1: return
+        if self.flag != 0: return   # OK
+        
+        self.flag = 1  # DISPUTE
+        self.deadline = tx['blocknumber'] + self.DELTA
+        self.out( ('EventDispute', r, self.deadline), tx['sender'])
+
+    def input(self, r, i, tx):
+        if tx['sender'] in self.pinputs[r]: return 
+        self.pinputs[r][tx['sender']] = i
+
+    def resolve(self, r, tx):
+        if r != self.bestRound+1: return
+        if self.flag != 2: return # PENDING
+        if tx['blocknumber'] < self.deadline: return
+
+        for p in self.ps:
+            if p not in self.pinputs[r]: self.pinputs[r][p] = None # Default value
+
+        self.state = self.U(self.state, self.pinputs[r].values(), None)
+        self.flag = 0   # OK
+        self.out( ('EventOnchain', r, self.state), tx['sender'])
+        self.bestRound += 1
+
 
 class Adv:
     def __init__(self, sid, pid, G, F, crony, c_payment, a2g):

@@ -62,60 +62,6 @@ class Protected_Wrapper(object):
         then and pseudonyms in the underlying blockchain
     '''
 
-    #def inputp2f(self, msg):
-    #    sender,msg = msg
-    #    assert not comm.isf(*sender), and not comm.isadversary(*sender)
-    #    
-    #    if msg[0] == 'transfer':
-    #        _,_to,_val,_data,_fro = msg
-    #        to = self.genym(_to)
-    #        val = _val
-    #        data = _data
-    #        
-    #        if self.iscontract(_to):
-    #            to = _to
-    #            if to in self.private and sid != self.private[to]:
-    #                data = ()
-    #    elif msg[0] == 'tick':
-    #        _,_sender = msg
-    #        _sender = self.genym(_sender)
-    #        msg = (msg[0], _sender)
-    #    elif msg[0] == 'contract-create':
-    #        _,_addr,_val,_data,_private,_fro = msg
-    #        fro = self.genym(_fro)
-    #        if _private: self.private[_addr] = sid
-    #        msg = (msg[0], _addr, _val, _data, _private, fro)
-    #    self.ledger.input_msg(sender, msg) 
-
-    #def inputf2f(self, msg):
-    #    sender,msg = msg
-    #    assert comm.isf(*sender)
-
-    #    if msg[0] == 'transfer':
-    #        _,_to,_val,_data,_fro = msg
-    #        to = self.genym(_to)
-    #        val = _val
-    #        data = _data
-    #        if self.iscontract(_to):
-    #            to = _to
-    #            if to in self.private and sid != self.private[to]:
-    #                data = ()
-    #        fro = self.genym(_fro)
-    #        msg = (msg[0], to, val, data, fro)
-    #    else:
-    #        raise Exception('What you be passing into my wrapper???', msg)
-    #    self.ledger.input_msg(sender, msg)
-    #        
-    #def inputa2f(self, msg):
-    #    sender,msg = msg
-    #    
-    #    if msg[0] == 'tick':
-    #        addr = self.genym(sender)
-    #        msg = (msg[0], addr, msg[1])
-    #        self.ledger.adversary_msg(sender, msg)
-    #    else: 
-    #        self.ledger.adversary_msg()
-
     def input_msg(self, sender, _msg):
         sid,pid = None,None
         if sender:
@@ -138,10 +84,10 @@ class Protected_Wrapper(object):
             else:
                 self.ledger.input_msg(sender, msg)
         else:
-            #print('PROTECTED MSG', msg)
             if msg[0] == 'transfer':
                 _,_to,_val,_data,_fro = msg
-                to = self.genym(_to)
+                #to = self.genym(_to)
+                to = _to
                 val = _val
                 data = _data
 
@@ -154,24 +100,24 @@ class Protected_Wrapper(object):
                         data = ()
                 ''' Only a functionality can send a transaction FROM a random address.'''
                 if comm.isf(sid,pid):
-                    fro = self.genym(_fro)
-                    #if len(rest):               # This means that the functionality has specified a delay
-                    #    deadline = rest[0]
-                    #    msg = ('transferf', to, val, data, fro, deadline)
+                    fro = _fro
+                    #fro = self.genym(_fro)
                 else:
-                    fro = self.genym(sender)
+                    #fro = self.genym(sender)
+                    fro = sender
                 msg = (msg[0], to, val, data, fro)
-                #print('[PROTECTED]', 'transger msg', msg)
             elif msg[0] == 'tick':
                 _,_sender = msg
-                _sender = self.genym(_sender)
+                #_sender = self.genym(_sender)
                 msg = (msg[0], _sender)
             elif msg[0] == 'contract-create':
                 _,_addr,_val,_data,_private,_fro = msg
                 if comm.isf(sid,pid):
-                    fro = self.genym(_fro)
+                    #fro = self.genym(_fro)
+                    fro = _fro
                 else:
-                    fro = self.genym(sender)
+                    #fro = self.genym(sender)
+                    fro = sender
                 ''' No translation necessary for the address '''
                 if _private: self.private[_addr] = sid
                 msg = (msg[0],_addr,_val,_data,_private,fro)
@@ -231,11 +177,6 @@ class Protected_Wrapper(object):
     def subroutine_msg(self, sender, _msg):
         sid,pid = sender
 
-        #if type(_msg[0]) == bool:
-        #    wrapper,msg = _msg
-        #else:
-        #    msg = _msg
-        #    wrapper = True
         if comm.isf(sid,pid) or comm.isadversary(sid,pid):
             try:
                 wrapper,msg = _msg
@@ -258,22 +199,31 @@ class Protected_Wrapper(object):
             elif msg[0] == 'get-caddress':
                 #_,_addr = msg
                 #addr = self.genym(_addr)
-                addr = self.genym((sid,pid))
+                #addr = self.genym((sid,pid))
+                addr = (sid,pid)
                 msg = (msg[0], addr)
                 return self.ledger.subroutine_msg(sender,msg)
+            elif msg[0] == 'compute-caddress':
+                addr = self.genym((sid,pid))
+                msg = (msg[0], addr, msg[1])
+                return self.ledger.subroutine_msg(sender, msg)
+            elif msg[0] == 'get-nonce':
+                addr = self.genym((sid,pid))
+                msg = (msg[0], addr)
+                return self.ledger.subroutine_msg(sender, msg)
             elif msg[0] == 'get-addr':# and (comm.isf(*sender) or comm.isadversary(*sender)):
                 return self.subroutine_get_addr(sid, pid, msg[1])
             elif msg[0] == 'get-txs':
                 _,_addr,blockto,blockfro = msg
-                addr = self.genym(_addr)
-                #print('get-txs', _addr, addr, blockto, blockfro)
+                if self.iscontract(_addr): addr = _addr
+                else: addr = self.genym(_addr)
                 #return self.subroutine_gettx(addr, blockto, blockfro)
                 txs = self.ledger.subroutine_msg(sender, ('get-txs',addr,blockto,blockfro))
                 o = []
                 for tx in txs:
                     to,fro,val,data,nonce = tx
-                    to = self.rgenym(to); 
-                    fro = self.rgenym(fro)
+                    if not self.iscontract(to): self.rgenym(to)
+                    if not self.iscontract(fro): fro = self.rgenym(fro)
                     o.append( (to,fro,val,data,nonce)  )
                 return o
             elif msg[0] == 'read-output':
@@ -315,7 +265,7 @@ class Protected_Wrapper(object):
             self.ledger.adversary_msg(msg)
 
 from comm import Channel
-def ProtectedITM(sid,pid, G, a2f, f2f, p2f, g2c):
+def ProtectedITM(sid,pid, G, a2f, f2f, p2f):
     p = Protected_Wrapper(G)
     p_itm = ITMFunctionality(sid,pid,a2f,f2f,p2f)
     p_itm.init(p)

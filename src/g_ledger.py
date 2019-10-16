@@ -15,7 +15,7 @@ ADVERSARY = -1
 DELTA = 8
 
 class Ledger_Functionality(object):
-    def __init__(self, sid, pid, g2c):
+    def __init__(self, sid, pid):
         self.txqueue = defaultdict(list)
         self.newtxs = dict()
         self._balances = defaultdict(int)
@@ -27,7 +27,7 @@ class Ledger_Functionality(object):
         self.sid = sid
         self.pid = pid
         self.DELTA = 1
-        self.g2c = g2c
+        self.g2c = None
         self.clock = None
         #self.t_L = 0
         self.t_L = defaultdict(int)
@@ -96,7 +96,14 @@ class Ledger_Functionality(object):
 
     def get_caddress(self, sid, pid, addr):
         sender = (sid,pid)
-        return sha256(addr.encode() + str(self.nonces[addr]+1).encode()).hexdigest()[24:]
+        return sha256(str(addr).encode() + str(self.nonces[addr]+1).encode()).hexdigest()[24:]
+
+    def compute_address(self, sid, pid, addr, nonce):
+        sender = (sid,pid)
+        return sha256(addr.encode() + str(nonce).encode()).hexdigest()[24:]
+
+    def get_nonce(self, sid, pid, addr):
+        return self.nonces[addr]
 
     def txref(self, val, sender):
         return {
@@ -118,15 +125,15 @@ class Ledger_Functionality(object):
         for blockno in range(fro,to+1):
             txqueue = self.txqueue[blockno]
             #print('Get tx round', blockno, 'txs', txqueue)
-            print('txqueue round={}, queue={}, to={}, from={}'.format(blockno,txqueue,to,fro))
+            #print('txqueue round={}, queue={}, to={}, from={}'.format(blockno,txqueue,to,fro))
             for tx in txqueue:
                 if tx[0] == 'transfer':
                     ########
                     to,val,data,fro,nonce = tx[1:]
-                    print('to', to, 'from', fro, 'addr', addr)
                     if to == addr or fro == addr:
+                        #print('to', to, 'from', fro, 'addr', addr)
                         output.append((to,fro,val,data,nonce))
-        print('Returning transactions:', output)
+        #print('Returning transactions:', output)
         return output
 
     def CALL(self,to,fro,data,amt):
@@ -197,7 +204,9 @@ class Ledger_Functionality(object):
     def input_contract_create(self, sid, pid, addr, val, data, private, fro):
         assert self._balances[fro] >= val
         self.nonces[fro] += 1
-        compute_addr = sha256(fro.encode() + str(self.nonces[fro]).encode()).hexdigest()[24:]
+        # TODO finalize and test without pseudonyms
+        #compute_addr = sha256(fro.encode() + str(self.nonces[fro]).encode()).hexdigest()[24:]
+        compute_addr = sha256(str(fro).encode() + str(self.nonces[fro]).encode()).hexdigest()[24:]
         assert compute_addr == addr, 'Given address: %s, computed address %s, nonce: %s' % (addr, compute_addr, self.nonces[fro]+1)
         assert data is not None
         self.newtxs[fro,self.nonces[fro]] = ('contract-create', addr, val, data, fro, private)
@@ -213,6 +222,7 @@ class Ledger_Functionality(object):
         self._balances[to] += val
         self.receipts[fro,self.nonces[fro]] = self.txref(val, fro)
         if to in self.contracts:
+            print('\t[G_ledger] EXEC function "{}" in {}'.format(data,to))
             r = self.Exec(to, val, data, fro)
             self.txs[fro,self.nonces[fro]] = r
 
@@ -242,7 +252,7 @@ class Ledger_Functionality(object):
         self._balances[sender] += 100000
         print('\n\tBLOCK #{}:'.format(self.round-1))
         for tx in self.txqueue[self.round-1]:
-            print('\t\t TX:to={:.10}, val={}, data={}, fro={:.10}'.format(tx[1],tx[2],tx[3],tx[4]))
+            print('\t\t TX:to={:.10}, val={}, data={}, fro={:.10}'.format(str(tx[1]),tx[2],tx[3],str(tx[4])))
             if tx[0] == 'transfer':
                 self.exec_tx(tx[1], tx[2], tx[3], tx[4])
             elif tx[0] == 'contract-create':
@@ -329,6 +339,10 @@ class Ledger_Functionality(object):
         sid,pid = sender
         if msg[0] == 'get-caddress':
             return self.get_caddress(sid, pid, msg[1])
+        elif msg[0] == 'compute-caddress':
+            return self.compute_address(sid, pid, msg[1], msg[2])
+        elif msg[0] == 'get-nonce':
+            return self.get_nonce(sid, pid, msg[1])
         elif msg[0] == 'getbalance':
             return self.getbalance(sid, pid, msg[1])
         elif msg[0] == 'read-output':

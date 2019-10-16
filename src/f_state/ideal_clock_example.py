@@ -65,18 +65,17 @@ z2a = Z2A(advid, zid)
 # clock
 g_clock, clock_itm = z_start_clock(clockid[0], clockid[1], Clock_Functionality, ClockITM, a2clock, fstate2clock, m2clock) 
 # Ledger
-g_ledger, protected, ledger_itm = z_start_ledger(ledgerid[0],ledgerid[1],Ledger_Functionality,ProtectedITM, a2ledger, f2ledger, m2ledger, ledger2clock)
+g_ledger, protected, ledger_itm = z_start_ledger(ledgerid[0],ledgerid[1],Ledger_Functionality,ProtectedITM, a2ledger, f2ledger, m2ledger)
 # Simulated honest party
-simparty = z_sim_party(simpartyid[0], simpartyid[1], ITMPassthrough, ledger_itm, a2sp, sp2f, z2sp, sp2clock)
+simparty = z_sim_party(simpartyid[0], simpartyid[1], ITMPassthrough, ledger_itm, a2sp, sp2f, z2sp)
 caddr = simparty.subroutine_call( ((-1,-1), True, ('get-caddress',)) )
 # F_state
-idealf, state_itm = StateITM('sid2', 1, ledger_itm, caddr, U1, a2fstate, f2fstate, f2ledger, m2fstate, fstate2clock, 2,3,4)
-#gevent.spawn(state_itm.run)
+idealf, state_itm = StateITM('sid2', 1, ledger_itm, caddr, U1, a2fstate, f2fstate, f2ledger, m2fstate, 2,3,4)
 # Parties
-iparties = z_ideal_parties(fstatesid, fstatepartyids, state_itm, createParties, [a2p1,a2p2,a2p3], [p2fstate1,p2fstate2,p2fstate3], [z2p1,z2p2,z2p3], [p2clock1,p2clock2,p2clock3])
+iparties = z_ideal_parties(fstatesid, fstatepartyids, state_itm, createParties, [a2p1,a2p2,a2p3], [p2fstate1,p2fstate2,p2fstate3], [z2p1,z2p2,z2p3])
 comm.setParties(iparties)
 p1 = iparties[0]; p2 = iparties[1]; p3 = iparties[2]
-# '''Simulator spawn'''
+# Simulator
 simulator = Sim_State(advid[0], advid[1], ledger_itm, state_itm, p2, Contract1, a2p2, a2ledger)
 simitm = ITMAdversary(advid[0], advid[1], z2a, a2p2, a2fstate, a2ledger)
 simitm.init(simulator)
@@ -97,9 +96,10 @@ gevent.spawn(state_itm.run)
 for party in iparties: gevent.spawn(party.run)
 gevent.spawn(simitm.run)
 
-p1addr = z_genym((p1.sid,p1.pid), ledger_itm)
-p2addr = z_genym((p2.sid,p2.pid), ledger_itm)
-p3addr = z_genym((p3.sid,p3.pid), ledger_itm)
+#p1addr = z_genym((p1.sid,p1.pid), ledger_itm)
+#p2addr = z_genym((p2.sid,p2.pid), ledger_itm)
+#p3addr = z_genym((p3.sid,p3.pid), ledger_itm)
+p1addr = p1.sender; p2addr = p2.sender; p3addr = p3.sender
 caddr = z_deploy_contract(z2sp, z2a, simparty, simitm, ledger_itm, Contract1, p1addr, p2addr, p3addr)
 
 z_inputs(('register',), z2p1, z2p2, z2p3)
