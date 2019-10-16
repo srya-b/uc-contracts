@@ -86,37 +86,26 @@ class Protected_Wrapper(object):
         else:
             if msg[0] == 'transfer':
                 _,_to,_val,_data,_fro = msg
-                #to = self.genym(_to)
-                to = _to
-                val = _val
-                data = _data
-
                 '''Special rules for contracts'''
                 if self.iscontract(_to):
-                    to = _to
                     '''Contracts that are private and accessed by other sid
                     can only receive money from them, no execution'''
-                    if to in self.private and sid != self.private[to]:
+                    if _to in self.private and sid != self.private[_to]:
                         data = ()
                 ''' Only a functionality can send a transaction FROM a random address.'''
                 if comm.isf(sid,pid):
                     fro = _fro
-                    #fro = self.genym(_fro)
                 else:
-                    #fro = self.genym(sender)
                     fro = sender
-                msg = (msg[0], to, val, data, fro)
+                msg = (msg[0], _to, _val, _data, fro)
             elif msg[0] == 'tick':
                 _,_sender = msg
-                #_sender = self.genym(_sender)
                 msg = (msg[0], _sender)
             elif msg[0] == 'contract-create':
                 _,_addr,_val,_data,_private,_fro = msg
                 if comm.isf(sid,pid):
-                    #fro = self.genym(_fro)
                     fro = _fro
                 else:
-                    #fro = self.genym(sender)
                     fro = sender
                 ''' No translation necessary for the address '''
                 if _private: self.private[_addr] = sid
@@ -193,7 +182,8 @@ class Protected_Wrapper(object):
             elif msg[0] == 'getbalance':
                 #print('[protected] getbalance subroutine call')
                 _,_addr = msg
-                addr = self.genym(_addr)
+                #addr = self.genym(_addr)
+                addr = _addr
                 msg = (msg[0], addr)
                 return self.ledger.subroutine_msg(sender,msg)
             elif msg[0] == 'get-caddress':

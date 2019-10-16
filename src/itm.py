@@ -170,7 +170,8 @@ class ITMPassthrough(object):
         return self.clock.subroutine_msg( self.sender, ('clock-read',))
 
     def subroutine_call(self, inp):
-        sender,reveal,msg = inp
+        #sender,reveal,msg = inp
+        msg = inp
         if msg[0] == 'read':
             return self.subroutine_read()
         else:
@@ -240,6 +241,32 @@ def createParties(sid, r, f, a2ps, p2fs, z2ps):
         parties.append(p)
     return parties
 
+
+class DefaultSim(object):
+    def __init__(self, sid, pid, G, a2g):
+        self.sid = sid; self.pid = pid
+        self.sender = (sid,pid)
+        self.G = G
+        self.a2g = a2g
+
+    def __str__(self):
+        return '\033[91mDefaultSim (%s, %s)\033[0m' % (self.sid,self.pid)
+
+    def write(self, to, msg):
+        gwrite(u'91m', 'DefaultSim (%s,%s)'%(self.sid,self.pid), to, msg)
+
+    def input_tick(self, permutation):
+        msg = (self.sender, True, (True, ('tick', perm)))
+        self.write(self.G, msg)
+        self.a2g.write( (True, ('tick', perm)) )
+
+
+    def input_msg(self, msg):
+        if msg[0] == 'tick':
+            self.input_tick(msg[1])
+        else:
+            dump.dump()
+    
 class ITMAdversary(object):
     def __init__(self, sid, pid, z2a, z2p, a2f, a2g):
         self.sid = sid
