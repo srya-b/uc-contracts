@@ -32,9 +32,12 @@ def U1(state, inputs, aux_in, rnd):
         new_state = state
 
     if aux_in:
+        new_state = state
         print('\t\tGot some aux in', aux_in)
-        x = aux_in[0]
-        new_state = state*x
+        for i in aux_in:
+            print('i', i)
+            x = i[0]
+            new_state = new_state*x
     aux_out = None
     return (new_state, aux_out)
 

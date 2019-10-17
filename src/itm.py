@@ -170,8 +170,7 @@ class ITMPassthrough(object):
         return self.clock.subroutine_msg( self.sender, ('clock-read',))
 
     def subroutine_call(self, inp):
-        #sender,reveal,msg = inp
-        msg = inp
+        sender,reveal,msg = inp
         if msg[0] == 'read':
             return self.subroutine_read()
         else:

@@ -180,41 +180,42 @@ class Protected_Wrapper(object):
             if msg[0] == 'genym':
                 return self.genym((sid,pid))
             elif msg[0] == 'getbalance':
-                #print('[protected] getbalance subroutine call')
                 _,_addr = msg
-                #addr = self.genym(_addr)
                 addr = _addr
                 msg = (msg[0], addr)
                 return self.ledger.subroutine_msg(sender,msg)
             elif msg[0] == 'get-caddress':
-                #_,_addr = msg
-                #addr = self.genym(_addr)
-                #addr = self.genym((sid,pid))
                 addr = (sid,pid)
                 msg = (msg[0], addr)
                 return self.ledger.subroutine_msg(sender,msg)
             elif msg[0] == 'compute-caddress':
                 addr = self.genym((sid,pid))
+                addr = (sid,pid)
                 msg = (msg[0], addr, msg[1])
                 return self.ledger.subroutine_msg(sender, msg)
             elif msg[0] == 'get-nonce':
-                addr = self.genym((sid,pid))
+                print('\n\tNONCE', msg)
+                #addr = self.genym((sid,pid))
+                addr = (sid,pid)
                 msg = (msg[0], addr)
                 return self.ledger.subroutine_msg(sender, msg)
             elif msg[0] == 'get-addr':# and (comm.isf(*sender) or comm.isadversary(*sender)):
                 return self.subroutine_get_addr(sid, pid, msg[1])
             elif msg[0] == 'get-txs':
+                # TODO will cause problems
                 _,_addr,blockto,blockfro = msg
                 if self.iscontract(_addr): addr = _addr
                 else: addr = self.genym(_addr)
-                #return self.subroutine_gettx(addr, blockto, blockfro)
+                print('\t\t\n GET-TXs\n')
+                print('\t\t\t_addr={}\n\t\t\tblockto={}\tblockfro={}\n\t\t\taddr={}\n'.format(_addr,blockto,blockfro,addr))
                 txs = self.ledger.subroutine_msg(sender, ('get-txs',addr,blockto,blockfro))
                 o = []
                 for tx in txs:
                     to,fro,val,data,nonce = tx
-                    if not self.iscontract(to): self.rgenym(to)
-                    if not self.iscontract(fro): fro = self.rgenym(fro)
+                    #if not self.iscontract(to): self.rgenym(to)
+                    #if not self.iscontract(fro): fro = self.rgenym(fro)
                     o.append( (to,fro,val,data,nonce)  )
+                print('\t\t\nGETTX OUTPUT', o)
                 return o
             elif msg[0] == 'read-output':
                 _,_outputs = msg

@@ -100,7 +100,7 @@ class Ledger_Functionality(object):
 
     def compute_address(self, sid, pid, addr, nonce):
         sender = (sid,pid)
-        return sha256(addr.encode() + str(nonce).encode()).hexdigest()[24:]
+        return sha256(str(addr).encode() + str(nonce).encode()).hexdigest()[24:]
 
     def get_nonce(self, sid, pid, addr):
         return self.nonces[addr]
