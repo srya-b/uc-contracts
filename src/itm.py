@@ -81,10 +81,7 @@ class ITMProtocol(object):
         self.F.set_clock(p2c, clock)
 
     def clock_update(self):
-        if self.F.clock_update_ready():
-            self.p2c.write(('clock-update',))
-        else:
-            raise Exception('Prot {} not ready for update'.format(self.sender))
+        self.p2c.write(('clock-update',))
 
     def clock_register(self):
         self.p2c.write(('register',))

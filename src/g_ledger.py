@@ -152,7 +152,7 @@ class Ledger_Functionality(object):
         nonce = self.nonces[sender]
         if (sender,nonce) not in self.output:
             self.output[sender,nonce] = []
-        print('PRINT: sender={}, msg={}'.format(sender, data))
+        print('PRINT: sender={}, nonce={}, msg={}'.format(sender, nonce, data))
         self.output[sender,nonce].append(data)
 
     def Exec(self,to,val,data,fro):
@@ -171,7 +171,8 @@ class Ledger_Functionality(object):
     def read_output(self, sid, pid, indices):
         ret = []
         for sender,nonce in indices:
-            try: ret.append(self.output[sender,nonce])
+            try:
+                ret.append(self.output[sender,nonce])
             except KeyError: continue
         return ret
 

@@ -107,12 +107,12 @@ z_inputs(('register',), z2p1, z2p2, z2p3)
 for p in iparties:
     print('round', p.clock_read())
 
-z_inputs(('input',0), z2p1, z2p2, z2p3)
-z_inputs(('clock-update',), z2p1, z2p2, z2p3)
-for p in iparties:
-    print('round', p.clock_read())
-z_ping(a2fstate)
-z_ping(z2p1, z2p2, z2p3)
+#z_inputs(('input',0), z2p1, z2p2, z2p3)
+#z_inputs(('clock-update',), z2p1, z2p2, z2p3)
+#for p in iparties:
+#    print('round', p.clock_read())
+#z_ping(a2fstate)
+#z_ping(z2p1, z2p2, z2p3)
 
 #z_inputs(('input',0), z2p1, z2p2, z2p3)
 z_mine_blocks(1, z2sp, z2sp.to)
@@ -169,9 +169,9 @@ if p3r: print('p3',p3r,'\n')
 #
 ### tx input
 print('p2ledger2', p2ledger2)
-z_inputs( ('write', p2ledger2, ('transfer', caddr, 0, ('mult', (2,)), 'doesnt matter')), z2p2)
+z_inputs( ('write', p2ledger1, ('transfer', caddr, 0, ('mult', (2,)), 'doesnt matter')), z2p1)
 z_inputs( ('write', p2ledger2, ('transfer', caddr, 0, ('mult', (10,)), 'doesnt matter')), z2p2)
-z_inputs( ('write', p2ledger2, ('transfer', caddr, 0, ('mult', (10,)), 'doesnt matter')), z2p2)
+z_inputs( ('write', p2ledger3, ('transfer', caddr, 0, ('mult', (10,)), 'doesnt matter')), z2p3)
 z_set_delays(z2a, simitm, ledger_itm, [0,0,0])
 z_mine_blocks(1, z2sp, z2sp.to)
 z_inputs(('input', 'sub',),z2p1)

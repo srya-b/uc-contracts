@@ -206,7 +206,6 @@ class Protected_Wrapper(object):
                 _,_addr,blockto,blockfro = msg
                 if self.iscontract(_addr): addr = _addr
                 else: addr = self.genym(_addr)
-                print('\t\t\n GET-TXs\n')
                 print('\t\t\t_addr={}\n\t\t\tblockto={}\tblockfro={}\n\t\t\taddr={}\n'.format(_addr,blockto,blockfro,addr))
                 txs = self.ledger.subroutine_msg(sender, ('get-txs',addr,blockto,blockfro))
                 o = []
@@ -215,14 +214,14 @@ class Protected_Wrapper(object):
                     #if not self.iscontract(to): self.rgenym(to)
                     #if not self.iscontract(fro): fro = self.rgenym(fro)
                     o.append( (to,fro,val,data,nonce)  )
-                print('\t\t\nGETTX OUTPUT', o)
                 return o
             elif msg[0] == 'read-output':
                 _,_outputs = msg
                 outputs = []
                 for o in _outputs:
                     _sender,_nonce = o
-                    outputs.append( (self.genym(sender), _nonce))
+                    #outputs.append( (self.genym(sender), _nonce))
+                    outputs.append( (_sender, _nonce) )
                 msg = (msg[0], outputs)
                 return self.ledger.subroutine_msg(sender, msg)
             elif msg[0] == 'contract-ref':

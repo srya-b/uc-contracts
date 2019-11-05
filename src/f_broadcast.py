@@ -15,6 +15,7 @@ class Broadcast_Functionality(object):
         self.sender = (_sid, _pid)
         self.peers = peers
         self.poutputs = defaultdict(dict)
+        self.newoutputs = defaultdict(list)
         self.outputs = defaultdict(Queue)
         self.buffer_output = defaultdict(list)
         # TODO: register and extract time
@@ -62,24 +63,27 @@ class Broadcast_Functionality(object):
                 print('Round', r, 'buffer', self.buffer_output[r])
                 for msg,p in self.buffer_output[ r ]:
                     for peer in self.peers:
-                        if self.round not in self.poutputs[peer]:
-                            self.poutputs[peer][self.round] = []
-                        #self.poutputs[peer][self.round].append( (msg,p) )
-                        self.poutputs[peer][self.round].append( msg )
+                        #if self.round not in self.poutputs[peer]:
+                        #    self.poutputs[peer][self.round] = []
+                        #self.poutputs[peer][self.round].append( msg )
+                        self.newoutputs[peer].append( (msg,p) )
 
     def ping(self):
         self.process_buffer()
         dump.dump()
 
     def subroutine_read(self, pid):
-        return self.poutputs[pid]
+        r = list(self.newoutputs[pid])
+        self.newoutputs[pid] = []
+        return r
+        #return self.poutputs[pid]
 
     def input_bcast(self, pid, msg):    
         #print('THIS NIGGA RIGHT HURRR TRYING TO BCAST', pid, msg)
-        dump.dump()
+        #dump.dump()
         if not self.gave_input[pid]:
             self.buffer( msg, 1, pid )
-        else: dump.dump()
+        dump.dump()
 
     def input_msg(self, sender, msg):   
         #print('INPUT MSG', sender, msg)
@@ -87,7 +91,7 @@ class Broadcast_Functionality(object):
         self.process_buffer()
         if pid in self.peers or pid == -1:
             if msg[0] == 'bcast':
-                self.input_bcast(pid, msg)
+                self.input_bcast(pid, msg[1])
             else: dump.dump()
         else: dump.dump()
 
