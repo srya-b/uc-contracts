@@ -40,12 +40,15 @@ class State_Protocol(object):
         # TODO: get the current clock time for this sid
         self.clockround = 0
         self.lastcommit = None
+        self.allcommits = {}
         self.inputsent = False
         self.expectbatch = False
         self.expectcommit = False
         self.expectsign = False
         # TODO: running U once here to get initial state
         self.state, self.outr = self.U(None, [], None, 0)
+        self.alloutr = {}
+        self.allstates = {}
         self.aux_in = []
         #z_write( self.sender, self.state )
 
@@ -195,6 +198,7 @@ class State_Protocol(object):
 
 
     def check_bc(self):
+        if self.flag == 1: return
         # get all msgs in multicast, filter by leader
         msgs = self.F_bc.subroutine_call((
             (self.sid,self.pid),True,
@@ -226,8 +230,10 @@ class State_Protocol(object):
                 self.expectcommit = False
                 self.inputsent = False
                 _round,_sigs = msg[1:]
+                assert _round == self.round
                 # TODO check commit message
                 self.lastcommit = (self.state, self.outr, _sigs)
+                self.allcommits[self.round] = self.lastcommit
                 self.lastround = _round
                 self.round = self.lastround+1
                 self.aux_in = []
@@ -238,15 +244,29 @@ class State_Protocol(object):
         else: dump.dump()
         self.clockround = cur_round
 
+    def _evidence(self, _r):
+        _state,_outr,_sigs = self.allcommits[_r]
+        tx = ('transfer', self.C, 0, ('evidence', (_r, _state, _outr, _sigs)), 'NA')
+        self.write('G_Ledger', tx)
+        self.p2g.write( tx )
 
-    def handle_distpute(self, r, deadline):
+    def call_evidence(self, _r):
+        if _r <= self.lastround:
+            self._evidence(_r)
+        else:
+            dump.dump()
+    
+    def handle_dispute(self, r, deadline):
         if r <= self.lastround:
             print('\t\t[ProtState{}] Dispute r={} <= lastRound={}'.format(self.sender,r,self.lastround))
-            self.p2g.write( ('transfer', self.C, 0, ('evidence',(self.lastround, *self.lastcommit)), 'NA') )
+#            self.p2g.write( ('transfer', self.C, 0, ('evidence',(self.lastround, *self.lastcommit)), 'NA') )
+            self._evidence( self.lastround )
         elif r == self.lastround+1:
             print('\t\t[ProtState{}] Dispute r={} = lastRound+1={}'.format(self.sender,r,self.lastround+1))
+            tx = ('transfer', self.C, 0, ('input',r,self.currentroundinput), 'NA')
+            self.write('G_Ledger', tx)
             self.flag = 1   # PENDING
-            self.p2g.write( ('transfer', self.C, 0, ('input',r,self.currentroundinput), 'NA') )
+            self.p2g.write( tx  )
         else:
             raise Exception('r={}, self.lastround={}'.format(r, self.lastround))
 
@@ -258,7 +278,7 @@ class State_Protocol(object):
             ('get-txs', self.C, blockno-1, self.lastblock)
         ))
         # if flag=OK only expect DISPUTE no other transaction
-        if self.flag == 1 and txs:  # fag = OK
+        if txs:  # fag = OK
             for tx in txs:
                 to,fro,val,data,nonce = tx
                 output = self.G.subroutine_call((
@@ -267,12 +287,12 @@ class State_Protocol(object):
                 ))
                 if not output: continue
                 for e in output[0]:
-                    if r[0] == 'EventDispute':
+                    if e[0] == 'EventDispute' and self.flag == 0:
                         r,deadline = e[1:]
                         # should set all flags to false and flag=PENDING
                         self.handle_dispute(r,deadline)
                         break
-
+        # check for transactions in CONTRACT_AUX
         txs = self.G.subroutine_call((
             (self.sid, self.pid), True,
             ('get-txs', self.C_aux, blockno-1, self.lastblock)
@@ -288,7 +308,7 @@ class State_Protocol(object):
                 if not output: continue
                 for o in output[0]:
                     self.aux_in.append(o[1:])
-        print('\n\t\t aux_in={}'.format(self.aux_in))
+            print('\n\t\t aux_in={}'.format(self.aux_in))
         self.lastblock = blockno
                         
 
@@ -325,8 +345,8 @@ class State_Protocol(object):
     #    self.lastblock = blockno
 
     def input_ping(self):
-        self.check_bc()
         self.tx_check()
+        self.check_bc()
 
     def input_msg(self, sender, msg):   
         #print('INPUT MSG', sender, msg)
@@ -342,6 +362,8 @@ class State_Protocol(object):
                 self.input_input(msg[1], msg[2])
             elif msg[0] == 'ping':
                 self.input_ping()
+            elif msg[0] == 'call-evidence':
+                self.call_evidence(msg[1])
             else: dump.dump()
 
     def subroutine_msg(self, sender, msg):

@@ -204,9 +204,10 @@ class Protected_Wrapper(object):
             elif msg[0] == 'get-txs':
                 # TODO will cause problems
                 _,_addr,blockto,blockfro = msg
-                if self.iscontract(_addr): addr = _addr
-                else: addr = self.genym(_addr)
-                print('\t\t\t_addr={}\n\t\t\tblockto={}\tblockfro={}\n\t\t\taddr={}\n'.format(_addr,blockto,blockfro,addr))
+                #if self.iscontract(_addr): addr = _addr
+                #else: addr = self.genym(_addr)
+                addr = _addr
+                print('\t\t\t_addr={}\tblockto={}\tblockfro={}\n\t\t\taddr={}'.format(_addr,blockto,blockfro,addr))
                 txs = self.ledger.subroutine_msg(sender, ('get-txs',addr,blockto,blockfro))
                 o = []
                 for tx in txs:
