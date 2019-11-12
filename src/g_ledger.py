@@ -547,6 +547,17 @@ class Ledger_Functionality2(object):
             except KeyError: continue
         return ret
 
+    def input_read_output(self, sid, pid, indices):
+        ret = []
+        for sender,nonce in indices:
+            try:
+                ret.append(self.output[sender,nonce])
+            except KeyError: continue
+        if comm.isf(sid,pid):
+            self.f2_.write( ((sid,pid), ret) )
+        elif comm.isparty(sid,pid):
+            self.f2p.write( ((sid,pid), ret) )
+
     def input_delay_tx(self, fro, nonce, rounds):
         tx = self.newtxs[fro,nonce]
         self.txqueue[self.round + rounds].append( (*tx, nonce) )
@@ -702,6 +713,7 @@ class Ledger_Functionality2(object):
         #if comm.isparty(sid,pid): 
         #    self.util_read_clock(sid)
 
+        print('[G_LEDGER] INPUT MESSAGE', sender, msg)
         if msg[0] == 'transfer':
             self.input_transfer(sid, pid, msg[1],msg[2],msg[3],msg[4])
         elif msg[0] == 'contract-create':
@@ -725,6 +737,8 @@ class Ledger_Functionality2(object):
                 dump.dump()
         elif msg[0] == 'get-txs':
             return self.input_get_txs(sid, pid, msg[1], msg[2], msg[3])
+        elif msg[0] == 'read-output':
+            return self.input_read_output(sid, pid, msg[1])
         else:
             dump.dump()
 

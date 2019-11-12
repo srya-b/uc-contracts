@@ -373,11 +373,16 @@ class StateChannel_Functionality2(object):
             for tx in txs:
                 #print('tx', tx)
                 to,fro,val,data,nonce = tx
-                output = self.G.subroutine_call((
-                    self.sender,
-                    True,
-                    (False, ('read-output', [(fro,nonce)]))
-                ))
+                #output = self.G.subroutine_call((
+                #    self.sender,
+                #    True,
+                #    (False, ('read-output', [(fro,nonce)]))
+                #))
+                self.f2_.write( ((69,'G_ledger'), (False, ('read-output', [(fro,nonce)]))) )
+                r = gevent.wait(objects=[self._2f],count=1)
+                r = r[0]
+                fro,output = r.read()
+                self._2f.reset()
                 print('Output for (fro,nonce)={}, outputs={}'.format((fro,nonce), output))
                 if not output: continue
                 for o in output[0]:
@@ -434,7 +439,7 @@ class StateChannel_Functionality2(object):
         #if not self.isplayer(pid): 
         #    dump.dump()
         #    return
-        #self.tx_check()
+        self.tx_check()
         #dump.dump(); return
         #self.process_buffer()
         if msg[0] == 'input':
