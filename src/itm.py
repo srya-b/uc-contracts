@@ -55,6 +55,54 @@ class ITMFunctionality(object):
                 self.p2f.reset()
             else: print('eLsE dUmPiNg LiKe A rEtArD'); dump.dump()
 
+class ITMFunctionality2(object):
+
+    def __init__(self, sid, pid, a2f, f2a, z2f, f2z, p2f, f2p, f2f):
+        self.sid = sid
+        self.pid = pid
+        self.sender = (sid,pid)
+
+        self.input = AsyncResult()
+        self.subroutine = AsyncResult()
+        self.backdoor = AsyncResult()
+        self.f2c = None; self.clock = None
+       
+    def __str__(self):
+        return str(self.F)
+
+    def init(self, functionality):
+        self.F = functionality
+        self.outputs = self.F.outputs
+
+    def set_clock(self, f2c, clock):
+        self.f2c = f2c; self.clock = clock
+        self.F.set_clock(f2c, clock)
+
+    def subroutine_call(self, inp):
+        sender,reveal,msg = inp
+        return self.F.subroutine_msg(sender if reveal else None, msg)
+
+    def run(self):
+        while True:
+            ready = gevent.wait(
+                objects=[self.f2f, self.p2f, self.a2f],
+                count=1
+            )
+            assert len(ready) == 1
+            r = ready[0]
+            sender,reveal,msg = r.read()    
+            if r == self.f2f:
+                self.F.input_msg(None if not reveal else sender, msg)
+                self.f2f.reset()
+            elif r == self.a2f:
+                self.F.adversary_msg(msg)
+                self.a2f.reset()
+            elif r == self.p2f: 
+                self.F.input_msg(sender, msg)   
+                self.p2f.reset()
+            else: print('eLsE dUmPiNg LiKe A rEtArD'); dump.dump()
+
+
 
 class ITMProtocol(object):
 
@@ -237,6 +285,223 @@ def createParties(sid, r, f, a2ps, p2fs, z2ps):
         parties.append(p)
     return parties
 
+class ITMPassthrough2(object):
+
+    def __init__(self, sid, pid, z2p, p2z, f2p, p2f):
+        self.sid = sid
+        self.pid = pid
+        self.sender = (sid,pid)
+
+        self.z2p = z2p; self.p2z = p2z
+        self.f2p = f2p; self.p2f = p2f
+        #self.a2p = a2p; self.p2f = p2f; self.z2p = z2p 
+        #self.p2c = None; self.clock = None
+
+        self.input = AsyncResult()
+        self.subroutine = AsyncResult()
+        self.backdoor = AsyncResult()
+        self.outputidx = 0
+       
+    def __str__(self):
+        return '\033[1mITM(%s, %s)\033[0m' % (self.sid, self.pid)
+
+    def write(self, to, msg):
+        gwrite(u'1m', 'ITM(%s, %s)'%(self.sid,self.pid), to, msg)
+
+    def init(self, functionality):
+        self.F = functionality
+        self.outputs = self.F.outputs
+
+    def set_clock(self, p2c, clock):
+        self.p2c = p2c; self.clock = clock
+
+    def clock_update(self):
+        self.p2c.write(('clock-update',))
+
+    def clock_register(self):
+        self.p2c.write(('register',))
+
+    def clock_read(self):
+        return self.clock.subroutine_msg( self.sender, ('clock-read',))
+
+    def subroutine_call(self, inp):
+        sender,reveal,msg = inp
+        if msg[0] == 'read':
+            return self.subroutine_read()
+        else:
+            return self.F.subroutine_call((
+                (self.sid, self.pid),
+                True,
+                msg
+            ))
+   
+    def ping(self):
+        o = self.F.subroutine_call((
+            (self.sid, self.pid),
+            True,
+            ('read',)
+        ))
+        if o:
+            z_write((self.sid,self.pid), o)
+        dump.dump()
+
+    def subroutine_read(self):
+        outputs = self.F.subroutine_call( (self.sender, True, ('read',)))
+        for o in outputs[self.outputidx:]:
+            z_write( (self.sid,self.pid), o )
+        self.outputidx = len(outputs)
+    
+    def input_write(self, p2_, msg):
+        p2_.write( msg )
+
+    def run(self):
+        while True:
+            ready = gevent.wait(
+                objects=[self.a2p, self.z2p],
+                count=1
+            )
+
+            assert len(ready) == 1
+            r = ready[0]
+            msg = r.read()
+            if r == self.z2p:
+                #print('PASSTHROUGH MESSAGE', msg) 
+                if msg[0] == 'ping':
+                    self.ping()
+                elif msg[0] == 'write':
+                    self.input_write(msg[1], msg[2])
+                elif msg[0] == 'clock-update':
+                    self.clock_update()
+                elif msg[0] == 'register':
+                    self.clock_register()
+                else:
+                    self.write(self.F, msg)
+                    self.p2f.write( msg )
+                self.z2p.reset()
+            elif r == self.a2p:
+                comm.corrupt(self.sid, self.pid)
+                self.write(self.F, msg)
+                self.p2f.write( msg )
+                self.a2p.reset()
+            else:
+                print('else dumping somewhere ive never been'); dump.dump()
+
+class PartyWrapper:
+    def __init__(self, sid, z2p, p2z, f2p, p2f, a2p, p2a):
+        self.sid = sid
+        self.z2pid = {}
+        self.f2pid = {}
+
+    def _newPID(self, pid, _2pid, p2_, tag):
+        pp2_ = comm.GenChannel() 
+        _2pp = comm.GenChannel() # _ to 
+
+        def _translate():
+            while True:
+                r = gevent.wait(objects=[pp2_],count=1)
+                r = r[0]
+                msg = r.read()
+                p2_.write( (pid, msg) )
+
+        _2pid[pid] = _2pp
+        return (_2pp, pp2_) 
+
+
+    def newPID(self, pid):
+        print('[{}] Creating new party with pid: {}'.format(self.sid, pid))
+        _z2p,_p2z = self._newPID(pid, self.z2pid, self.p2z, 'NA')
+        _f2p,_p2f = self._newPID(pid, self.f2pid, self.p2f, 'NA')
+        
+        itm = ITMPassthrough(sid, pid, _z2p, _p2z, _f2p, _p2f) 
+        gevent.spawn(itm.run)
+
+    def getPID(self, _2pid, pid):
+        if pid in _2pid: return _2pid[pid]
+        else:
+            self.newPID(pid)
+            return _2pid[pid]
+
+    def run(self):
+        while True:
+            ready = gevent.wait(objects=[self.z2p, self.f2p, self.a2p], count=1)
+            assert len(ready) == 1
+            r = ready[0]
+            (pid, msg) = r.get() 
+            if r == self.z2p:
+                # TODO reject if corrupted party
+                _pid = self.getPID(self.z2pid,pid)
+                _pid.write(msg)
+                self.z2p.reset()
+            elif r == self.f2p:
+                _pid = self.getPID(self.f2pid,pid)
+                _pid.write(msg)
+                self.f2p.reset()
+            elif r == self.a2p:
+                # TODO if not corrupt, crash
+                self.p2f.write((pid,msg))
+            else:
+                dump.dump()
+
+#class FunctionalityWrapper:
+#    def __init__(self, p2f, f2p, a2f, f2a, z2f, f2z):
+#        self.z2pid = {}
+#        self.p2pid = {}
+#
+#    def _newFID(self, _2fid, f2_, sid, tag):
+#        ff2_ = comm.GenChannel()
+#        _2ff = comm.GenChannel()
+#
+#        def _translate():
+#            while True:
+#                r = gevent.wait(objects=[ff2_],count=1)
+#                r = r[0]
+#                msg = r.read()
+#                f2_.write( ((sid,tag), msg) )
+#
+#        _2fid[pid] = _2ff
+#        return (_2ff, ff2_) 
+#
+#
+#    def newFID(self, sid, tag):
+#        print('[{}] Creating new party with pid: {}'.format(sid, tag))
+#        _z2f,_f2z = self._newFID(self.z2fid, self.f2z, sid, tag)
+#        _p2f,_f2p = self._newFID(self.f2fid, self.f2p, sid, tag)
+#       
+#        if tag == 'G_ledger':
+#            g_ledger, LedgerFuntionality(sid, -1)
+#            pwrapper = ProtectedWrapper(g_ledger)
+#            pitm = ITMFunctionality2(sid,-1,
+#        elif tag == 'F_multicast':
+#        elif tag == 'F_state':
+#        itm = ITMFunctionality(sid, pid, _z2p, _p2z, _f2p, _p2f) 
+#        gevent.spawn(itm.run)
+#
+#    def getPID(self, _2pid, sid,tag):
+#        if (sid,tag) in _2pid return _2pid[sid,tag]:
+#        else:
+#            self.newPID(self, sid, tag)
+#            return _2pid[sid,tag]
+#
+#    def run(self):
+#        while True:
+#            ready = gevent.wait(objects=[self.z2p, self.f2p, self.a2p], count=1)
+#            assert len(ready) == 1
+#            r = ready[0]
+#            (pid, msg) = r.get() 
+#            if r == self.z2p:
+#                # TODO reject if corrupted party
+#                _pid = self.getPID(self.z2pid,pid)
+#                _pid.write(msg)
+#                self.z2p.reset()
+#            elif r == self.f2p:
+#                _pid = self.getPID(self.f2pid,pid)
+#                _pid.write(msg)
+#                self.f2p.reset()
+#            elif r == self.a2p:
+#                # TODO if not corrupt, crash
+#                self.p2f.write((pid,msg))
+#            else:
+#                dump.dump()
 
 class DefaultSim(object):
     def __init__(self, sid, pid, G, a2g):

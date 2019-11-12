@@ -15,7 +15,7 @@ def dump():
     global _dump
     curframe = inspect.currentframe()
     calframe = inspect.getouterframes(curframe, 2)
-    print('\n\t\t*********** dumping from={} *****************'.format(calframe[1][3]))
+    #print('\n\t\t*********** dumping from={} *****************'.format(calframe[1][3]))
     if _dump.ready(): print('\n\n\t****** DUMP ALREADY CALED ****'); print('caller name:', calframe[1][3])
     _dump.set(0)
 

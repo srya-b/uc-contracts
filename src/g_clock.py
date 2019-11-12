@@ -91,6 +91,105 @@ class Clock_Functionality(object):
         if msg[0] == 'clock-read':
             return self.subroutine_clock_read(sender)
 
+class Clock_Functionality2(object):
+    def __init__(self, sid, pid, f2p, f2a, f2z, _2f, f2_):
+        self.sid = sid; self.pid = pid
+        self.sender = (sid,pid)
+        #self.a2f = a2f
+        self.f2p = f2p
+        self.f2a = f2a
+        self.f2z = f2z
+        self._2f = _2f; self.f2_ = f2_
+
+        self.pregistry = defaultdict(list)
+        self.fregistry = defaultdict(list)
+        self.sids = set()
+        self.sessionT = defaultdict(int)
+        self.dp = defaultdict(int)        # (pid,sid) -> d
+        self.dfsid = defaultdict(int)     # F,sid -> d
+        self.outputs = None
+
+
+    def check_and_step_round(self):
+        for sid in self.sids:
+            honestp = True; F = True
+            for pid in self.pregistry[sid]:
+                if comm.ishonest(sid,pid) and not self.dp[sid,pid]:
+                    honestp = False
+            print('All honst parties? (%s)' % sid, honestp)
+            if not honestp: continue
+            for pid in self.fregistry[sid]:
+                if not self.dfsid[sid,pid]:
+                    F = False
+            print('All functionalities? (%s)' % sid, F)
+            if not F: continue
+            self.sessionT[sid] += 1
+
+            for pid in self.pregistry[sid]:
+                self.dp[sid,pid] = 0
+            for pid in self.fregistry[sid]:
+                self.dfsid[sid,pid] = 0
+
+    def input_register(self, sender):
+        sid,pid = sender
+        self.sids.add(sid) 
+        print('Regsitered sids', self.sids)
+        if comm.isf(sid,pid):
+            self.fregistry[sid].append(pid)
+        elif comm.isparty(sid,pid):
+            self.pregistry[sid].append(pid)
+        self.f2p.write( (pid, 'CLOCK_OK') )
+        #dump.dump()
+   
+    def input_pclock_update(self, sender):
+        sid,pid = sender
+        if sid in self.pregistry and pid in self.pregistry[sid]:
+            self.dp[sender] = 1
+            self.check_and_step_round()
+        dump.dump()
+
+    def input_fclock_update(self, sender):
+        sid,pid = sender
+        if sid in self.fregistry and pid in self.fregistry[sid]:
+            self.dfsid[sender] = 1
+            self.check_and_step_round()
+        dump.dump()
+
+    def input_clock_read(self, sender):
+        sid,pid = sender
+        if sid in self.sids:
+            if comm.isf(*sender):
+                self.f2_.write( ((sid,pid), self.sessionT[sid]) )
+            elif comm.isparty(*sender):
+                self.f2p.write( ((sid,pid), self.sessionT[sid]) )
+            else:
+                dump.dump()
+        else:
+            self.f2_.write( ((sid,pid), 'FAILED') )
+
+    def input_msg(self, sender, msg):
+        print('CLOCK MSG', msg, 'SENDER', sender, 'PARTY', comm.isparty(*sender), 'F', comm.isf(*sender))
+        if msg[0] == 'clock-update':
+            if comm.isf(*sender): self.input_fclock_update(sender)
+            elif comm.isparty(*sender): self.input_pclock_update(sender)
+            else: print('clock update called by non-party'); dump.dump()
+        elif msg[0] == 'register':
+            self.input_register(sender)
+        elif msg[0] == 'clock-read':
+            self.input_clock_read(sender)
+        else:
+            dump.dump()
+
+    def subroutine_clock_read(self, sender):
+        sid,pid = sender
+        if sid in self.sids:
+            return self.sessionT[sid]
+
+    def subroutine_msg(self, sender, msg):
+        if msg[0] == 'clock-read':
+            return self.subroutine_clock_read(sender)
+
+
 
 def ClockITM(sid, pid, a2f, f2f, p2f):
     f = Clock_Functionality(sid,pid, a2f)

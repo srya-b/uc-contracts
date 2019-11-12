@@ -20,6 +20,9 @@ def cset(sid,pid,tag,itm):
     if (sid,pid) not in commap:
         commap[sid,pid] = tag
         itmmap[sid,pid] = itm
+def cset2(sid,pid,tag):
+    if (sid,pid) not in commap:
+        commap[sid,pid] = tag
 
 def isf(sid,pid):
     try:
@@ -62,6 +65,9 @@ def setFunctionality(itm):
     sid,pid = itm.sid,itm.pid
     cset(sid,pid,FUNCTIONALITY,itm)
     #print('FUNCTIONALITY', sid, pid)
+
+def setFunctionality2(sid,pid):
+    cset2(sid,pid,FUNCTIONALITY)
 
 def setParty(p):
     sid,pid = p.sid,p.pid
@@ -128,6 +134,27 @@ Design Decision:
         that's the only way. That's the way it was the first time
         idk how I convinced myself to change it. rip
 '''
+class GenChannel(Event):
+    def __init__(self, i=-1):
+        Event.__init__(self)
+        self._data = None
+        self.i = i
+
+    def write(self,data):
+        if not self.is_set():
+            #print('\033[93m \t\tWriting {} id={}\033[0m'.format(data,self.i))
+            self._data = data; self.set()
+        else: 
+            raise Exception("\033[1mwriting to channel already full. Writing {} in {}\033[0m".format(data,self.i))
+            dump.dump()
+
+    def read(self): 
+        #print('\033[91m Reading message: {} id={}\033[0m'.format(self._data,self.i)); 
+        return self._data
+    def reset(self, s=''): 
+        #print('\033[1m Resetting id={}, string={}\033[0m'.format(self.i,s)); 
+        self.clear()
+
 class Channel(Event):
     def __init__(self, to, fro):
         Event.__init__(self)
