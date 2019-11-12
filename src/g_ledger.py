@@ -427,13 +427,6 @@ class Ledger_Functionality2(object):
             ret.append(leak)
         print('THESE ARE THE LEAKS', ret)
         self.f2a.write(ret)
-        #self.adversary_out = qqueue()
-        #adv = comm.adversary
-        #self.write(adv, ('leaks', ret))
-        #adv.leak.set((
-        #    (self.sid, self.pid),
-        #    ('leaks', ret)
-        #))
 
     def get_contract(self, sid, pid, addr):
         if addr in self.contracts:

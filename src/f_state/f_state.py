@@ -422,13 +422,6 @@ class StateChannel_Functionality2(object):
         self.state_check()
 
     def input_msg(self, sender, msg):
-        #b = self.subroutine_block_number()
-        #b = self.f2_.write( ((69,'G_ledger'), (True, ('block-number',))))
-        #r = gevent.wait(objects=[self._2f],count=1)
-        #r = r[0]
-        #fro,blockno = r.read()
-        #assert fro==(69,'G_ledger')
-        #print('\n\t\t\t blockno=', blockno)
         sid,pid = None,None
         if sender:
             sid,pid = sender
@@ -440,8 +433,7 @@ class StateChannel_Functionality2(object):
         #    dump.dump()
         #    return
         self.tx_check()
-        #dump.dump(); return
-        #self.process_buffer()
+        #TODO self.process_buffer()
         if msg[0] == 'input':
             self.input_input(sid, pid, msg[1])
         elif msg[0] == 'read':
@@ -478,17 +470,7 @@ class Sim_State:
         return '\033[91mSimulator (%s, %s)\033[0m' % (self.sid, self.pid) 
 
     def write(self, to, msg):
-        #print('\033[91m{:>20}\033[0m -----> {}, msg={}'.format('Simulator (%s,%s)' % (self.sid, self.pid), str(to), msg))
         gwrite(u'91m', 'Simulator (%s,%s)'%(self.sid,self.pid), to, msg)
-
-#    def input_delay_tx(self, fro, nonce, rounds):
-#        msg=('delay-tx', fro, nonce, rounds)
-#        self.write(self.G, msg)
-#        self.G.backdoor.set((
-#            self.sender,
-#            True,
-#            (False, msg)
-#        ))
 
     def input_party(self, to, msg):
         self.write(self.crony, msg)
@@ -508,7 +490,6 @@ class Sim_State:
             dump.dump()
 
 class Sim_State2:
-   # def __init__(self, sid, pid, G, F, crony, c, a2p, a2g):
     def __init__(self, sid, pid, a2f, a2p, a2z):
         self.sid = sid; self.pid = pid
         self.sender = (sid,pid)
@@ -520,17 +501,7 @@ class Sim_State2:
         return '\033[91mSimulator (%s, %s)\033[0m' % (self.sid, self.pid) 
 
     def write(self, to, msg):
-        #print('\033[91m{:>20}\033[0m -----> {}, msg={}'.format('Simulator (%s,%s)' % (self.sid, self.pid), str(to), msg))
         gwrite(u'91m', 'Simulator (%s,%s)'%(self.sid,self.pid), to, msg)
-
-#    def input_delay_tx(self, fro, nonce, rounds):
-#        msg=('delay-tx', fro, nonce, rounds)
-#        self.write(self.G, msg)
-#        self.G.backdoor.set((
-#            self.sender,
-#            True,
-#            (False, msg)
-#        ))
 
     def input_party(self, to, msg):
         self.write(self.crony, msg)
