@@ -104,11 +104,15 @@ caddr = msg[0][1]
 addr = z_deploy_contract(_z2p, _p2z, _z2a, _a2z, sp, Contract1, p1, p2, p3)
 print('\n\t\t Desployed contract at:', addr)
 
-#f.newFID(7,'F_state', (addr, U1, 2,3,4))
 f.newFID('hello', 'F_state', (caddr, U1, 2, 3, 4))
 msg = z_inputs( ((420,'G_clock'), ('register',)), _z2p, _p2z, 3, 4)
 print('RESPONSE from clock', msg, '\n')
 msg = z_ainputs( ('A2P', (2, ((420,'G_clock'), ('register',)))), _z2a, _a2z)
+
+
+
+
+
 
 ###msg = z_mine_blocks(_z2p, _p2z, 'hello', 1, 1)
 ###print('RESPONSE from tick', msg)

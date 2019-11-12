@@ -56,18 +56,13 @@ print('\n\t rnd', rnd)
 
 z_inputs( ((420,'G_clock'), ('clock-update',)), _z2p, _p2z, 2,3,4)
 z_ainputs( ('A2F', (('hello','F_bcast'), ('deliver',m,4))), _z2a, _a2z)
-#
 msg = wait_for(_p2z)
-#r = gevent.wait(objects=[_p2z],count=1)
-#r = r[0]
-#msg = r.read()
 print('\n\t from party', msg)
 
-#z_ainputs( ('A2F', ('ping', ('hello','F_bcast'))), _z2a, _a2z)
-#
-#o = z_inputs( (('hello','F_bcast'), ('read',)), _z2p, _p2z, 2, 3, 4)
-#print('\t\t\033[1mP1: {}\033[0m'.format(o[0][1]))
-#print('\t\t\033[1mP2: {}\033[0m'.format(o[1][1]))
-#print('\t\t\033[1mP3: {}\033[0m'.format(o[2][1]))
-
+# Now try the exception
+z_inputs( (('hello','F_bcast'), ('bcast', 'hello')), _z2p, _p2z, 3)
+z_inputs( ((420,'G_clock'), ('clock-update',)), _z2p, _p2z, 2,3,4)
+z_inputs( ((420,'G_clock'), ('clock-update',)), _z2p, _p2z, 2,3,4)
+z_ainputs( ('A2F', ('ping', ('hello', 'F_bcast'))), _z2a, _a2z)
+dump.dump_wait()
 

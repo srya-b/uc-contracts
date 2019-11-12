@@ -174,6 +174,7 @@ class Broadcast_Functionality2(object):
 
     def deliver(self, msg, pid):
         if pid not in self.peers: raise Exception; dump.dump()
+        # Check if there are unconsumed messages, if so --> error because dummy adv didn't deliver
         rnd = self.util_read_clock()
         m,r = msg
         for _msg in self.buffer_output[ r ]:
@@ -181,8 +182,19 @@ class Broadcast_Functionality2(object):
                 print('\n\t \033[1m found msg={} in buffer={}\033[0m'.format(m, _msg))
                 #dump.dump()
                 self.f2p.write( (pid, m) )
+                self.buffer_output[r].remove( _msg )
+                print('\n\t \033[1m [F_bcast] removed msg={} from buffer={}\033[0m'.format(_msg, self.buffer_output[r]))
                 return
         raise Exception("Msg={} not in buffer={}".format(msg, self.buffer_output))
+
+    def check_except(self):
+        rnd = self.util_read_clock()
+        if rnd > 1:
+            for i in range(0, rnd):
+                if len(self.buffer_output[ i ]) > 0:
+                    raise Exception("there were messages from previous rounds ({}) not delivered, buffer={}".format(rnd, self.buffer_output[i]))
+        else:
+            print('Bitch ass')
 
     def buffer(self, msg, delta):
         print('Delay this', msg, 'for', delta, 'rounds, right now at', self.util_read_clock())
@@ -203,6 +215,7 @@ class Broadcast_Functionality2(object):
 
     def ping(self):
         #self.process_buffer()
+        self.check_except()
         dump.dump()
 
     def subroutine_read(self, pid):
@@ -227,6 +240,7 @@ class Broadcast_Functionality2(object):
         #print('INPUT MSG', sender, msg)
         sid,pid = sender
         #self.process_buffer()
+        self.check_except()
         if pid in self.peers or pid == -1:
             if msg[0] == 'bcast':
                 if pid == self.caster:
