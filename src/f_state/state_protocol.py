@@ -214,9 +214,9 @@ class State_Protocol(object):
             self.expectcommit = False
             self.inputsent = False
             assert rnd == self.round
-            self.lastcommit = (self.state, self.outr, _sigs)
+            self.lastcommit = (self.state, self.outr, sigs)
             self.allcommits[self.round] = self.lastcommit
-            self.round = sef.lastround + 1
+            self.round = self.lastround + 1
             self.aux_in = []
             # TODO probably output the new state to the envronment??
             print('Update\n\t\tself.lastcommit={}\n\t\tself.lastround={}\n\t\tself.round={}\n'.format(self.lastcommit, self.lastround, self.round))
@@ -363,8 +363,8 @@ class State_Protocol(object):
                 _,rnd,aux_in,inputs = msg
                 self.input_batch(rnd, aux_in, inputs)
             elif msg[0] == 'COMMIT':
-                _,rnd,signs = msg
-                self.inout_commit(rnd,sigs)
+                _,rnd,sigs = msg
+                self.input_commit(rnd,sigs)
             else:
                 dump.dump()
         else:
