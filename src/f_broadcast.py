@@ -134,7 +134,8 @@ class Broadcast_Functionality2(object):
         self.f2z = _f2z
         self._2f = _2f
         self.f2_ = f2_
-        self.leaks = set()
+        #self.leaks = set()
+        self.leaks = []
         
         print('[F_bcast] \n\tsid={} pid={}\n\tpeers={}\n\tsender={}'.format(self.sid,self.pid,self.peers,self.caster))
 
@@ -165,36 +166,39 @@ class Broadcast_Functionality2(object):
         return blockno
 
     def leak(self, msg, r):
-        self.leaks.add( (msg,r) ) 
+        print('msg', msg, 'r', r)
+        self.leaks.append( (msg,r) ) 
 
     def getLeaks(self):
-        r = set(self.leaks)
-        self.leaks = set()
+        r = list(self.leaks)
+        self.leaks = list()
         self.f2a.write( r )
 
     def deliver(self, msg, pid):
-        if pid not in self.peers: raise Exception; dump.dump()
+        if pid not in self.peers: print('pid', pid, 'peers', self.peers); raise Exception; dump.dump()
         # Check if there are unconsumed messages, if so --> error because dummy adv didn't deliver
         rnd = self.util_read_clock()
         m,r = msg
+        if r > self.round: raise Exception("r={}, self.round={}, rnd={}".format(r,self.round,rnd))
         for _msg in self.buffer_output[ r ]:
             if _msg == m:
                 print('\n\t \033[1m found msg={} in buffer={}\033[0m'.format(m, _msg))
                 #dump.dump()
                 self.f2p.write( (pid, m) )
-                self.buffer_output[r].remove( _msg )
+                #self.buffer_output[r].remove( _msg )
                 print('\n\t \033[1m [F_bcast] removed msg={} from buffer={}\033[0m'.format(_msg, self.buffer_output[r]))
                 return
         raise Exception("Msg={} not in buffer={}".format(msg, self.buffer_output))
-
+    # TODO meaningful checks
     def check_except(self):
-        rnd = self.util_read_clock()
-        if rnd > 1:
-            for i in range(0, rnd):
-                if len(self.buffer_output[ i ]) > 0:
-                    raise Exception("there were messages from previous rounds ({}) not delivered, buffer={}".format(rnd, self.buffer_output[i]))
-        else:
-            print('Bitch ass')
+        #rnd = self.util_read_clock()
+        #if rnd > 1:
+        #    for i in range(0, rnd):
+        #        if len(self.buffer_output[ i ]) > 0:
+        #            raise Exception("there were messages from previous rounds ({}) not delivered, buffer={}".format(rnd, self.buffer_output[i]))
+        #else:
+        #    print('Bitch ass')
+        pass
 
     def buffer(self, msg, delta):
         print('Delay this', msg, 'for', delta, 'rounds, right now at', self.util_read_clock())
@@ -236,11 +240,18 @@ class Broadcast_Functionality2(object):
         self.buffer( msg, 1 )
         dump.dump()
 
+    def update_time(self):
+        rnd = self.util_read_clock()
+        if rnd > self.round:
+            self.lastround = self.round
+            self.round = rnd
+
     def input_msg(self, sender, msg):   
         #print('INPUT MSG', sender, msg)
         sid,pid = sender
         #self.process_buffer()
         self.check_except()
+        self.update_time()
         if pid in self.peers or pid == -1:
             if msg[0] == 'bcast':
                 if pid == self.caster:
@@ -258,6 +269,7 @@ class Broadcast_Functionality2(object):
         if msg[0] == 'read': return self.subroutine_read(pid)
 
     def adversary_msg(self, msg):
+        self.update_time()
         if msg[0] == 'ping': self.ping()
         elif msg[0] == 'get-leaks':
             self.getLeaks()

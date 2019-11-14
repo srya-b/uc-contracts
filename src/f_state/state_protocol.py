@@ -1,7 +1,7 @@
 import dump
 import gevent
 from itm import ITMFunctionality
-from comm import ishonest, isdishonest, isadversary
+from comm import ishonest, isdishonest, isadversary, isf, isparty
 from queue import Queue as qqueue
 from utils import print, gwrite, z_write 
 from hashlib import sha256
@@ -10,16 +10,19 @@ from gevent.queue import Queue, Channel
 
 class State_Protocol(object):
     #def __init__(self, sid, pid, G, F_bc, C, C_aux, U, p2g, p2bc, *peers):
-    def __init__(self, sid, pid, _p2f, _p2a, _p2z, C, C_aux, U, *peers):
+    def __init__(self, sid, pid, _p2f, _f2p, _p2a, _p2z, p2_, _2p, C, C_aux, U, leaderpid, *peers):
         self.sid = sid
         self.pid = pid
         self.sender = (sid,pid)
         self.first = True
         self.sendinput = False
-
+        
         self.p2f = _p2f
         self.p2a = _p2a
         self.p2z = _p2z
+        self.f2p = _f2p
+        self.p2_ = p2_
+        self._2p = _2p
 
         #self.G = G
         #self.F_bc = F_bc
@@ -32,6 +35,8 @@ class State_Protocol(object):
         self.peers = peers
         self.leader = False
         self.pleader = None
+        self.leaderpid = leaderpid
+        if leaderpid == self.pid: self.leader = True
         self.pinputs = defaultdict(dict)
         self.psigns = defaultdict(dict)
         self.currentroundinput = None
@@ -40,7 +45,7 @@ class State_Protocol(object):
         self.flag = 0
         self.round = 0
         self.lastround = -1
-        self.lastblock = self.subroutine_block_number()
+        self.lastblock = 0
         # TODO: get the current clock time for this sid
         self.clockround = 0
         self.lastcommit = None
@@ -76,9 +81,12 @@ class State_Protocol(object):
         # step1=input, step2=batch
         self.step = 1
 
-    def set_leader(self, leaderpid, pleader, p2l):
-        if leaderpid==self.pid: self.leader = True
-        self.pleader = pleader; self.p2l = p2l
+    #def set_leader(self, leaderpid, pleader, p2l):
+    #    if leaderpid==self.pid: self.leader = True
+    #    self.pleader = pleader; self.p2l = p2l
+    #def set_leader(self, leaderpid):
+    #    if leaderpid == self.pid: self.leader = True
+    #    self.leaderpid = leaderpid
 
     def printleaders(self):
         print('%s reporting leader: %s' % (self.pid, self.pleader))
@@ -90,15 +98,13 @@ class State_Protocol(object):
     def write(self, to, msg):
         gwrite(u'92m', 'Prot_state(%s,%s)' % (self.sid,self.pid), to, msg)
 
-    def round_number(self):
-        return self.G.subroutine_call((
-            (self.sid,self.pid), True,
-            (True, ('block-number',))
-        ))
-
     def util_read_clock(self):
-        return self.clock.subroutine_msg( self.sender, ('clock-read',))
         self.p2f.write( ((420,'G_clock'), ('clock-read,')) )
+        r = gevent.wait(objects=[self.f2p],count=1)
+        r = r[0]
+        fro,rnd = r.read()
+        self.f2p.reset()
+        return rnd
     
     def set_clock(self, c2c, clock):
         self.p2c = c2c; self.clock = clock
@@ -107,13 +113,13 @@ class State_Protocol(object):
         return self.clock.subroutine_call( self.sender, ('clock-read',))
     
     def subroutine_block_number(self):
-        #print('calling blockno')
-        return self.G.subroutine_call((
-            (self.sid, self.pid),
-            True,
-            ('block-number',)
-        ))
-
+        self.p2f.write( ((69,'G_ledger'), ('block-number',)) )
+        r = gevent.wait(objects=[self.f2p],count=1)
+        r = r[0]
+        fro,blockno = r.read()
+        self.f2p.reset()
+        print('blockno', blockno)
+        return blockno
 
     def input_input(self, v_i, r):
         if r == self.round and not self.inputsent and self.flag == 0:
@@ -121,44 +127,35 @@ class State_Protocol(object):
             # send v_i,r --> leader
             self.write( self.pleader, (v_i,r) )
             self.inputsent = True; self.expectbatch = True
-            self.p2l.write( ('input',v_i,r) )
+            #self.p2l.write( ('input',v_i,r) )
+            self.p2_.write( ((self.sid, self.leaderpid), ('input', v_i,r)) )
         else: 
             print('Input from wrong round, round={}  v_i={}, r_i={}'.format(self.round, v_i, r))
             dump.dump()
  
-    # TODO check contract with different variable than self.lastround
-    def check_contract(self):
-        pass
-#        blockno = self.subroutine_block_number()
-#        txs = self.G.subroutine_call((
-#            (self.sid, self.pid), True,
-#            (False, ('get-txs', self.C, blockno-1, self.lastround))
-#        ))
-#        print("TXS", txs)
-
     def send_batch(self):
         print('\n\t\t self.aux_in={}'.format(self.aux_in))
-        #assert len(self.aux_in) <= 1, "More than one aux_in={}".format(self.aux_in)
-        #msg = ('BATCH', self.round, None, list(self.pinputs[self.round].values()))
         msg = ('BATCH', self.round, self.aux_in if self.aux_in else [], list(self.pinputs[self.round].values()))
-        self.write(self.F_bc, ('bcast',msg))
         self.expectsign = True
-        self.p2bc.write( ('bcast', msg) )
+        self.p2f.write( (('hello', 'F_bcast'), ('bcast', msg)) )
 
     def input_pinput(self, p_i, v_i, r):
         print('[LEADER] received input from', p_i, v_i, r)
-        if r != self.round: dump.dump(); return
+        if r != self.round: dump.dump(); print('Not the right round', r, self.round); return
         if p_i not in self.pinputs[r]:
             self.pinputs[r][p_i] = v_i
         for p in self.peers:
             if p not in self.pinputs[self.round]:
+                print('\033[1m\n\ndumped because not complete\033[0m', self.pinputs[self.round], self.peers)
                 dump.dump(); return
+        print('send batch')
         self.send_batch()
 
     def send_commit(self):
         msg = ('COMMIT', self.round, list(self.pinputs[self.round].values()))
-        self.expectsig = False
-        self.p2bc.write( ('bcast', msg) )
+        self.expectsign = False
+        #self.p2bc.write( ('bcast', msg) )
+        self.p2f.write( (('hello','F_bcast'),('bcast', msg)) )
 
     def input_psign(self, p_i, r_i, sig):
         if not self.expectsign: print('Message out of order'); dump.dump(); return
@@ -197,9 +194,33 @@ class State_Protocol(object):
        
         # TODO send actual signature
         self.expectcommit = True
-        self.p2l.write( ('SIGN', self.round, _s) )
+        # self.p2l.write( ('SIGN', self.round, _s) )
+        self.p2_.write( ((self.sid,self.leaderpid), ('SIGN', self.round, _s)) )
         # TODO set a timeout for waiting for COMMIT message
 
+    def input_batch(self, rnd, aux_in, inputs):
+        if self.flag == 0 and self.expectbatch:
+            print('\n\033[1m got a batch \033[0m', rnd, aux_in, inputs)
+            self.expectbatch = False
+            self.expectcommit = True
+            # TODO do some more checks of the clock
+            if self.round == rnd:
+                self.execute(inputs, aux_in)
+            else: dump.dump()
+        else: dump.dump()
+            
+    def input_commit(self, rnd, sigs):
+        # TODO check commit messages
+            self.expectcommit = False
+            self.inputsent = False
+            assert rnd == self.round
+            self.lastcommit = (self.state, self.outr, _sigs)
+            self.allcommits[self.round] = self.lastcommit
+            self.round = sef.lastround + 1
+            self.aux_in = []
+            # TODO probably output the new state to the envronment??
+            print('Update\n\t\tself.lastcommit={}\n\t\tself.lastround={}\n\t\tself.round={}\n'.format(self.lastcommit, self.lastround, self.round))
+            dump.dump()
 
 
     def check_bc(self):
@@ -278,98 +299,89 @@ class State_Protocol(object):
     def tx_check(self):
         # first check the state channel contract for disputes or other
         blockno = self.subroutine_block_number()
-        txs = self.G.subroutine_call((
-            (self.sid, self.pid), True,
-            ('get-txs', self.C, blockno-1, self.lastblock)
-        ))
+        self.p2f.write( ((69,'G_ledger'), ('get-txs', self.C, blockno-1,self.lastblock)) )
+        r = gevent.wait(objects=[self.f2p],count=1)
+        r = r[0]
+        fro,txs = r.read()
+        self.f2p.reset()
         # if flag=OK only expect DISPUTE no other transaction
-        if txs:  # fag = OK
-            for tx in txs:
-                to,fro,val,data,nonce = tx
-                output = self.G.subroutine_call((
-                    self.sender, True,
-                    ('read-output', [(fro,nonce)])
-                ))
-                if not output: continue
-                for e in output[0]:
-                    if e[0] == 'EventDispute' and self.flag == 0:
-                        r,deadline = e[1:]
-                        # should set all flags to false and flag=PENDING
-                        self.handle_dispute(r,deadline)
-                        break
-        # check for transactions in CONTRACT_AUX
-        txs = self.G.subroutine_call((
-            (self.sid, self.pid), True,
-            ('get-txs', self.C_aux, blockno-1, self.lastblock)
-        ))
-        
-        if txs:
-            for tx in txs:
-                to,fro,val,data,nonce = tx
-                output = self.G.subroutine_call((
-                    self.sender, True,
-                    ('read-output', [(fro,nonce)])
-                ))
-                if not output: continue
-                for o in output[0]:
-                    self.aux_in.append(o[1:])
-            print('\n\t\t aux_in={}'.format(self.aux_in))
-        self.lastblock = blockno
-                        
+        #if txs:  # fag = OK
+        #    for tx in txs:
+        #        to,fro,val,data,nonce = tx
+        #        output = self.G.subroutine_call((
+        #            self.sender, True,
+        #            ('read-output', [(fro,nonce)])
+        #        ))
+        #        if not output: continue
+        #        for e in output[0]:
+        #            if e[0] == 'EventDispute' and self.flag == 0:
+        #                r,deadline = e[1:]
+        #                # should set all flags to false and flag=PENDING
+        #                self.handle_dispute(r,deadline)
+        #                break
+        ## check for transactions in CONTRACT_AUX
+        #txs = self.G.subroutine_call((
+        #    (self.sid, self.pid), True,
+        #    ('get-txs', self.C_aux, blockno-1, self.lastblock)
+        #))
+        self.p2f.write( ((69,'G_ledger'), ('get-txs', self.C_aux, blockno-1, self.lastblock)) )
+        r = gevent.wait(objects=[self.f2p],count=1)
+        r = r[0]
+        fro,txs = r.read()
+        self.f2p.reset()
+        #
+        #if txs:
+        #    for tx in txs:
+        #        to,fro,val,data,nonce = tx
+        #        output = self.G.subroutine_call((
+        #            self.sender, True,
+        #            ('read-output', [(fro,nonce)])
+        #        ))
+        #        if not output: continue
+        #        for o in output[0]:
+        #            self.aux_in.append(o[1:])
+        #    print('\n\t\t aux_in={}'.format(self.aux_in))
+        #self.lastblock = blockno
+        #                
 
         # if flag=PENDING only expect some resolution off-chain or on-chain
 
         # if flag=OK check for contract aux_in
 
-    #def tx_check(self):
-    #    blockno = self.subroutine_block_number()
-    #    txs = self.G.subroutine_call((
-    #        (self.sid, self.pid), True,
-    #        ('get-txs', self.C, blockno-1, self.lastblock)
-    #    ))
-    #    print('[ProtState {}] Searching for C={} from {} to {} '.format(self.sender,self.C,self.lastblock,blockno-1))
-    #    if txs:
-    #        for tx in txs:
-    #            to,fro,val,data,nonce = tx
-    #            output = self.G.subroutine_call((
-    #                self.sender, True,
-    #                ('read-output', [(fro,nonce)])
-    #            ))
-    #            print('[State Prot {}] {}'.format(self.sender, output))
-    #            for e in output[0]:
-    #                if e[0] == 'EventDispute':
-    #                    r,deadline = e[1:]
-    #                    self.handle_distpute(r,deadline)
-    #                    break
-    #                else:
-    #                    dump.dump()
-    #                    raise Exception('No matching event', e)
-    #    else:
-    #        dump.dump()
-    #        print('No TXS found', txs)
-    #    self.lastblock = blockno
-
     def input_ping(self):
         self.tx_check()
-        self.check_bc()
+        #self.check_bc()
+        print('Pinged')
+        dump.dump()
 
     def input_msg(self, sender, msg):   
-        #print('INPUT MSG', sender, msg)
+        print('INPUT MSG', sender, msg)
         sid,pid = sender
-        if self.sid == sid:         # sent by another party
-            if msg[0] == 'input':
-                self.input_pinput(pid, msg[1], msg[2])
-            elif msg[0] == 'SIGN':
-                self.input_psign(pid, msg[1], msg[2])
-            else: dump.dump()
-        else:                       # sent by environment
-            if msg[0] == 'input':
-                self.input_input(msg[1], msg[2])
-            elif msg[0] == 'ping':
-                self.input_ping()
-            elif msg[0] == 'call-evidence':
-                self.call_evidence(msg[1])
-            else: dump.dump()
+        
+        if isf(sid,pid):
+            if msg[0] == 'BATCH':
+                _,rnd,aux_in,inputs = msg
+                self.input_batch(rnd, aux_in, inputs)
+            elif msg[0] == 'COMMIT':
+                _,rnd,signs = msg
+                self.inout_commit(rnd,sigs)
+            else:
+                dump.dump()
+        else:
+            if self.sid == sid:         # sent by another party
+                if msg[0] == 'input':
+                    self.input_pinput(pid, msg[1], msg[2])
+                elif msg[0] == 'SIGN':
+                    self.input_psign(pid, msg[1], msg[2])
+                else: dump.dump()
+            else:                       # sent by environment
+                if msg[0] == 'input':
+                    self.input_input(msg[1], msg[2])
+                elif msg[0] == 'ping':
+                    self.input_ping()
+                elif msg[0] == 'call-evidence':
+                    self.call_evidence(msg[1])
+                else: dump.dump()
 
     def subroutine_msg(self, sender, msg):
         if msg[0] == 'read':    

@@ -165,6 +165,7 @@ class Clock_Functionality2(object):
             else:
                 dump.dump()
         else:
+            print('Not in sids', sid, self.sids)
             self.f2_.write( ((sid,pid), 'FAILED') )
 
     def input_msg(self, sender, msg):

@@ -496,7 +496,12 @@ class Ledger_Functionality2(object):
                         #print('to', to, 'from', fro, 'addr', addr)
                         output.append((to,fro,val,data,nonce))
         print('Returning transactions:', output)
-        self.f2_.write( ((sid,pid), output) )
+        if comm.isf(sid,pid):
+            self.f2_.write( ((sid,pid), output) )
+        elif comm.isparty(sid,pid):
+            self.f2p.write( ((sid,pid), output) )
+        else:
+            raise Exception("Not a functionality or a partu")
         #return output
 
 
