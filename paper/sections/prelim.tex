@@ -1,0 +1,9 @@
+To build up to a ledger functionality, we first need to discuss the building blocks.
+The first important component is the communication model.
+Recall from~\cite{uc} that the communication model is asynchronous where messages between parties can be arbitrarily delayed by the adversary.
+Though this is the weakest assumptions that one can make about a network, we require a synchronous communication model build on top of UC that can provide some eventual delivery guarantees.
+
+\subsection{Synchronous Network}
+There are two parts that go into modelling a synchronous network in UC: creating a round structure that all ITMs can be synchronized with and requiring maximum delays on message by the adversary.
+In order to achieve the former, we rely on a pervious work by Katz et al.~\cite{katz-clock}.
+
