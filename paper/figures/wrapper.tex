@@ -1,0 +1,31 @@
+\begin{bbox}[title={Wrapper $\mathcal{W} (\mathcal{F},\mathcal{C}_1,...,\mathcal{C}_k)$}]
+
+Initialize $\msf{outputs} := \emptyset$, $\msf{buffer} := \emptyset$
+
+\OnInput $\inmsg{buffer}{msg}{\delta}{P_i}$ from $\mathcal{F}$:
+	
+	\quad $\msf{buffer}[\Gledger.\msf{rnd}+\delta].\msf{append}(msg,P_i)$ 
+
+\OnInput \inmsg{read} from \Partyi:
+
+	\quad $\msf{out} := \msf{outputs}[P_i]$
+
+	\quad $\msf{outputs}[P_i] := \emptyset$
+
+	\quad $\Send \msf{out} \rightarrow P_i$
+
+\Allinputs m from \Partyi:
+
+	\quad \Send $m \rightarrow \F$
+
+\vspace{2mm} \hrule \vspace{2mm}
+
+When activated, do the following subroutine before processing the message:
+
+	\quad \For $(msg,P_i) \in \msf{buffer}[\Gledger.\msf{rnd}]$:
+
+		\qquad \Send $(\msf{deliver},msg,P_i) \rightarrow \F$
+
+		\qquad $\msf{outputs}[P_i].\msf{append}(msg)$
+
+\end{bbox}

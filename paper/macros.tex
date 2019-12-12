@@ -3,6 +3,8 @@
 \newcommand{\F}{\f{F}}
 \newcommand{\C}{\mathcal{C}}
 \newcommand{\con}[1]{\msf{Contract_{#1}}}
+%\newcommand{\Fsync}[2]{\ensuremath{\F_{\msf{sync},#1,#2}}}
+\newcommand{\Fsync}[2]{\ensuremath{\F_{\msf{BD-SEC}}(#1,#2)}}
 \newcommand{\Fstate}{\ensuremath{\F_{\msf{state}}}}
 \newcommand{\Fpay}{\ensuremath{\F_{\msf{pay}}}}
 \newcommand{\Gledger}{\ensuremath{\f{G}_{\msf{ledger}}}}
@@ -11,14 +13,14 @@
 \newcommand{\edict}{\{\}}
 \newcommand{\lar}{\leftarrow}
 \newcommand{\rar}{\rightarrow}
-\newcommand{\Init}{{\bf \color{Cerulean} Init}~}
-\newcommand{\OnInput}{{\bf \color{Cerulean} On input}~}
+\newcommand{\Init}{{\bf \color{NavyBlue} Init}~}
+\newcommand{\OnInput}{{\bf \color{NavyBlue} On input}~}
 \newcommand{\Allinputs}{{\bf \color{Cerulean} All other input~}}
 \newcommand{\OnAdvInput}{{\bf \color{BrickRed} On input}~}
 
 \makeatletter
 \newcommand{\inmsg}[1]{%
-	(\msf{#1}\checknextarg}
+	(#1\checknextarg}
 \newcommand{\checknextarg}{\@ifnextchar\bgroup{\gobblenextarg}{)~}}
 \newcommand{\gobblenextarg}[1]{, #1\@ifnextchar\bgroup{\gobblenextarg}{)~}}
 \makeatother
@@ -26,11 +28,13 @@
 \newcommand{\transfermsg}{\inmsg{transfer}{to}{val}{data}{from}}
 \newcommand{\createmsg}{\inmsg{contract \ create}{addr}{val}{data}{private}{from}}
 \newcommand{\reject}{\textbf{reject}~}
+\newcommand{\ignore}{\textbf{ignore}~}
 \newcommand{\For}{\textbf{For}~}
 \newcommand{\Env}{\ensuremath{\mathcal{Z}}}
 \newcommand{\While}{\textbf{While}~}
 \newcommand{\Buffer}{\textbf{Buffer}~}
 \newcommand{\Send}{\textbf{Send}~}
+\newcommand{\Output}{\textbf{Output}~}
 \newcommand{\Leak}{\textbf{Leak}~}
 \newcommand{\In}{\textbf{in}~}
 \newcommand{\If}{\textbf{If}~}
@@ -38,7 +42,7 @@
 \newcommand{\Return}{\textbf{Return}~}
 \newcommand{\pluseq}{\ensuremath{\mathrel{+}=}}
 \newcommand{\Adv}{\ensuremath{\mathcal{A}}}
-\newcommand{\Partyi}{$\mathbf{P_i=(sid,pid)}$}
+\newcommand{\Partyi}{\ensuremath{\mathbf{P_i=(sid,pid)}}}
 %\newcommand{\qquad}{\quad \quad}
 \newcommand{\qqquad}{\qquad \quad}
 \newcommand{\qqqquad}{\qqquad \quad}

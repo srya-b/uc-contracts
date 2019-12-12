@@ -24,13 +24,9 @@ class State_Protocol(object):
         self.p2_ = p2_
         self._2p = _2p
 
-        #self.G = G
-        #self.F_bc = F_bc
         self.C = C          # C here is not the aux contract but contract_state
         self.C_aux = C_aux
         self.U = U
-        #self.p2g = p2g
-        #self.p2bc = p2bc
         self.outputs = defaultdict(Queue)
         self.peers = peers
         self.leader = False
@@ -53,44 +49,13 @@ class State_Protocol(object):
         self.inputsent = False
         self.expectbatch = False
         self.expectcommit = False
+        self.expectcommtrnd = -1
         self.expectsign = False
         # TODO: running U once here to get initial state
         self.state, self.outr = self.U(None, [], None, 0)
         self.alloutr = {}
         self.allstates = {}
         self.aux_in = []
-        #z_write( self.sender, self.state )
-
-        # TODO make this work
-        # the main idea here is that the protocol tracks what actions are remaining to take
-        # this is easy to check in the next round to check if the environment gave enough
-        # activations
-        # the simplest form is the function and the arguments to pass to it
-        # (f, (args,))
-        self.actions_remaining = []
-        
-        ''' The idea here is that state protocol won't send clock-update
-            until it has been activated at least twice, enough to check
-            for multicasts and to check for transactions to respond to
-        '''
-        self.activation_state = 0  # 0=wait for check tx, 1=wait for check bc, 2=ready
-        self.lastactivationround = 0  # TODO get current clock time
-
-        self.p2c = None; self.clock = None
-
-        # step1=input, step2=batch
-        self.step = 1
-
-    #def set_leader(self, leaderpid, pleader, p2l):
-    #    if leaderpid==self.pid: self.leader = True
-    #    self.pleader = pleader; self.p2l = p2l
-    #def set_leader(self, leaderpid):
-    #    if leaderpid == self.pid: self.leader = True
-    #    self.leaderpid = leaderpid
-
-    def printleaders(self):
-        print('%s reporting leader: %s' % (self.pid, self.pleader))
-        print('Am I the leader %s: %s' % (self.pid, self.leader))
 
     def __str__(self):
         return '\033[92mProt_state(%s,%s)\033[0m' % (self.sid, self.pid)
@@ -98,14 +63,18 @@ class State_Protocol(object):
     def write(self, to, msg):
         gwrite(u'92m', 'Prot_state(%s,%s)' % (self.sid,self.pid), to, msg)
 
-    def util_read_clock(self):
-        self.p2f.write( ((420,'G_clock'), ('clock-read,')) )
-        r = gevent.wait(objects=[self.f2p],count=1)
+    def wait_for(self, c):
+        r = gevent.wait(objects=[c],count=1)
         r = r[0]
-        fro,rnd = r.read()
-        self.f2p.reset()
-        return rnd
+        fro,msg = r.read()
+        c.reset()
+        return fro,msg    
     
+    def util_read_clock(self):
+        self.p2f.write( ((420,'G_clock'), ('clock-read',)) )
+        fro,rnd = self.wait_for(self.f2p)
+        return rnd
+
     def set_clock(self, c2c, clock):
         self.p2c = c2c; self.clock = clock
 
@@ -114,28 +83,23 @@ class State_Protocol(object):
     
     def subroutine_block_number(self):
         self.p2f.write( ((69,'G_ledger'), ('block-number',)) )
-        r = gevent.wait(objects=[self.f2p],count=1)
-        r = r[0]
-        fro,blockno = r.read()
-        self.f2p.reset()
-        print('blockno', blockno)
+        fro,blockno = self.wait_for(self.f2p)
         return blockno
 
     def input_input(self, v_i, r):
         if r == self.round and not self.inputsent and self.flag == 0:
-            print('SUBIMTTING FOR ROUND', self.round, r, v_i)
             # send v_i,r --> leader
             self.write( self.pleader, (v_i,r) )
             self.inputsent = True; self.expectbatch = True
-            #self.p2l.write( ('input',v_i,r) )
             self.p2_.write( ((self.sid, self.leaderpid), ('input', v_i,r)) )
         else: 
             print('Input from wrong round, round={}  v_i={}, r_i={}'.format(self.round, v_i, r))
             dump.dump()
- 
-    def send_batch(self):
-        print('\n\t\t self.aux_in={}'.format(self.aux_in))
-        msg = ('BATCH', self.round, self.aux_in if self.aux_in else [], list(self.pinputs[self.round].values()))
+
+    #def send_batch(self):
+    def send_batch(self, _r, _aux_in, _pinputs):
+        #msg = ('BATCH', self.round, self.aux_in if self.aux_in else [], list(self.pinputs[self.round].values()))
+        msg = ('BATCH', _r, _aux_in, _pinputs)
         self.expectsign = True
         self.p2f.write( (('hello', 'F_bcast'), ('bcast', msg)) )
 
@@ -146,15 +110,13 @@ class State_Protocol(object):
             self.pinputs[r][p_i] = v_i
         for p in self.peers:
             if p not in self.pinputs[self.round]:
-                print('\033[1m\n\ndumped because not complete\033[0m', self.pinputs[self.round], self.peers)
                 dump.dump(); return
-        print('send batch')
-        self.send_batch()
+        self.send_batch( self.round, self.aux_in if self.aux_in else [], list(self.pinputs[self.round].values()))
 
-    def send_commit(self):
-        msg = ('COMMIT', self.round, list(self.pinputs[self.round].values()))
+    def send_commit(self, _r, _sigs):
+        #msg = ('COMMIT', self.round, list(self.pinputs[self.round].values()))
+        msg = ('COMMIT', _r, _sigs)
         self.expectsign = False
-        #self.p2bc.write( ('bcast', msg) )
         self.p2f.write( (('hello','F_bcast'),('bcast', msg)) )
 
     def input_psign(self, p_i, r_i, sig):
@@ -170,11 +132,7 @@ class State_Protocol(object):
                 dump.dump(); return
             else:
                 assert self.psigns[r_i][p] == sig
-        self.send_commit()
-
-    # Check for messages from leader
-    def query_leader(self):
-        pass
+        self.send_commit(self.round, list(self.pinputs[self.round].values()))
 
     def subroutine_read(self):
         # TODO: not quite right
@@ -182,27 +140,35 @@ class State_Protocol(object):
             z_write( self.sender, self.state )
         else:
             z_write( (self.sid, self.pid), self.lastcommit[0])
-       
+    
+    def _execute(self, state, inputs, aux_in, rnd):
+        _s,_o = self.U(state, inputs, aux_in, rnd)
+        self.state = _s
+        self.outr = _o
+        return _s,_o
+
     def execute(self, inputs, aux_in):
         for aux in aux_in:
             assert aux in self.aux_in, 'Not here \t\tAUX_IN={} \n\t\tself={}'.format(aux_in, self.aux_in)
-        _s, _o = self.U(self.state, inputs, aux_in, self.round)
+        _s,_o = self._execute(self.state, inputs, aux_in, self.round)
+        #_s, _o = self.U(self.state, inputs, aux_in, self.round)
         print('New state computed at={}, state={}'.format(self.sender, _s))
         # TODO don't confirm state until commit is received
-        self.state = _s
-        self.outr = _o
+        #self.state = _s
+        #self.outr = _o
        
         # TODO send actual signature
         self.expectcommit = True
-        # self.p2l.write( ('SIGN', self.round, _s) )
+        self.expectcommitrnd = self.clockround+1
+        self.expectbatch = False
         self.p2_.write( ((self.sid,self.leaderpid), ('SIGN', self.round, _s)) )
         # TODO set a timeout for waiting for COMMIT message
 
     def input_batch(self, rnd, aux_in, inputs):
         if self.flag == 0 and self.expectbatch:
             print('\n\033[1m got a batch \033[0m', rnd, aux_in, inputs)
-            self.expectbatch = False
-            self.expectcommit = True
+            #self.expectbatch = False
+            #self.expectcommit = True
             # TODO do some more checks of the clock
             if self.round == rnd:
                 self.execute(inputs, aux_in)
@@ -211,88 +177,51 @@ class State_Protocol(object):
             
     def input_commit(self, rnd, sigs):
         # TODO check commit messages
-            self.expectcommit = False
-            self.inputsent = False
-            assert rnd == self.round
-            self.lastcommit = (self.state, self.outr, sigs)
-            self.allcommits[self.round] = self.lastcommit
-            self.round = self.lastround + 1
-            self.aux_in = []
-            # TODO probably output the new state to the envronment??
-            print('Update\n\t\tself.lastcommit={}\n\t\tself.lastround={}\n\t\tself.round={}\n'.format(self.lastcommit, self.lastround, self.round))
-            dump.dump()
-
-
-    def check_bc(self):
-        if self.flag == 1: return
-        # get all msgs in multicast, filter by leader
-        msgs = self.F_bc.subroutine_call((
-            (self.sid,self.pid),True,
-            ('read',)
-        ))
-        # check that this cround = last_cround + 1, fail otherwise
-        # more than 1 multicast message means failure ==> only leader sends at most one every round
-        assert len(msgs) <= 1, "Too many messages in broadcast={}, msgs={}\nEnvironment skipped a round!".format(len(msgs), msgs)
-        cur_round = self.util_read_clock()
-        assert cur_round == self.clockround or cur_round == self.clockround+1, "Skipped more than one round. Current round={}, clock round={}".format(cur_round, self.clockround)
-        if len(msgs)==0:
-            self.clockround = cur_round
-            dump.dump()
-            return
-        msg,p = msgs[0]
-        print('Message from fBcast msg={} from={}'.format(msg,p))
-        print('self.expectbatch={}, self.expectcommit={}'.format(self.expectbatch,self.expectcommit))
-        if self.flag == 0:
-            # if expect batch
-            if self.expectbatch and msg[0] == 'BATCH':
-                self.expectbatch = False
-                self.expectcommit = True
-                _round,_auxin,_inputs = msg[1:]
-                if self.round == _round:
-                    self.execute(_inputs, _auxin)
-                else: dump.dump()
-            # if expect commit
-            elif self.expectcommit and msg[0] == 'COMMIT':
-                self.expectcommit = False
-                self.inputsent = False
-                _round,_sigs = msg[1:]
-                assert _round == self.round
-                # TODO check commit message
-                self.lastcommit = (self.state, self.outr, _sigs)
-                self.allcommits[self.round] = self.lastcommit
-                self.lastround = _round
-                self.round = self.lastround+1
-                self.aux_in = []
-                print('Update\n\t\tself.lastcommit={}\n\t\tself.lastround={}\n\t\tself.round={}\n'.format(self.lastcommit, self.lastround, self.round))
-                dump.dump()
-            else:
-                dump.dump()
-        else: dump.dump()
-        self.clockround = cur_round
+        # TODO probably output the new state to the envronment??
+        self.expectcommit = False
+        self.inputsent = False
+        assert rnd == self.round
+        self.lastcommit = (self.state, self.outr, sigs)
+        self.allcommits[self.round] = self.lastcommit
+        self.lastround = rnd
+        self.round = self.lastround + 1
+        self.aux_in = []
+        print('\n\t\033[91mUpdate\n\t\tself.lastcommit={}\n\t\tself.lastround={}\n\t\tself.round={}\033[0m\n'.format(self.lastcommit, self.lastround, self.round))
+        dump.dump()
 
     def _evidence(self, _r):
         _state,_outr,_sigs = self.allcommits[_r]
         tx = ('transfer', self.C, 0, ('evidence', (_r, _state, _outr, _sigs)), 'NA')
-        self.write('G_Ledger', tx)
-        self.p2g.write( tx )
+        self.p2f.write( ((69,'G_ledger'), tx) )
+        fro,msg = self.wait_for(self.f2p)
+
+    def _dispute(self, _r):
+        tx = ('transfer', self.C, 0, ('dispute', (_r,)), 'NA')
+        self.p2f.write( ((69,'G_ledger'), tx) )
+
+    def call_dispute(self, _r):
+        #TODO if corrupt must be next roun
+        if _r != self.round: raise Exception("Environment dispute called on round with evideicen, r={}, current round={}".format(_r, self.round)); dump.dump()
+        self._dispute(_r)
 
     def call_evidence(self, _r):
-        if _r <= self.lastround:
+        # TODO corrupt
+        if _r == self.lastround:
             self._evidence(_r)
+            dump.dump()
         else:
+            raise Exception("Environment calling corrupt input. Evidence on round r={}, current round = {}".format(_r, self.round))
             dump.dump()
     
     def handle_dispute(self, r, deadline):
+        print('\t\t[ProtState{}] Dispute r={} <= lastRound={}'.format(self.sender,r,self.lastround))
         if r <= self.lastround:
-            print('\t\t[ProtState{}] Dispute r={} <= lastRound={}'.format(self.sender,r,self.lastround))
-#            self.p2g.write( ('transfer', self.C, 0, ('evidence',(self.lastround, *self.lastcommit)), 'NA') )
             self._evidence( self.lastround )
         elif r == self.lastround+1:
-            print('\t\t[ProtState{}] Dispute r={} = lastRound+1={}'.format(self.sender,r,self.lastround+1))
             tx = ('transfer', self.C, 0, ('input',r,self.currentroundinput), 'NA')
-            self.write('G_Ledger', tx)
             self.flag = 1   # PENDING
-            self.p2g.write( tx  )
+            self.p2f.write( ((69,'G_ledger'), tx) )
+            fro,msg = self.wait_for(self.f2p)
         else:
             raise Exception('r={}, self.lastround={}'.format(r, self.lastround))
 
@@ -300,64 +229,60 @@ class State_Protocol(object):
         # first check the state channel contract for disputes or other
         blockno = self.subroutine_block_number()
         self.p2f.write( ((69,'G_ledger'), ('get-txs', self.C, blockno-1,self.lastblock)) )
-        r = gevent.wait(objects=[self.f2p],count=1)
-        r = r[0]
-        fro,txs = r.read()
-        self.f2p.reset()
+        fro,txs = self.wait_for(self.f2p)
         # if flag=OK only expect DISPUTE no other transaction
-        #if txs:  # fag = OK
-        #    for tx in txs:
-        #        to,fro,val,data,nonce = tx
-        #        output = self.G.subroutine_call((
-        #            self.sender, True,
-        #            ('read-output', [(fro,nonce)])
-        #        ))
-        #        if not output: continue
-        #        for e in output[0]:
-        #            if e[0] == 'EventDispute' and self.flag == 0:
-        #                r,deadline = e[1:]
-        #                # should set all flags to false and flag=PENDING
-        #                self.handle_dispute(r,deadline)
-        #                break
-        ## check for transactions in CONTRACT_AUX
-        #txs = self.G.subroutine_call((
-        #    (self.sid, self.pid), True,
-        #    ('get-txs', self.C_aux, blockno-1, self.lastblock)
-        #))
+        if txs:  # fag = OK
+            for tx in txs:
+                to,fro,val,data,nonce = tx
+                self.p2f.write( ((69,'G_ledger'), ('read-output', [(fro,nonce)])) )
+                fro,output = self.wait_for(self.f2p)
+                if not output: continue
+                for e in output[0]:
+                    if e[0] == 'EventDispute' and self.flag == 0:
+                        print('\n\t\033[1m Dispute found \033[0m')
+                        r,deadline = e[1:]
+                        self.handle_dispute(r,deadline)
+                        break
         self.p2f.write( ((69,'G_ledger'), ('get-txs', self.C_aux, blockno-1, self.lastblock)) )
-        r = gevent.wait(objects=[self.f2p],count=1)
-        r = r[0]
-        fro,txs = r.read()
-        self.f2p.reset()
-        #
-        #if txs:
-        #    for tx in txs:
-        #        to,fro,val,data,nonce = tx
-        #        output = self.G.subroutine_call((
-        #            self.sender, True,
-        #            ('read-output', [(fro,nonce)])
-        #        ))
-        #        if not output: continue
-        #        for o in output[0]:
-        #            self.aux_in.append(o[1:])
-        #    print('\n\t\t aux_in={}'.format(self.aux_in))
-        #self.lastblock = blockno
-        #                
-
-        # if flag=PENDING only expect some resolution off-chain or on-chain
-
-        # if flag=OK check for contract aux_in
+        fro,txs = self.wait_for(self.f2p)
+        print('Got some txs', fro, txs) 
+        if txs:
+            for tx in txs:
+                to,fro,val,data,nonce = tx
+                self.p2f.write( ((69,'G_ledger'), ('read-output', [(fro,nonce)])) )
+                fro,output = self.wait_for(self.f2p)
+                if not output: continue
+                for o in output[0]:
+                    self.aux_in.append(o[1:])
+            print('\n\t\t aux_in={}'.format(self.aux_in))
+        self.lastblock = blockno
 
     def input_ping(self):
         self.tx_check()
-        #self.check_bc()
-        print('Pinged')
         dump.dump()
 
+    # TODO if exception is only raised in f_broadcast then maybe environment
+    #       can avoid it for many rounds, in actuality you want that F_brodcast
+    #       if also saying 'clock-update'
+    def check_except(self):
+        if self.expectcommit:
+            if self.clockround > self.expectcommitrnd:
+                print('clockround={}, commitround={}'.format(self.clockround, self.expectcommitrnd))
+                if self.lastcommit:
+                    self._evidence(self.lastround)
+                    self._dispute(self.round)
+                raise Exception
+    
+    def update_time(self):
+        rnd = self.util_read_clock()
+        if rnd > self.clockround:
+            self.clockround = rnd
+
     def input_msg(self, sender, msg):   
-        print('INPUT MSG', sender, msg)
+        #print('INPUT MSG', sender, msg)
         sid,pid = sender
-        
+        self.check_except()
+        self.update_time()
         if isf(sid,pid):
             if msg[0] == 'BATCH':
                 _,rnd,aux_in,inputs = msg
@@ -369,6 +294,7 @@ class State_Protocol(object):
                 dump.dump()
         else:
             if self.sid == sid:         # sent by another party
+                if not self.leader: dump.dump(); return
                 if msg[0] == 'input':
                     self.input_pinput(pid, msg[1], msg[2])
                 elif msg[0] == 'SIGN':
@@ -381,7 +307,16 @@ class State_Protocol(object):
                     self.input_ping()
                 elif msg[0] == 'call-evidence':
                     self.call_evidence(msg[1])
+                elif msg[0] == 'dispute':
+                    self.call_dispute(msg[1])
                 else: dump.dump()
+
+    def adversary_msg(self, msg):
+        print('state prot adv message={}'.format(msg))
+        if msg[0] == 'input':
+            self.input_input(msg[1], msg[2])
+        else:
+            dump.dump()
 
     def subroutine_msg(self, sender, msg):
         if msg[0] == 'read':    

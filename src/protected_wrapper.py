@@ -285,7 +285,7 @@ class Protected_Wrapper2(object):
 
     def input_msg(self, sender, _msg):
         sid,pid = None,None
-        print("PROTECTED MSG", sender, _msg)
+        #print("PROTECTED MSG", sender, _msg)
         if sender:
             sid,pid = sender
             #if sender not in self.addresses:

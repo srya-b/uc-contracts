@@ -1,0 +1,22 @@
+\begin{bbox}[title={$\F_{\msf{clock}} (\mathcal{P})$}]
+
+Intialize $\forall p_i \in \mathcal{P}: d_i := 0$
+
+\vspace{2mm} \hrule \vspace{2mm}
+
+\OnInput \inmsg{RoundOK} from \Partyi:
+
+	\quad $d_i = 1$
+
+	\quad \If $\forall p_i \in \mathcal{P}: d_i = 1$:
+
+	\quad \quad $d_i := 0$ for all $p_i \in \mathcal{P}$
+
+	\quad \Leak $(\msf{switch},\mathbf{P_i}) \rightarrow \mathcal{A}$
+
+\OnInput \inmsg{clockread} from \Partyi:
+
+	\quad \Send $d_i \rightarrow \mathbf{P_i}$
+
+\end{bbox}
+

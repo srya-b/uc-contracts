@@ -1,0 +1,38 @@
+\begin{bbox}[title={$\F_{\msf{bcast}} (p_L, p_1...p_n)$}]
+
+Initialie $\msf{buffer} := \emptyset$, $\msf{lastRound} \leftarrow -1$, $\msf{round} \leftarrow 0$
+
+\OnInput \inmsg{broadcast}{msg} from \Partyi:
+
+	\quad \If $\Partyi \neq p_L$: ignore
+
+	\quad \Leak $(\msf{msg},\msf{round} + 1) \rightarrow \mathcal{A}$
+
+	\quad $\msf{buffer}[\msf{round}+1] \leftarrow \msf{msg}$
+
+
+\OnInput \inmsg{deliver}{msg}{to} from $\mathcal{A}$:
+	
+	\quad \If $\msf{to} \notin (p_1,...,p_n)$: ignore
+
+	\quad $m,r \leftarrow \msf{msg}$
+
+	\quad \If $\msf{m} \in \msf{buffer}[r]$:
+
+	\quad \quad \Send $(m) \rightarrow \msf{to}$
+
+\vspace{2mm} \hrule \vspace{2mm}
+
+When activated do that following first:
+
+	\quad \Send $(\msf{clockread},) \rightarrow \globalf{G}_{\msf{clock}}$
+
+	\quad $\msf{rnd} \leftarrow wait(\globalf{G}_{\msf{clock}})$
+
+	\quad \If $\msf{rnd} > \msf{round}$:
+
+	\quad \quad $\msf{lastRound} \leftarrow \msf{round}$
+	
+	\quad \quad $\msf{round} \leftarrow \msf{rnd}$
+
+\end{bbox}

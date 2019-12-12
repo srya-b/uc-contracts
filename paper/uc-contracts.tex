@@ -113,6 +113,58 @@
 	\caption{The wrapper $\mathcal{W}$ that provides common function for all functionalities. In $\Fstate$ for example, the wrapper enables functionalities to buffer sending output to the parties in the protocol. When the wrapper sends a message to its functionality $\F$, it does not constitute an \msf{ITM} to \msf{ITM} write as they are both running on the same \msf{ITM}.}
 \end{figure}
 
+\begin{figure}
+	\input{figures/f_broadcast}
+\end{figure}
+
+\begin{figure}
+	\input{figures/g_clock}
+\end{figure}
+
+\begin{figure}
+	\input{figures/state_prot}
+\end{figure}
+
+\section{Three-Phase Commitment}
+
+\subsection{Synchronous Bracha Broadcast}
+
+\begin{figure}[!h]
+	\input{figures/f_katz}
+\end{figure}
+%\begin{figure}
+%	\input{figures/sim_bracha}
+%\end{figure}
+\begin{figure}[!h]
+	\input{figures/f_bracha}
+\end{figure}
+\begin{figure}[!h]
+	\input{figures/prot_bracha}
+\end{figure}
+
+{\bf Theorem.} {\em Protocol $\Pi_{\msf{Bracha}}$ securely realized $\F_{\msf{Bracha}}$ in the $\{\F_{\msf{BD-SEC}},\F_{\msf{CLOCK}}\}$-hybrid world. Assume a stateic adversary corrupted up to $\frac{n}{3}$ parties.}
+
+Consider the simulator, $\mathcal{S}$, above.
+
+If the dealer $\mathcal{D}$ is honest: In the ideal world, $\mathcal{D}$ gives input $v$ to $\F_{\msf{Bracha}}$ which gives leaks it to $\mathcal{S}$.
+The simulator submits the input to it all of the locl $\Fsync{\mathcal{D}}{p_i}$ for $p_i \in  \mathcal{P}$.
+
+$\mathcal{S}$ expects to receive $|\mathcal{P}|$ activations from $\F_{\msf{Bracha}}$ when ideal world parties attempt to read output from the functionality.
+In each activation, the simulator sufficiently ensures each party reads messages from all other parties and simualated state changes and increment the local $\overline{\mathcal{F}}_{\msf{clock}}$
+
+The functionality waits $Rnd = 3$ rounds to deliver the output. In the first round $|\mathcal{P}|^2$ activations ensure all \msf{ECHO} messages are sent.
+In functionality round 2, activations ensure that all \msf{READY} messages are sent. The final functionality round 3, all \msf{READY}s are delivered and the simulates real world parties all output a value $v$.
+By the proof of the Bracha protocol, all real world parties output the same value. The simulator instructs 
+\subsection{Extra}
+
+\begin{figure}
+	\input{figures/f_clock}
+\end{figure}
+
+\begin{figure}
+	\input{figures/f_3pc}
+\end{figure}
+
 %\begin{bbox}[title=asd]
 %hello
 %\end{bbox}

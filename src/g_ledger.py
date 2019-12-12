@@ -441,7 +441,7 @@ class Ledger_Functionality2(object):
     def input_get_caddress(self, sender):
         sid,pid = sender
         c = sha256(str(sender).encode() + str(self.nonces[sender]+1).encode()).hexdigest()[24:]
-        self.f2p.write( (pid, c) )
+        self.f2p.write( ((sid,pid), c) )
 
     def compute_address(self, sid, pid, addr, nonce):
         sender = (sid,pid)
@@ -495,7 +495,7 @@ class Ledger_Functionality2(object):
                     if to == addr or fro == addr:
                         #print('to', to, 'from', fro, 'addr', addr)
                         output.append((to,fro,val,data,nonce))
-        print('Returning transactions:', output)
+        #print('Returning transactions:', output)
         if comm.isf(sid,pid):
             self.f2_.write( ((sid,pid), output) )
         elif comm.isparty(sid,pid):
@@ -572,7 +572,7 @@ class Ledger_Functionality2(object):
         # Leak message to the adversary ONLY if not private
         self.leak( ((fro,self.nonces[fro]),('transfer', to, val, data, fro)) )
         #print('** transfer dump **')
-        self.f2p.write( (pid, 'TRANSFER_OK') )
+        self.f2p.write( ((sid,pid), 'TRANSFER_OK') )
         #dump.dump()
 
     ''' Functionality chooses how long to delay tx
@@ -597,7 +597,7 @@ class Ledger_Functionality2(object):
         self.leak( ((fro,self.nonces[fro]),('contract-create',addr,val,data,fro,private)) )
         #print('** contract create dump **')
         #dump.dump()
-        self.f2p.write( (pid, 'CREATE_OK') )
+        self.f2p.write( ((sid,pid), 'CREATE_OK') )
 
     def exec_tx(self, to, val, data, fro):
         # Need to check again in case of other txs
@@ -646,7 +646,7 @@ class Ledger_Functionality2(object):
         #print('** tick honest dump **')
         #dump.dump()
         sid,pid = sender
-        self.f2p.write( (pid, 'TICK OK') )
+        self.f2p.write( ((sid,pid), 'TICK OK') )
                
     def input_tick_adversary(self, sid, pid, addr, permutation):
         new_txqueue = self.txqueue[self.round+1].copy() 
@@ -681,7 +681,7 @@ class Ledger_Functionality2(object):
         #sid,pid = None,None
         #if sender:
         #    sid,pid = sender
-        print('DEBUG: ledger adversary msg', msg)
+        #print('DEBUG: ledger adversary msg', msg)
         if msg[0] == 'tick':
             self.input_tick_adversary(msg[1], msg[2])
         elif msg[0] == 'get-leaks':
@@ -711,7 +711,7 @@ class Ledger_Functionality2(object):
         #if comm.isparty(sid,pid): 
         #    self.util_read_clock(sid)
 
-        print('[G_LEDGER] INPUT MESSAGE', sender, msg)
+        #print('[G_LEDGER] INPUT MESSAGE', sender, msg)
         if msg[0] == 'transfer':
             self.input_transfer(sid, pid, msg[1],msg[2],msg[3],msg[4])
         elif msg[0] == 'contract-create':
@@ -723,12 +723,12 @@ class Ledger_Functionality2(object):
         elif msg[0] == 'get-caddress':
             self.input_get_caddress(msg[1])
         elif msg[0] == 'block-number':
-            print('\n\t\t block number request', sid, pid)
+            #print('\n\t\t block number request', sid, pid)
             if comm.isparty(sid,pid):
-                print('\n\t\t party asked block-number')
-                self.f2p.write( (pid, self.round) )
+                #print('\n\t\t party asked block-number')
+                self.f2p.write( ((sid,pid), self.round) )
             elif comm.isf(sid,pid):
-                print('\n\t\t functionality blocknumber')
+                #print('\n\t\t functionality blocknumber')
                 self.f2_.write( ((sid,pid), self.round) )
             else:
                 self.f2_.write( 'fail' )

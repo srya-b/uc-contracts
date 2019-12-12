@@ -253,6 +253,7 @@ class StateChannel_Functionality2(object):
         self.p2c = None; self.clock = None
         self.t_L = 0
         self.auxin_ptr = 0
+        self.leaks = []
 
     def p(self,i):
         return self.pmap[i]
@@ -304,9 +305,19 @@ class StateChannel_Functionality2(object):
     def write(self, to, msg):
         gwrite(u'92m', 'F_state', to, msg)
 
-    def leak(self, msg):
-        self.adversary_out.put(msg)
+    #def leak(self, msg):
+    #    self.adversary_out.put(msg)
 
+    def leak(self, msg):
+        print('Leaking', msg)
+        #self.leaks.append( msg )
+        self.f2a.write( ('leak',r) )
+
+    def getLeaks(self):
+        r = list(self.leaks)
+        self.leaks = list()
+        self.f2a.write( r )
+    
     # instead of waiting for on-chain rounds, wait for clock rounds
     def process_buffer(self):
         rnd = self.util_read_clock()
@@ -443,6 +454,8 @@ class StateChannel_Functionality2(object):
 
     def adversary_msg(self, msg):
         if msg[0] == 'ping': self.ping()
+        elif msg[0] == 'get-leaks':
+            self.getLeaks()
         else: dump.dump()
 
     def subroutine_msg(self, sender, msg):
@@ -489,14 +502,49 @@ class Sim_State:
         else:
             dump.dump()
 
+
+from itm2 import ProtocolWrapper, FunctionalityWrapper, DummyAdversary
+from comm import GenChannel
+from state_protocol import State_Protocol
+from utils2 import z_inputs
+
 class Sim_State2:
-    def __init__(self, sid, pid, a2f, a2p, a2z):
+    #def __init__(self, sid, pid, a2f, a2p, a2z):
+    def __init__(self, sid, pid, z2a, a2z, p2a, a2p, a2f, f2a, caddr_state, caddr_aux, U1):
         self.sid = sid; self.pid = pid
         self.sender = (sid,pid)
-        self.a2f = a2f
-        self.a2p = a2p
-        self.a2z = a2z
-    
+        self.z2a = a2z; self.a2z = a2z
+        self.a2p = a2p; self.p2a = p2a
+        self.a2f = a2f; self.f2a = f2a
+
+        self._a2z = GenChannel('a2z')
+        self._z2a = GenChannel('z2a')
+        self._z2p = GenChannel('z2p')
+        self._p2z = GenChannel('p2z')
+        self._f2p = GenChannel('f2p')
+        self._p2f = GenChannel('p2f')
+        self._a2p = GenChannel('a2p')
+        self._p2a = GenChannel('p2a')
+        self._a2f = GenChannel('a2f')
+        self._f2a = GenChannel('f2a')
+        self._z2f = GenChannel('z2f')
+        self._f2z = GenChannel('f2z')
+
+        self.cruptpid = 2
+
+        self.pwrapper = ProtocolWrapper('hello', self._z2p, self._p2z, self._f2p, self._p2f, self._a2p, self._p2a, State_Protocol) 
+        self.pwrapper.newPassthroughPID(1)
+        gevent.spawn(self.pwrapper.run)
+
+        self.fwrapper = FunctionalityWrapper(self._p2f, self._f2p, self._a2f, self._f2a, self._z2f, self._f2z)
+        gevent.spawn(self.fwrapper.run)
+        #self.fwrapper.newFID(69, 'G_ledger')
+        self.fwrapper.newFID(420, 'G_clock')
+        self.fwrapper.newFID('hello', 'F_bcast', (3, 2, 3, 4))
+       
+        self.pwrapper.newPassthroughPID(2)
+        self.pwrapper.newPID(3, (caddr_state,caddr_aux,U1,3,2,3,4)); self.pwrapper.newPID(4, (caddr_state,caddr_aux,U1,3,2,3,4))
+       
     def __str__(self):
         return '\033[91mSimulator (%s, %s)\033[0m' % (self.sid, self.pid) 
 
@@ -520,3 +568,49 @@ class Sim_State2:
         else:
             dump.dump()
 
+    def getLeaks(self, fro):
+        if fro[1] == 'G_ledger':
+            print('write to a2f:', fro, (False, ('get-leaks',)))
+            self.a2f.write( (fro, (False, ('get-leaks',))) )
+        else:
+            print('write a2f:', fro, ('get-leaks',))
+            self.a2f.write( (fro, ('get-leaks',)))
+        r = gevent.wait(objects=[self.f2a],count=1)
+        r = r[0]
+        msg = r.read()
+        print('response F', msg)
+        self.a2z.write( msg )
+        self.f2a.reset()
+
+    def run(self):
+        ready = gevent.wait(
+            objects=[self.z2a, self.f2z, self.p2z],
+            count=1
+        )
+        r = ready[0]
+        if r == self.z2a:
+            msg = r.read()
+            self.z2a.reset()
+            t,msg = msg
+            print('ADVERSARY MESSAGE SIM', t, msg)
+            if t == 'A2F':
+                if msg[0] == 'get-leaks':
+                    print('A2F message', msg)
+                    self.getLeaks(msg[1])
+                elif msg[0] == 'delay-tx':
+                    print('\n\033[1m Delay tx sim\033[0m')
+                    dump.dump()
+                elif msg[0] == 'ping':
+                    print('\n\033[1m Ping sim \033[0m')
+                    dump.dump()
+                else:
+                    print('fucked up'); dump.dump()
+            elif t == 'A2P':
+                self.a2p.write( msg )
+        elif r == self.p2a:
+            msg = r.read()
+            self.p2a.reset()
+            print('Go Back from party', msg)
+            self.a2z.write( msg )
+        else:
+            print('\033[1m else dumping right after leak\033[0m'); dump.dump()

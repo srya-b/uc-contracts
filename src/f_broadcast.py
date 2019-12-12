@@ -182,11 +182,11 @@ class Broadcast_Functionality2(object):
         if r > self.round: raise Exception("r={}, self.round={}, rnd={}".format(r,self.round,rnd))
         for _msg in self.buffer_output[ r ]:
             if _msg == m:
-                print('\n\t \033[1m found msg={} in buffer={}\033[0m'.format(m, _msg))
+                print('\t \033[1m found msg={} in buffer={}\033[0m'.format(m, _msg))
                 #dump.dump()
-                self.f2p.write( (pid, m) )
+                self.f2p.write( ((self.sid,pid), m) )
                 #self.buffer_output[r].remove( _msg )
-                print('\n\t \033[1m [F_bcast] removed msg={} from buffer={}\033[0m'.format(_msg, self.buffer_output[r]))
+                #print('\n\t \033[1m [F_bcast] removed msg={} from buffer={}\033[0m'.format(_msg, self.buffer_output[r]))
                 return
         raise Exception("Msg={} not in buffer={}".format(msg, self.buffer_output))
     # TODO meaningful checks
@@ -201,7 +201,7 @@ class Broadcast_Functionality2(object):
         pass
 
     def buffer(self, msg, delta):
-        print('Delay this', msg, 'for', delta, 'rounds, right now at', self.util_read_clock())
+        #print('Delay this', msg, 'for', delta, 'rounds, right now at', self.util_read_clock())
         rnd = self.util_read_clock()
         self.leak( msg, rnd+delta )
         self.buffer_output[ rnd+delta ].append( msg )

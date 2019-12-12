@@ -1,0 +1,33 @@
+\begin{bbox}[title={Simulator $S_{\msf{Bracha}}$}]
+
+Simulate real-world parties $\overline{\mathcal{P}} = p_1,...,p_n$ and $\Fsync{p_i}{p_j}, \forall p_i,p_j \in \overline{\mathcal{P}}$
+
+Simulate instance $\overline{\F}$ of $\F_{\msf{clock}}$.
+
+Designate same dealer $\overline{\mathcal{D}}$ as environment.
+
+Simulate dummy adversray $\mathcal{A}_{\mathcal{D}}$
+
+\vspace{2mm} \hrule \vspace{2mm}
+
+Case \#1 ( Dishonest $\mathcal{D}$ ):
+
+\OnInput \inmsg{input}{v} from $\mathcal{Z}$ for $\mathcal{D}$:
+
+	\quad \Send (input,v) $\rightarrow \mathcal{A}_{\mathcal{D}}$ {\em (Passthrough for corrupted parties in real world)}
+
+\OnInput \inmsg{m} from $\mathcal{Z}$:
+
+	\quad \Send (m) $\rightarrow \mathcal{A}_{\mathcal{D}}$
+
+\OnInput \inmsg{activates}{$p_j$} from $\F_{\msf{Bracha}}$:
+
+	\quad \If first message in round $r$:
+
+		\quad \quad Deliver messages from $\Fsync{p_j}{p_i}$ to $p_i$ through $(\msf{fetch})$ and simulate state changes.
+
+\vspace{2mm} \hrule \vspace{2mm}
+
+When protocol terminates, obtain output value $v$. Deliver $v \rightarrow \F_{\msf{Bracha}}$ as the dealer $\mathcal{D}$.
+
+\end{bbox}

@@ -133,12 +133,12 @@ class Clock_Functionality2(object):
     def input_register(self, sender):
         sid,pid = sender
         self.sids.add(sid) 
-        print('Regsitered sids', self.sids)
+        #print('Regsitered sids', self.sids)
         if comm.isf(sid,pid):
             self.fregistry[sid].append(pid)
         elif comm.isparty(sid,pid):
             self.pregistry[sid].append(pid)
-        self.f2p.write( (pid, 'CLOCK_OK') )
+        self.f2p.write( ((sid,pid), 'CLOCK_OK') )
         #dump.dump()
    
     def input_pclock_update(self, sender):
@@ -169,7 +169,7 @@ class Clock_Functionality2(object):
             self.f2_.write( ((sid,pid), 'FAILED') )
 
     def input_msg(self, sender, msg):
-        print('CLOCK MSG', msg, 'SENDER', sender, 'PARTY', comm.isparty(*sender), 'F', comm.isf(*sender))
+        #print('CLOCK MSG', msg, 'SENDER', sender, 'PARTY', comm.isparty(*sender), 'F', comm.isf(*sender))
         if msg[0] == 'clock-update':
             if comm.isf(*sender): self.input_fclock_update(sender)
             elif comm.isparty(*sender): self.input_pclock_update(sender)

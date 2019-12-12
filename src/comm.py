@@ -80,7 +80,7 @@ def setParties(parties):
 
 def corrupt(sid,pid):
     global corrupted
-    print('\033[1mCorrupting {}, {}\033[0m'.format((sid,pid), corrupted[sid,pid]))
+    #print('\033[1mCorrupting {}, {}\033[0m'.format((sid,pid), corrupted[sid,pid]))
     corrupted[sid,pid] = True
 
 def isdishonest(sid,pid):
@@ -89,7 +89,7 @@ def isdishonest(sid,pid):
 
 def ishonest(sid,pid):
     global corrupted
-    print('\033[1m Is Corrupt {}, {}\033[0m'.format((sid,pid), corrupted[sid,pid]))
+    #print('\033[1m Is Corrupt {}, {}\033[0m'.format((sid,pid), corrupted[sid,pid]))
     return not corrupted[sid,pid]
 
 def id2input(self, identifier):

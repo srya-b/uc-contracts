@@ -112,10 +112,6 @@ msg = z_ainputs( ('A2P', (2, ((420,'G_clock'), ('register',)))), _z2a, _a2z)
 rnd = z_inputs( ((420,'G_clock'), ('clock-read',)), _z2p, _p2z, 3)
 print('\n\t ROUND:', rnd)
 
-
-
-
-
 ###msg = z_mine_blocks(_z2p, _p2z, 'hello', 1, 1)
 ###print('RESPONSE from tick', msg)
 ###
