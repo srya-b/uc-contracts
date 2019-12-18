@@ -574,7 +574,7 @@ class ProtocolWrapper:
                 pp2_.reset()
                 msg = ((self.sid,pid),msg)
                 rnd = self.util_clock_read(pid)
-                print('\033[1m Adding msg={} to q={}\033[0m'.format(msg,q))
+                #print('\033[1m Adding msg={} to q={}\033[0m'.format(msg,q))
                 if self.eventually_queue[pid] != (): raise Exception("theres a {} eventually that never got processed {}".format(pid, self.eventually_queue))
                 self.leaks[pid].append( msg )
                 self.eventually_queue.append( (msg,rnd,p2_) )
@@ -735,7 +735,7 @@ class ProtocolWrapper2:
                 pp2_.reset()
                 msg = ((self.sid,pid),msg)
                 rnd = self.util_clock_read(pid)
-                print('\033[1m Adding msg={} to q={}\033[0m'.format(msg,q))
+                #print('\033[1m Adding msg={} to q={}\033[0m'.format(msg,q))
                 if self.eventually_queue[pid] != (): raise Exception("theres a {} eventually that never got processed {}".format(pid, self.eventually_queue))
                 self.leaks[pid].append( msg )
                 self.eventually_queue.append( (msg,rnd,p2_) )
@@ -877,12 +877,15 @@ class FunctionalityWrapper:
         self.p2fid = {}
         self.a2fid = {}
         self.f2fid = {}
-        #self._2f = comm.GenChannel()
-        #self.f2_ = comm.GenChannel()
         self.p2f = p2f; self.f2p = f2p;
         self.a2f = a2f; self.f2a = f2a;
         self.z2f = z2f; self.f2z = f2z;
         self.f2_ = comm.GenChannel('f2_')
+        self.tagtocls = {}
+
+
+    def newcls(self, tag, cls):
+        self.tagtocls[tag] = cls
 
     def _newFID(self, _2fid, f2_, sid, tag):
         ff2_ = comm.GenChannel(('write-translate',sid,tag))
@@ -893,9 +896,6 @@ class FunctionalityWrapper:
                 r = gevent.wait(objects=[ff2_],count=1)
                 r = r[0]
                 msg = r.read()
-                #print('\n\tFunctionality wrapper: {} --> {}'.format(msg, ((sid,tag), msg)))
-                #print("msg", msg)
-                print('\033[93m fro={} msg={}\033[0m'.format((sid,tag), msg))
                 ff2_.reset()
                 f2_.write( ((sid,tag), msg) )
         gevent.spawn(_translate) 
@@ -906,16 +906,14 @@ class FunctionalityWrapper:
 
     #def newFID(self, sid, tag, params=()):
     def newFID(self, sid, tag, cls, params=()):
-        print('[{}] Creating new party with pid: {}'.format(sid, tag))
+        print('[{}] Creating new Functionality with pid: {}'.format(sid, tag))
         _z2f,_f2z = self._newFID(self.z2fid, self.f2z, sid, tag)
         _p2f,_f2p = self._newFID(self.p2fid, self.f2p, sid, tag)
         _a2f,_f2a = self._newFID(self.a2fid, self.f2a, sid, tag)
-        #f2_ = comm.GenChannel()
         _2f,_f2_ = self._newFID(self.f2fid, self.f2_, sid, tag)
        
         if tag == 'G_ledger':
             print('\033[94mG_ledger channel _2f={}, _f2_={}\033[0m'.format(_2f.i, _f2_.i))
-            #g_ledger = Ledger_Functionality2(sid, -1, self.f2p, self.f2a, self.f2z, _2f, _f2_)
             g_ledger = Ledger_Functionality2(sid, -1, _f2p, _f2a, _f2z, _2f, _f2_)
             pwrapper = Protected_Wrapper2(g_ledger)
             ledger_itm = ITMFunctionality2(sid,-1, _a2f, _f2a, _z2f, _f2z, _p2f, _f2p, _2f, _f2_)
@@ -924,7 +922,6 @@ class FunctionalityWrapper:
             setFunctionality2(sid,tag)
         elif tag == 'G_clock':
             print('\033[94mG_clock channel _2f={}, _f2_={}\033[0m'.format(_2f.i, _f2_.i))
-            #c = Clock_Functionality2(sid, -1, self.f2p, self.f2a, self.f2z, _2f, _f2_)
             c = Clock_Functionality2(sid, -1, _f2p, _f2a, _f2z, _2f, _f2_)
             c_itm = ITMFunctionality2(sid,-1, _a2f, _f2a, _z2f, _f2z, _p2f, _f2p, _2f, _f2_)
             c_itm.init(c)
@@ -938,14 +935,12 @@ class FunctionalityWrapper:
             gevent.spawn(itm.run)
             setFunctionality2(sid,tag)
         elif tag == 'F_bcast':
-            #f = Broadcast_Functionality2(sid, tag, self.f2p, self.f2a, self.f2z, _2f, _f2_, *params)
             f = Broadcast_Functionality2(sid, tag, _f2p, _f2a, _f2z, _2f, _f2_, *params)
             itm = ITMFunctionality2(sid, tag, _a2f, _f2a, _z2f, _f2z, _p2f, _f2p, _2f, _f2_)
             itm.init(f)
             setFunctionality2(sid,tag)
             gevent.spawn(itm.run)
         elif tag == 'F_bd':
-            #f = BD_SEC_Functionality(sid, -1, _f2p,_p2f, _f2a,_a2f, _f2z,_z2f)
             f = cls(sid, -1, _f2p,_p2f, _f2a,_a2f, _f2z,_z2f)
             setFunctionality2(sid,tag)
             gevent.spawn(f.run)
@@ -955,51 +950,71 @@ class FunctionalityWrapper:
             gevent.spawn(f.run)
 
     def getFID(self, _2pid, sid,tag):
-        return _2pid[sid,tag]
-        #if (sid,tag) in _2pid: return _2pid[sid,tag]
-        #else:
-        #    self.newFID(sid, tag)
-        #    return _2pid[sid,tag]
+        #return _2pid[sid,tag]
+        if (sid,tag) in _2pid: return _2pid[sid,tag]
+        else:
+            cls = self.tagtocls[tag]
+            self.newFID(sid, tag, cls)
+            return _2pid[sid,tag]
 
     def run(self):
         while True:
             ready = gevent.wait(objects=[self.z2f, self.p2f, self.a2f, self.f2_], count=1)
-            #assert len(ready) == 1
             r = ready[0]
-            if r == self.z2f:
-                #((_sid,_pid), msg) = r.read() 
+            if r == self.z2f:  # should never happen
                 dump.dump()
-                # TODO reject if corrupted party
-                #_pid = self.getPID(self.z2pid,pid)
-                #_pid.write(msg)
                 self.z2f.reset()
             elif r == self.p2f:
                 ((_sid,_pid), msg) = r.read() 
                 self.p2f.reset()
-                #print('FUNCTIONALITY MESSAGE', _pid, msg)
                 ((__sid,_tag), msg) = msg
                 _fid = self.getFID(self.p2fid, __sid, _tag)
-                #_fid.write( ((_sid,_pid), True,  msg) )
                 _fid.write( ((_sid,_pid), msg) )
             elif r == self.a2f:
                 msg = r.read()
                 self.a2f.reset()
-                #print('ADVERSARY MSG', msg)
                 ((sid,tag), msg) = msg
                 # TODO if not corrupt, crash
-                #self.p2f.write((pid,msg))
                 _fid = self.getFID(self.a2fid, sid, tag)
                 _fid.write( msg )
             elif r == self.f2_:
                 ((_sid,_pid), msg) = r.read()
                 self.f2_.reset()
-                #print('F2F message', _sid, _pid, msg)
                 ((__sid,__pid), _msg) = msg
                 _fid = self.getFID(self.f2fid, __sid,__pid)
                 _fid.write( ((_sid,_pid), _msg) )
             else:
                 print('SHEEEit')
                 dump.dump()
+
+class FunctionalityWrapperWrapper(object):
+    def __init__(self, p2f, f2p, a2f, f2a, z2f, f2z):
+        self.z2fid = {}
+        self.p2fid = {}
+        self.a2fid = {}
+        self.f2fid = {}
+        self.p2f = p2f; self.f2p = f2p;
+        self.a2f = a2f; self.f2a = f2a;
+        self.z2f = z2f; self.f2z = f2z;
+        self.f2_ = comm.GenChannel('f2_')
+
+        self.tagtocls = {}
+        self.wrapper = FunctionalityWrapper(p2f, f2p, a2f, f2a, z2f, f2z)
+
+    def newfunctionality(self, tag, cls):
+        self.tagtocls[tag] = cls
+
+    def newFID(self, sid, tag, cls):
+        print('[{}] Creating new Functionality with pid: {}'.format(sid, tag))
+          
+
+    def getFID(self, _2fid, sid, tag):
+        if (sid,tag) in _2fid: return _2fid[sid,tag]
+        else:
+            cls = self.tagtocls[tag]
+            self.wrapper.newFID(sid, tag, cls)
+
+
 
 class ITMAdversary2(object):
     #def __init__(self, sid, pid, z2a, z2p, a2f, a2g):

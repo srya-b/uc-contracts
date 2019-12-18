@@ -1,22 +1,26 @@
-\begin{bbox}[title={$\F_{\msf{clock}} (\mathcal{P})$}]
+\begin{bbox}[title={\textbf{Functionality} $\F_{\msf{clock}} (\mathcal{P})$}]
 
 Intialize $\forall p_i \in \mathcal{P}: d_i := 0$
 
 \vspace{2mm} \hrule \vspace{2mm}
 
-\OnInput \inmsg{RoundOK} from \Partyi:
+-- \OnInput \inmsg{RoundOK} from \Partyi:
 
-	\quad $d_i = 1$
+	\dquad $d_i = 1$
 
-	\quad \If $\forall p_i \in \mathcal{P}: d_i = 1$:
+	\dquad \If $\forall p_i \in \mathcal{P}: d_i = 1$:
 
-	\quad \quad $d_i := 0$ for all $p_i \in \mathcal{P}$
+	\dquad \quad $d_i := 0$ for all $p_i \in \mathcal{P}$
 
-	\quad \Leak $(\msf{switch},\mathbf{P_i}) \rightarrow \mathcal{A}$
+	\dquad \Leak $(\msf{switch},\mathbf{P_i}) \rightarrow \mathcal{A}$
 
-\OnInput \inmsg{clockread} from \Partyi:
+-- \OnInput \inmsg{RequestRound} from \Partyi: 
 
-	\quad \Send $d_i \rightarrow \mathbf{P_i}$
+	\dquad \Send $d_i \rightarrow \mathbf{P_i}$
+
+-- \OnInput \inmsg{corrupt}{$p_i$} from $\mathcal{A}$:
+
+	\dquad Set $\mathcal{H} := \mathcal{H} \cup \{p_i\}$
 
 \end{bbox}
 

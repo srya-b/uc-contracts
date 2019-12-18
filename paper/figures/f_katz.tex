@@ -1,33 +1,31 @@
-\begin{bbox}[title={$\F_{\msf{BD-SEC}}^{\delta,\ell}(p_s,p_r)$}]
+\begin{bbox}[title={\textbf{Functionality} $\F_{\msf{BD-SEC}}^{\delta,\ell}(p_s,p_r)$}]
 
 Initialize $M := \bot$ and $D := 1$ and $\hat{D} := 1$
 
-\OnInput \inmsg{m} from $\mathbf{p_s}$:
+-- \OnInput \inmsg{m} from $\mathbf{p_s}$:
 
-	\quad Set $D := 1$, $M := m$
+	\dquad Set $D := 1$, $M := m$
 
-	\quad \Leak ({\bf send},$M$) $\rightarrow \mathcal{A}$
+	\dquad \Leak ({\bf send},$M$) $\rightarrow \mathcal{A}$
 
-\OnInput \inmsg{fetch} from $p_r$:
+-- \OnInput \inmsg{fetch} from $p_r$:
 
-	\quad Set $D = D - 1$
+	\dquad Set $D = D - 1$
 
-	\quad \If $D = 0$: \Send ({\bf sent},$M$) $\rightarrow p_r$
+	\dquad \If $D = 0$: \Send ({\bf sent},$M$) $\rightarrow p_r$
 
-\OnInput \inmsg{delay}{T} from $\mathcal{A}$:
+-- \OnInput \inmsg{delay}{T} from $\mathcal{A}$:
 
-	\quad \If $\hat{D} + T \leq \delta$: 
+	\qquad \If $\hat{D} + T \leq \delta$: 
 
-		\quad \quad $D := D + T$, $\hat{D} := \hat{D} + T$
+		\qquad \quad $D := D + T$, $\hat{D} := \hat{D} + T$
 
-		\quad \quad \Send ({\bf delay},$T$) $\rightarrow \mathcal{A}$
+		\qquad \quad \Send ({\bf delay},$T$) $\rightarrow \mathcal{A}$
 
-\OnInput \inmsg{replace}{$m'$}{$T'$} from $\mathcal{A}$:
+-- \OnInput \inmsg{replace}{$m'$}{$T'$} from $\mathcal{A}$:
 
-	\quad \If $p_s$ corrupted, $D > 0$ and $T'$ is valid:
+	\qquad \If $p_s$ corrupted, $D > 0$ and $T'$ is valid:
 
-		\quad \quad $D := T'$ and $M' = m$
-
-
+		\qquad \quad $D := T'$ and $M' = m$
 \end{bbox}
 

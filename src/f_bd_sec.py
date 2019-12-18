@@ -38,7 +38,7 @@ class BD_SEC_Functionality(object):
     def input_msg(self, sender, msg):
         sid,pid = sender
         if msg[0] == 'send' and pid == self.sender:
-            self.input_send(msg)
+            self.input_send(msg[1])
         elif msg[0] == 'fetch' and pid == self.receiver:
             self.input_fetch()
         else: dump.dump()

@@ -13,11 +13,13 @@
 \definecolor{viol}{RGB}{134,0,175}
 \definecolor{roug}{RGB}{215,15,0}
 \definecolor{bb}{RGB}{0,0,0}
+\definecolor{gg}{RGB}{220,220,220}
 
 \newtcolorbox[auto counter]{bbox}[2][]{%
     colback=white,
     colframe=bb,
-    colbacktitle=white!90!roug,
+    %colbacktitle=white!90!roug,
+	colbacktitle=white!40!gg,
     coltitle=black,
     fonttitle=\bfseries, 
     enhanced,
@@ -36,16 +38,16 @@
 
 \newcommand{\lastupdate}{August 2015}
 
-\lhead{\sc IACR Policy for Cryptology Schools}
-\rhead{\sc \lastupdate}
+%\lhead{\sc IACR Policy for Cryptology Schools}
+%\rhead{\sc \lastupdate}
 
-\title{\bf IACR Policy for Cryptology Schools}
-\author{\mbox{}}
+\title{\bf Synchronous SAUCY}
+\author{\mbox{Surya Bakshi, Andrew Miller}}
 
-\date{\lastupdate
- \footnote{The most recent version of this document
-    can be obtained from \protect\url{http://www.iacr.org/docs/}.\newline
-  Editors of this document: M. Abdalla, A. Boldyreva, C. Cachin, A. Kiayias, B. Warinschi (2014).}}
+%\date{\lastupdate
+% \footnote{The most recent version of this document
+%    can be obtained from \protect\url{http://www.iacr.org/docs/}.\newline
+%  Editors of this document: M. Abdalla, A. Boldyreva, C. Cachin, A. Kiayias, B. Warinschi (2014).}}
 
 \input{macros}
 
@@ -56,62 +58,45 @@
 
 \maketitle
 
+\begin{abstract}
+Universal composability (UC) is a framework to define and analyze the security of cryptographic and distributed protocols.
+The notion of security afforded by UC ensures that security of protocols is guaranteed in any environment, i.e. while interacting with any other UC-defined protocol. 
+UC definitions of protocols enable highly modular design that greatly improves the complexity of protocols and the ease with which security properties can be proven.
+Unfortunately, UC definitions and security proofs are often long, complex and difficult to reuse. 
+Furthermore, disproving UC proofs and finding counter examples becomes very difficult as the complexity of the protocol at hand increases as well.
+\todo{something, something engineering, software}
+
+In this work we attempted to bridge the gap and create an implementation of UC that can be used to implement real protocols in the UC-style: taking advantage of the modularity it provides.
+An impementation of UC also makes discovering and findind bugs easier through existing techniques like fuzz testing and executable definitions.
+We implement UC in Python and define synchronous protocols in the model proposed by Katz et al.~\cite{katz-clock}. 
+We work our way up from a simple broadcast primitive~\cite{bracha-broadcast} to distributed blockchain applications.
+\end{abstract}
+
+\section{Intro}
+
 \section{Related Works}
 \input{sections/relatedworks}
 
 \section{Preliminaries}
 \input{sections/prelim}
+%\begin{figure}[!ht]
+%	\input{figures/exec_tx}
+%	\label{fig:functionality:exectx}
+%\end{figure}
 
-\begin{figure}[!ht]
-	\input{figures/exec_tx}
-	\label{fig:functionality:exectx}
-\end{figure}
+\section{Synchronous Broadcast}
+\input{sections/synchronous}
 
-\begin{figure}[!ht]
-\input{figures/exec_contract_create}
-\label{fig:functionality:execcreate}
-\end{figure}
+\section{Ledger Functionality}
+\input{sections/ledger}
 
-\begin{figure}[!ht]
-\input{figures/g_ledger}
-	\caption{Ideal functionality representing a basic ledger with adversarial methods for delaying/reordering transactions and smart contract support}
-	\label{fig:functionality:ledger}
-\end{figure}
+\section{Payment Channel}
+\input{sections/paychannels}
 
-\begin{figure}
-	\input{figures/protected_wrapper}
-	\caption{Protection wrapper for the ledger to maintain indistinguishability.}
-\end{figure}
-
-\begin{figure}
-	\input{figures/u_pay}
-	\caption{Update function for a payment channel. Given as a parameter to \Fstate. It defines the format of the \msf{state} and its updates.}
-\end{figure}
-
-\begin{figure}
-	\input{figures/contract_pay}
-	\caption{Contract pay}
-\end{figure}
-
-\begin{figure}
-	\input{figures/p_pay}
-	\caption{Local protocol for parties to follow for a payment channel between two parties. Parties can pay, deposit into, or withdraw from the channel.}
-\end{figure}
-
-\begin{figure}
-	\input{figures/f_state}
-	\caption{The ideal functionality \Fstate. The functionality proceeds in rounds and waits for parties to provide input. When all parties have provided input or the round deadline has passed, a state update is executed. Contract output is given to \Gledger in the form of a transaction. Parties must explicitly \msf{ping} the functionality in order to make progress. }
-\end{figure}
-
-\begin{figure}
-	\input{figures/f_pay}
-	\caption{The payment channel functionality. Unlike $\Fstate$, doesn't need any notion of rounds until it must deal with on-chain transactions for deposits. Buffering for $O(\Delta)$ rounds implies the adversary can choose the number.}
-\end{figure}
-
-\begin{figure}
-	\input{figures/wrapper}
-	\caption{The wrapper $\mathcal{W}$ that provides common function for all functionalities. In $\Fstate$ for example, the wrapper enables functionalities to buffer sending output to the parties in the protocol. When the wrapper sends a message to its functionality $\F$, it does not constitute an \msf{ITM} to \msf{ITM} write as they are both running on the same \msf{ITM}.}
-\end{figure}
+%\begin{figure}[h]
+%	\input{figures/wrapper}
+%	\caption{The wrapper $\mathcal{W}$ that provides common function for all functionalities. In $\Fstate$ for example, the wrapper enables functionalities to buffer sending output to the parties in the protocol. When the wrapper sends a message to its functionality $\F$, it does not constitute an \msf{ITM} to \msf{ITM} write as they are both running on the same \msf{ITM}.}
+%\end{figure}
 
 \begin{figure}
 	\input{figures/f_broadcast}
@@ -125,36 +110,6 @@
 	\input{figures/state_prot}
 \end{figure}
 
-\section{Three-Phase Commitment}
-
-\subsection{Synchronous Bracha Broadcast}
-
-\begin{figure}[!h]
-	\input{figures/f_katz}
-\end{figure}
-%\begin{figure}
-%	\input{figures/sim_bracha}
-%\end{figure}
-\begin{figure}[!h]
-	\input{figures/f_bracha}
-\end{figure}
-\begin{figure}[!h]
-	\input{figures/prot_bracha}
-\end{figure}
-
-{\bf Theorem.} {\em Protocol $\Pi_{\msf{Bracha}}$ securely realized $\F_{\msf{Bracha}}$ in the $\{\F_{\msf{BD-SEC}},\F_{\msf{CLOCK}}\}$-hybrid world. Assume a stateic adversary corrupted up to $\frac{n}{3}$ parties.}
-
-Consider the simulator, $\mathcal{S}$, above.
-
-If the dealer $\mathcal{D}$ is honest: In the ideal world, $\mathcal{D}$ gives input $v$ to $\F_{\msf{Bracha}}$ which gives leaks it to $\mathcal{S}$.
-The simulator submits the input to it all of the locl $\Fsync{\mathcal{D}}{p_i}$ for $p_i \in  \mathcal{P}$.
-
-$\mathcal{S}$ expects to receive $|\mathcal{P}|$ activations from $\F_{\msf{Bracha}}$ when ideal world parties attempt to read output from the functionality.
-In each activation, the simulator sufficiently ensures each party reads messages from all other parties and simualated state changes and increment the local $\overline{\mathcal{F}}_{\msf{clock}}$
-
-The functionality waits $Rnd = 3$ rounds to deliver the output. In the first round $|\mathcal{P}|^2$ activations ensure all \msf{ECHO} messages are sent.
-In functionality round 2, activations ensure that all \msf{READY} messages are sent. The final functionality round 3, all \msf{READY}s are delivered and the simulates real world parties all output a value $v$.
-By the proof of the Bracha protocol, all real world parties output the same value. The simulator instructs 
 \subsection{Extra}
 
 \begin{figure}

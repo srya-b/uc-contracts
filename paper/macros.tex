@@ -5,7 +5,9 @@
 \newcommand{\con}[1]{\msf{Contract_{#1}}}
 %\newcommand{\Fsync}[2]{\ensuremath{\F_{\msf{sync},#1,#2}}}
 \newcommand{\Fsync}[2]{\ensuremath{\F_{\msf{BD-SEC}}(#1,#2)}}
+\newcommand{\Fbdsec}{\ensuremath{\F_{\msf{BD-SEC}}^{\delta,\ell}}}
 \newcommand{\Fstate}{\ensuremath{\F_{\msf{state}}}}
+\newcommand{\Fclock}{\ensuremath{\F_{\msf{clock}}}}
 \newcommand{\Fpay}{\ensuremath{\F_{\msf{pay}}}}
 \newcommand{\Gledger}{\ensuremath{\f{G}_{\msf{ledger}}}}
 \newcommand{\globalf}[1]{\ensuremath{{\overline{\mathcal{#1}}}}}
@@ -14,7 +16,7 @@
 \newcommand{\lar}{\leftarrow}
 \newcommand{\rar}{\rightarrow}
 \newcommand{\Init}{{\bf \color{NavyBlue} Init}~}
-\newcommand{\OnInput}{{\bf \color{NavyBlue} On input}~}
+\newcommand{\OnInput}{{\bf \color{Black} On input}~}
 \newcommand{\Allinputs}{{\bf \color{Cerulean} All other input~}}
 \newcommand{\OnAdvInput}{{\bf \color{BrickRed} On input}~}
 
@@ -43,7 +45,7 @@
 \newcommand{\pluseq}{\ensuremath{\mathrel{+}=}}
 \newcommand{\Adv}{\ensuremath{\mathcal{A}}}
 \newcommand{\Partyi}{\ensuremath{\mathbf{P_i=(sid,pid)}}}
-%\newcommand{\qquad}{\quad \quad}
+\newcommand{\dquad}{\quad \quad}
 \newcommand{\qqquad}{\qquad \quad}
 \newcommand{\qqqquad}{\qqquad \quad}
 \newcommand{\qqqqquad}{\qqqquad \quad}

@@ -1,0 +1,48 @@
+In this section we describe the ideal functionality and protocol for a simple byzantine broadcast in the synchronous model.
+The function is modelled after the secure function evaluation functionality, $\F_{\msf{SFE}}^{f,Rnd}$, described in ~\cite{katz-clock}.
+Secure function evaluation computes the output of a single function from the inputs of the parties.
+The function being evaluated must be computable in one round in the ideal world, meaning parties don't have to give input more than once.
+In our case, the ideal function for a byantine broadcast, $f$ (shown below), with a dealier, $\mathcal{D}$, just selects the dealer's input.
+
+\[ f(x_1,...,x_n) := x_{\mathcal{D}} \]
+
+The functionality proceeds in rounds, $l$, until $Rnd$ rounds have elapsed.
+At the end of $Rnd$ rounds it computes the function $f$ on the inputs of all parties that have provided input and sends output to each of them.
+In every round, the functionality requires the environment to activate each party at least $|\mathcal{P}|$ times before increenting the round $l$. 
+Everytime a party is activated by a party asking for \msf{output}, the functionality activates the the simulator.
+With $n$ activations, the simulator can sufficiently simulate the real world protocol and use the activations provdided by the functionality, to activate and perform computation.
+For example, for a party $p_i$, on activation $k$ within a round, the simulator simulates $p_i$'s interaction with party $p_k$ in the real world.
+It will read messages from $p_k$ to $p_i$, perform any local computation, and potentially send messages to $p_k$ for subsequent rounds.
+
+Similarly, such a structure design must also be present in the real world, where the environment will provide the same $n$ \msf{output} to each itm.
+
+\begin{figure}[!h]
+	\input{figures/f_bracha}
+	\label{fig:functionality:broadcast}
+	\caption{Ideal functionality for a byzantine broadcast. The ideal functionality is not specific to any potential real world protocol, but captures the guarantees of the broadcast. Additionally, the functionality is identical to the SFE functionality except for assumptions made for the application at hand.}
+\end{figure}
+
+The ideal functionality of for byzantine broadcast is described in Figure ~\ref{fig:functionality:broadcast}
+
+\begin{figure}[!h]
+	\input{figures/prot_bracha}
+\end{figure}
+\begin{figure}
+	\input{figures/sim_bracha}
+\end{figure}
+
+{\bf Theorem.} {\em Protocol $\Pi_{\msf{Bracha}}$ securely realized $\F_{\msf{Bracha}}$ in the $\{\F_{\msf{BD-SEC}},\F_{\msf{CLOCK}}\}$-hybrid world. Assume a stateic adversary corrupted up to $\frac{n}{3}$ parties.}
+
+Consider the simulator, $\mathcal{S}$, above.
+
+If the dealer $\mathcal{D}$ is honest: In the ideal world, $\mathcal{D}$ gives input $v$ to $\F_{\msf{Bracha}}$ which gives leaks it to $\mathcal{S}$.
+The simulator submits the input to it all of the locl $\Fsync{\mathcal{D}}{p_i}$ for $p_i \in  \mathcal{P}$.
+
+$\mathcal{S}$ expects to receive $|\mathcal{P}|$ activations from $\F_{\msf{Bracha}}$ when ideal world parties attempt to read output from the functionality.
+In each activation, the simulator sufficiently ensures each party reads messages from all other parties and simualated state changes and increment the local $\overline{\mathcal{F}}_{\msf{clock}}$
+
+The functionality waits $Rnd = 3$ rounds to deliver the output. In the first round $|\mathcal{P}|^2$ activations ensure all \msf{ECHO} messages are sent.
+In functionality round 2, activations ensure that all \msf{READY} messages are sent. The final functionality round 3, all \msf{READY}s are delivered and the simulates real world parties all output a value $v$.
+By the proof of the Bracha protocol, all real world parties output the same value. The simulator instructs 
+
+
