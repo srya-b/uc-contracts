@@ -5,62 +5,52 @@ Initialize $\msf{BQ} := \frac{\msf{ceil}(n+t)}{2}$, $\msf{init} := crnd$, $\msf{
 
 \vspace{2mm} \hrule \vspace{2mm}
 
+% dealer input INPUT
 {\bf Dealer $\mathcal{D}$ Protocol}
 
 -- \OnInput \inmsg{input}{m} from $\mathcal{Z}$:
 
-	\dquad \For $p_i \in \mathcal{P}$:
+	\qquad \For $p_i \in \mathcal{P}$:
 
-		\dquad \quad \Send $\msf{VAL}(m) \rightarrow \Fsync{\mathcal{D}}{p_i}$
+		\qquad \quad \Send $\msf{VAL}(m) \rightarrow \Fsync{\mathcal{D}}{p_i}$
 
 \vspace{2mm} \hrule \vspace{2mm}
 
 {\bf Party $p_i$ Protocol}
 
+% on input VAL
 -- \OnInput \inmsg{$\msf{VAL}(m)$} from $\F_{\msf{sync},\mathcal{D},p_i}$ (once, round $\msf{init}+1$):
 
-	\dquad \For $p_j \in \mathcal{P}$: \Send $\msf{ECHO}(m) \rightarrow \Fsync{p_i}{p_j}$
+	\qquad \For $p_j \in \mathcal{P}$: \Send $\msf{ECHO}(m) \rightarrow \Fsync{p_i}{p_j}$
 
- \OnInput \inmsg{$\msf{ECHO}(m)$} from $\Fsync{p_j}{p_i}$ (round $\msf{init}+2$):
+-- \OnInput \inmsg{$\msf{ECHO}(m)$} from $\Fsync{p_j}{p_i}$ (round $\msf{init}+2$):
 
-	\dquad \If received $\msf{ECHO}(m)$ from $\msf{BQ}$ parties:
+	\qquad \If received $\msf{ECHO}(m)$ from $\msf{BQ}$ parties:
 
-		\dquad \quad \For $p_j \in \mathcal{P}$: \Send $\msf{READY}(m) \rightarrow \Fsync{p_i}{p_j}$ 
-
+		\qquad \quad \For $p_j \in \mathcal{P}$: \Send $\msf{READY}(m) \rightarrow \Fsync{p_i}{p_j}$ 
+% on input READY
 -- \OnInput \inmsg{$\msf{READY}(m)$} from $\Fsync{p_j}{p_i}$ (round $\msf{init}+3$):
 
-	\dquad \If received $\msf{READY}(m)$ from $2t+1$ parties:
+	\qquad \If received $\msf{READY}(m)$ from $2t+1$ parties:
 
-		\dquad \quad $\msf{out} := m$
+		\qquad \quad $\msf{out} := m$
 
-		%\quad \quad \Output $m$
-
-	%\quad \If received $\msf{ECHO}(m)$ from $\msf{BQ}-t$ parties and $\msf{READY}(m)$ from $> t$ parties and $\msf{READY}$ not sent:
-
-	%	\quad \quad \For $p_j \in \mathcal{P}$: \Send $\msf{READY}(m) \rightarrow \Fsync{p_i}{p_j}$ \\
-
+% on innput OUTPUT 
 -- \OnInput \inmsg{output} from $\mathcal{Z}$:
 
-	\dquad \If $\msf{out} \neq \emptyset$: \Output $\msf{out}$ 
+	\qquad \If $\msf{out} \neq \emptyset$: \Output $\msf{out}$ 
 
-	\dquad \Else On $j^{th}$ activation in this round:
+	\qquad \Else On $j^{th}$ activation in this round:
 
-		\dquad \quad \Send $(\msf{fetch}) \rightarrow \Fsync{p_j}{p_i}$
+		\qquad \quad \Send $(\msf{fetch}) \rightarrow \Fsync{p_j}{p_i}$
 
-		\dquad \quad $m \leftarrow \Fsync{p_j}{p_i}$
+		\qquad \quad $m \leftarrow \Fsync{p_j}{p_i}$
 
 \vspace{2mm} \hrule \vspace{2mm}
 
 \If not received $2t + 1$ \msf{READY}(\textunderscore) messages by $\msf{init} + 4$:
 
-	\dquad \Output $\bot$
+	\qquad \Output $\bot$
 
 \end{bbox}
 
-
-%  RND 2: 
-%			OnInput VAL from Dealer --> Echo
-%  RND 3:
-%			OnInput ECHO(m) from Pi: If 2t+1 ECHO messages --> READY
-%  RND 4:
-%			OnInput READY(m) from Pi: If t+1 READY --> Output m

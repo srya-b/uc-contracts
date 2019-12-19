@@ -47,17 +47,17 @@ Case \#1 ( Dishonest $\mathcal{D}$ ):
 
 -- \OnInput \inmsg{input}{v} from $\mathcal{Z}$ for $\mathcal{D}$:
 
-	\dquad \Send (input,v) $\rightarrow \mathcal{A}_{\mathcal{D}}$ {\em (Passthrough for corrupted parties in real world)}
+	\qquad \Send (input,v) $\rightarrow \mathcal{A}_{\mathcal{D}}$ {\em (Passthrough for corrupted parties in real world)}
 
 -- \OnInput \inmsg{m} from $\mathcal{Z}$:
 
-	\dquad \Send (m) $\rightarrow \mathcal{A}_{\mathcal{D}}$
+	\qquad \Send (m) $\rightarrow \mathcal{A}_{\mathcal{D}}$
 
 -- \OnInput \inmsg{activates}{$p_j$} from $\F_{\msf{Bracha}}$:
 
-	\dquad \If first message in round $r$:
+	\qquad \If first message in round $r$:
 
-		\dquad \quad Deliver messages from $\Fsync{p_j}{p_i}$ to $p_i$ through $(\msf{fetch})$ and simulate state changes.
+		\qquad \quad Deliver messages from $\Fsync{p_j}{p_i}$ to $p_i$ through $(\msf{fetch})$ and simulate state changes.
 
 \vspace{2mm} \hrule \vspace{2mm}
 

@@ -44,6 +44,14 @@ We modify the protocol in the following ways:
 	\item Second, the protocol is modified to only accept certain messages in certain rounds. For example, the hones dealer will only accept $(input,v)$ from the environment in the first round, all parties will only accept $(VAL,v)$ messages in the second tound, and so on.
 \end{itemize}
 
+These changes take the form of a wrapper $\mathcal{W}_{\msf{synchronous}}$ shown in Figure \ref{fig:wrapper:synchronous}.
+
+\begin{figure}
+	\input{figures/wrapper}
+	\label{fig:wrapper:synchronous}
+	\caption{This wrapper implements the enhancements made to the protocol to conform to the interace of the ideal functionality \Fbc. It reads in incoming messages in the first activation of a round and uses the next $|\mathcal{P}|$ activations to send messages to others.}
+\end{figure}
+
 \begin{figure}[!h]
 	\input{figures/prot_bracha}
 \end{figure}

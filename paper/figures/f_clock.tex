@@ -6,21 +6,21 @@ Intialize $\forall p_i \in \mathcal{P}: d_i := 0$
 
 -- \OnInput \inmsg{RoundOK} from \Partyi:
 
-	\dquad $d_i = 1$
+	\qquad $d_i = 1$
 
-	\dquad \If $\forall p_i \in \mathcal{P}: d_i = 1$:
+	\qquad \If $\forall p_i \in \mathcal{P}: d_i = 1$:
 
-	\dquad \quad $d_i := 0$ for all $p_i \in \mathcal{P}$
+	\qquad \quad $d_i := 0$ for all $p_i \in \mathcal{P}$
 
-	\dquad \Leak $(\msf{switch},\mathbf{P_i}) \rightarrow \mathcal{A}$
+	\qquad \Leak $(\msf{switch},\mathbf{P_i}) \rightarrow \mathcal{A}$
 
 -- \OnInput \inmsg{RequestRound} from \Partyi: 
 
-	\dquad \Send $d_i \rightarrow \mathbf{P_i}$
+	\qquad \Send $d_i \rightarrow \mathbf{P_i}$
 
 -- \OnInput \inmsg{corrupt}{$p_i$} from $\mathcal{A}$:
 
-	\dquad Set $\mathcal{H} := \mathcal{H} \cup \{p_i\}$
+	\qquad Set $\mathcal{H} := \mathcal{H} \cup \{p_i\}$
 
 \end{bbox}
 

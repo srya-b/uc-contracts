@@ -4,15 +4,15 @@ Initialize $M := \bot$ and $D := 1$ and $\hat{D} := 1$
 
 -- \OnInput \inmsg{m} from $\mathbf{p_s}$:
 
-	\dquad Set $D := 1$, $M := m$
+	\qquad Set $D := 1$, $M := m$
 
-	\dquad \Leak ({\bf send},$M$) $\rightarrow \mathcal{A}$
+	\qquad \Leak ({\bf send},$M$) $\rightarrow \mathcal{A}$
 
 -- \OnInput \inmsg{fetch} from $p_r$:
 
-	\dquad Set $D = D - 1$
+	\qquad Set $D = D - 1$
 
-	\dquad \If $D = 0$: \Send ({\bf sent},$M$) $\rightarrow p_r$
+	\qquad \If $D = 0$: \Send ({\bf sent},$M$) $\rightarrow p_r$
 
 -- \OnInput \inmsg{delay}{T} from $\mathcal{A}$:
 
