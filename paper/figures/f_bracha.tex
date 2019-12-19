@@ -50,27 +50,32 @@
 %
 %\end{bbox}
 
-\begin{bbox}[title={$\F_{\msf{Bracha}} (\mathcal{D}, \mathcal{P} = p_1,...,p_n)$}]
+\begin{bbox}[title={$\Fbc (\mathcal{D}, \mathcal{P} = p_1,...,p_n)$}]
 
-See $\F_{\msf{SFE}}^{f,Rnd}$ in Katz.
-%\OnInput \inmsg{input}{T} from $\mathcal{D}$ (once):
-%
-%	\quad \If $\msf{crnd} > 0$: \reject
-%
-%	\quad \Leak $T \rightarrow \mathcal{A}$
-%
-%	\quad \For $p_i \in \mathcal{P}$:
-%
-%		\quad \quad {\em In O(1)}  \Send $T \rightarrow p_i$
-%
-%\vspace{2mm} \hrule \vspace{2mm}
-%
-%\If $\msf{crnd} > 0$ and no input from $\mathcal{D}$:
-%
-%	\quad \For $p_i \in \mathcal{P}$:
-%
-%		\quad \quad {\em In O(1)} \Send $\bot \rightarrow p_i$
-%
+Intialize $x_\dealer := \bot, \ell := 1, \forall p_i : t_i = |\mathcal{P}|$
+
+\vspace{2mm} \hrule \vspace{2mm}
+
+-- \OnInput \inmsg{input}{$v$} from \Partyi:
+	
+	\qquad Set $x_\dealer := v$
+
+	\qquad \Leak (input,$v$) $\rightarrow \mathcal{A}$
+
+-- \OnInput \inmsg{output} from \Partyi:
+	
+	\qquad \If ($p_i = \dealer$) and ($x_\dealer$ not set): ignore 
+
+	\qquad \Else \If $(t_i > 1)$: Set $t_i := t_i - 1$
+
+		\qquad \quad \If $(\forall p_i \in \mathcal{H})$: Set $\ell := \ell + 1$
+
+	\qquad \Else \If $(t_i = 1)$ and $(\ell < Rnd)$: \Send (early) $\rightarrow p_i$
+
+	\qquad \Else \If $(y_1,...,y_n)$ not set:
+
+		\qquad \quad Set $y_1,...,y_n := x_\dealer$
+
 \end{bbox}
 
 %\begin{bbox}[title={Simulator $S_{\msf{Bracha}}$}]

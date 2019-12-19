@@ -4,7 +4,7 @@ Secure function evaluation computes the output of a single function from the inp
 The function being evaluated must be computable in one round in the ideal world, meaning parties don't have to give input more than once.
 In our case, the ideal function for a byantine broadcast, $f$ (shown below), with a dealier, $\mathcal{D}$, just selects the dealer's input.
 
-\[ f(x_1,...,x_n) := x_{\mathcal{D}} \]
+\[ f_{bc}(x_1,...,x_n) := x_{\mathcal{D}} \]
 
 The functionality proceeds in rounds, $l$, until $Rnd$ rounds have elapsed.
 At the end of $Rnd$ rounds it computes the function $f$ on the inputs of all parties that have provided input and sends output to each of them.
@@ -23,6 +23,19 @@ Similarly, such a structure design must also be present in the real world, where
 \end{figure}
 
 The ideal functionality of for byzantine broadcast is described in Figure ~\ref{fig:functionality:broadcast}
+The functionality is cast as a secure function evaluation where the function is as described above.
+In our case we simplify the SFE functionality instead of just parmeterizing it with the function $f_{\msf{bc}}$ gives its simplicity.
+The only simplification made to SFE is that the functionality only waits for the dealer's input (in SFE this equates to assuming all other parties' inputs are already set).
+Furthermore, the function $f_{\msf{BC}}$ is put in place in the functionality.
+
+\begin{figure}
+	\input{figures/async_bracha}
+	\label{fig:protocol:asyncbracha}
+	\caption{The original asynchronous broadcast protocol proposed by Bracha~\cite{bracha-broadcast}. The protocol proceeds in three rounds and terminates if enough messages are delivered.}
+\end{figure}
+
+Next we introduce a real world protocol that realized the ideal functionality.
+We use the asynchronous broadcast primitive introduced by Bracha~\cite{bracha-broadcast} that tolerates $\frac{n}{3}$ byzantine failures.
 
 \begin{figure}[!h]
 	\input{figures/prot_bracha}
@@ -31,7 +44,7 @@ The ideal functionality of for byzantine broadcast is described in Figure ~\ref{
 	\input{figures/sim_bracha}
 \end{figure}
 
-{\bf Theorem.} {\em Protocol $\Pi_{\msf{Bracha}}$ securely realized $\F_{\msf{Bracha}}$ in the $\{\F_{\msf{BD-SEC}},\F_{\msf{CLOCK}}\}$-hybrid world. Assume a stateic adversary corrupted up to $\frac{n}{3}$ parties.}
+{\bf Theorem.} {\em Protocol $\Pi_{\msf{Bracha}}$ securely realized \Fbc in the $\{\Fbdsec,\Fclock \}$-hybrid world. Assume a stateic adversary corrupted up to $\frac{n}{3}$ parties.}
 
 Consider the simulator, $\mathcal{S}$, above.
 
@@ -39,7 +52,7 @@ If the dealer $\mathcal{D}$ is honest: In the ideal world, $\mathcal{D}$ gives i
 The simulator submits the input to it all of the locl $\Fsync{\mathcal{D}}{p_i}$ for $p_i \in  \mathcal{P}$.
 
 $\mathcal{S}$ expects to receive $|\mathcal{P}|$ activations from $\F_{\msf{Bracha}}$ when ideal world parties attempt to read output from the functionality.
-In each activation, the simulator sufficiently ensures each party reads messages from all other parties and simualated state changes and increment the local $\overline{\mathcal{F}}_{\msf{clock}}$
+In each activation, the simulator sufficiently ensures each party reads messages from all other parties and simualated state changes and increment the local \Fclock.
 
 The functionality waits $Rnd = 3$ rounds to deliver the output. In the first round $|\mathcal{P}|^2$ activations ensure all \msf{ECHO} messages are sent.
 In functionality round 2, activations ensure that all \msf{READY} messages are sent. The final functionality round 3, all \msf{READY}s are delivered and the simulates real world parties all output a value $v$.
