@@ -1,0 +1,25 @@
+\begin{bbox}[title={\textbf{Protocol} Async-Bracha-Broadcast$(v)$}]
+
+-- {\bf Step 0}. Input $v$ from $p$:
+	
+	\qquad Send $(initial,v)$ to all processes.
+
+-- {\bf Step 1}. Wait for:
+	
+	\qquad one $(initial, v)$ message or $\frac{n+t}{2}$ $(echo,v)$ messages or $(t+1)$ $(ready,v)$ messages, for some $v$.
+
+	\qquad Send $(echo,v)$ to all processes.
+
+-- {\bf Step 2}. Wait for:
+	
+	\qquad $\frac{n+t}{2}$ $(echo,v)$ messages or $(t+1)$ $(ready,v)$ messages, for some $v$
+
+	\qquad Send $(ready,v)$ to all processes.
+
+-- {\bf Step 3}. Wait for:
+
+	\qquad $2t+1$ $(ready,v)$ messages
+
+	\qquad Accept $v$.
+
+\end{bbox}
