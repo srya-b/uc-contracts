@@ -36,6 +36,13 @@ Furthermore, the function $f_{\msf{BC}}$ is put in place in the functionality.
 
 Next we introduce a real world protocol that realized the ideal functionality.
 We use the asynchronous broadcast primitive introduced by Bracha~\cite{bracha-broadcast} that tolerates $\frac{n}{3}$ byzantine failures.
+Below, we introduce the same broadcast protocol cast in the synchronous model.
+We modify the protocol in the following ways:
+
+\begin{itemize}
+	\item First, the protocol has to be updates to reflect the interace offered by the ideal functionality. In the ideal world, the environment gives $|\mathcal{P}|$ activations to each party in each round. In the real world protocol, on the first activation of a party in a round $r$, the party $p_i$ fetches incoming messages from previous rounds, computes the messages to be sent in this round, $\{m_{i,j,r}\}_{j}$, and uses the next $|\mathcal{P}|$ rounds to send those messages to the other parties.
+	\item Second, the protocol is modified to only accept certain messages in certain rounds. For example, the hones dealer will only accept $(input,v)$ from the environment in the first round, all parties will only accept $(VAL,v)$ messages in the second tound, and so on.
+\end{itemize}
 
 \begin{figure}[!h]
 	\input{figures/prot_bracha}

@@ -27,7 +27,8 @@ class BD_SEC_Functionality(object):
     def input_send(self, msg):
         self.D = 1; self.M = msg
         self.leak( ('send', self.M) )
-        self.f2p.write( (self.sender, ('sent',)) )
+        #self.f2p.write( (self.sender, ('sent',)) )
+        self.f2a.write( (self.sender, ('sent',self.M)) )
 
     def input_fetch(self):
         self.D -= 1

@@ -19,13 +19,13 @@ Initialize $\msf{BQ} := \frac{\msf{ceil}(n+t)}{2}$, $\msf{init} := crnd$, $\msf{
 
 -- \OnInput \inmsg{$\msf{VAL}(m)$} from $\F_{\msf{sync},\mathcal{D},p_i}$ (once, round $\msf{init}+1$):
 
-	\dquad \For $p_j \in \mathcal{P}$: \Send $\msf{ECHO}(m) \rightarrow \Fsync{p_i}{p_j}$ \\
+	\dquad \For $p_j \in \mathcal{P}$: \Send $\msf{ECHO}(m) \rightarrow \Fsync{p_i}{p_j}$
 
  \OnInput \inmsg{$\msf{ECHO}(m)$} from $\Fsync{p_j}{p_i}$ (round $\msf{init}+2$):
 
 	\dquad \If received $\msf{ECHO}(m)$ from $\msf{BQ}$ parties:
 
-		\dquad \quad \For $p_j \in \mathcal{P}$: \Send $\msf{READY}(m) \rightarrow \Fsync{p_i}{p_j}$ \\
+		\dquad \quad \For $p_j \in \mathcal{P}$: \Send $\msf{READY}(m) \rightarrow \Fsync{p_i}{p_j}$ 
 
 -- \OnInput \inmsg{$\msf{READY}(m)$} from $\Fsync{p_j}{p_i}$ (round $\msf{init}+3$):
 
