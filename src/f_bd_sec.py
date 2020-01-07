@@ -11,7 +11,8 @@ from gevent.queue import Queue, Channel
 
 class BD_SEC_Functionality(object):
     def __init__(self, sid, pid, f2p, p2f, f2a, a2f, f2z, z2f):
-        self.sid, self.sender, self.receiver = sid
+        self.sid = sid
+        self.ssid, self.sender, self.receiver, self.round = sid
         self.pid = pid
         self.M = None; self.D = 1; self.Dhat = 1
         self.delta = 1
@@ -27,7 +28,7 @@ class BD_SEC_Functionality(object):
     def input_send(self, msg):
         self.D = 1; self.M = msg
         self.leak( ('send', self.M) )
-        #self.f2p.write( (self.sender, ('sent',)) )
+        print('\033[1m[Leak]\033[0m', 'message: {}'.format(self.M))
         self.f2a.write( (self.sender, ('sent',self.M)) )
 
     def input_fetch(self):

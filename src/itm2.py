@@ -593,7 +593,6 @@ class ProtocolWrapper:
                 #print('\n\t Translating: {} --> {}'.format(msg, ((sid,pid),msg)))
                 print('\t\t\033[93m {} --> {}, msg={}\033[0m'.format((self.sid,pid), msg[0], msg[1]))
                 self.leaks[pid].append( msg )
-                #print('\n\t\033[1m Bitch im out here getting them leaks for yo ass\033[0m')
                 p2_.write( ((sid,pid), msg) )
         gevent.spawn(_translate)
 
@@ -646,7 +645,7 @@ class ProtocolWrapper:
             r = ready[0]
             if r == self.z2p:
                 (pid, msg) = r.read() 
-                print('\033[92m[sid={}] Message for ({}): {}\033[0m'.format(self.sid, pid, msg))
+                #print('\033[92m[sid={}] Message for ({}): {}\033[0m'.format(self.sid, pid, msg))
                 self.z2p.reset('z2p party reset')
                 if not comm.ishonest(self.sid,pid):
                     raise Exception
@@ -656,9 +655,9 @@ class ProtocolWrapper:
             elif r == self.f2p:
                 #(pid, msg) = r.read() 
                 m = r.read()
-                print('\033[92m[{}] F2P Message for: {}\033[0m'.format(self.sid,m))
+                #print('\033[92m[{}] F2P Message for: {}\033[0m'.format(self.sid,m))
                 (fro,(to,msg)) = m
-                print('fro', fro, 'to', to, 'msg', msg)
+                #print('fro', fro, 'to', to, 'msg', msg)
                 _s,_p = to
                 self.f2p.reset('f2p in party')
                 #_pid = self.getPID(self.f2pid,pid)
@@ -752,7 +751,7 @@ class ProtocolWrapper2:
                 msg = r.read()
                 pp2_.reset('pp2_ translate reset')
                 #print('\n\t Translating: {} --> {}'.format(msg, ((sid,pid),msg)))
-                print('\t\t\033[93m {} --> {}, msg={}\033[0m'.format((self.sid,pid), msg[0], msg[1]))
+                #print('\t\t\033[93m {} --> {}, msg={}\033[0m'.format((self.sid,pid), msg[0], msg[1]))
                 self.leaks[pid].append( msg )
                 #print('\n\t\033[1m Bitch im out here getting them leaks for yo ass\033[0m')
                 p2_.write( ((sid,pid), msg) )
@@ -771,7 +770,7 @@ class ProtocolWrapper2:
         return rnd
 
     def newPID(self, pid):
-        print('[{}] Creating new party with pid: {}'.format(self.sid, pid))
+        print('\033[1m[{}]\033[0m Creating new party with pid: {}'.format('PWrapper', pid))
         _z2p,_p2z = self._newPID(self.sid, pid, self.z2pid, self.p2z, 'NA')
         _f2p,_p2f = self._newPID(self.sid, pid, self.f2pid, self.p2f, 'NA')
         _a2p,_p2a = self._newPID(self.sid, pid, self.a2pid, self.p2a, 'NA')
@@ -805,7 +804,7 @@ class ProtocolWrapper2:
             r = ready[0]
             if r == self.z2p:
                 (pid, msg) = r.read() 
-                print('\033[92m[sid={}] Message for ({}): {}\033[0m'.format(self.sid, pid, msg))
+                #print('\033[92m[sid={}] Message for ({}): {}\033[0m'.format(self.sid, pid, msg))
                 self.z2p.reset('z2p party reset')
                 if not comm.ishonest(self.sid,pid):
                     raise Exception
@@ -815,9 +814,9 @@ class ProtocolWrapper2:
             elif r == self.f2p:
                 #(pid, msg) = r.read() 
                 m = r.read()
-                print('\033[92m[{}] F2P Message for: {}\033[0m'.format(self.sid,m))
+                #print('\033[92m[{}] F2P Message for: {}\033[0m'.format(self.sid,m))
                 (fro,(to,msg)) = m
-                print('fro', fro, 'to', to, 'msg', msg)
+                #print('fro', fro, 'to', to, 'msg', msg)
                 #_s,_p = to
                 try:
                     _s,_p = to
@@ -906,7 +905,7 @@ class FunctionalityWrapper:
 
     #def newFID(self, sid, tag, params=()):
     def newFID(self, sid, tag, cls, params=()):
-        print('[{}] Creating new Functionality with pid: {}'.format(sid, tag))
+        print('\033[1m[{}]\033[0m Creating new Functionality with pid: {}'.format('FWrapper', tag))
         _z2f,_f2z = self._newFID(self.z2fid, self.f2z, sid, tag)
         _p2f,_f2p = self._newFID(self.p2fid, self.f2p, sid, tag)
         _a2f,_f2a = self._newFID(self.a2fid, self.f2a, sid, tag)
@@ -942,6 +941,9 @@ class FunctionalityWrapper:
             gevent.spawn(itm.run)
         elif tag == 'F_bd':
             f = cls(sid, -1, _f2p,_p2f, _f2a,_a2f, _f2z,_z2f)
+            #print('f2p', _f2p, 'p2f', _p2f)
+            #print('f2a', _f2a, 'a2f', _a2f)
+            #print('f2z', _f2z, 'z2f', _z2f)
             setFunctionality2(sid,tag)
             gevent.spawn(f.run)
         elif tag == 'F_clock':
@@ -967,6 +969,7 @@ class FunctionalityWrapper:
             elif r == self.p2f:
                 ((_sid,_pid), msg) = r.read() 
                 self.p2f.reset()
+                #print('P2F message', msg)
                 ((__sid,_tag), msg) = msg
                 _fid = self.getFID(self.p2fid, __sid, _tag)
                 _fid.write( ((_sid,_pid), msg) )
@@ -1237,7 +1240,6 @@ class DummyAdversary(object):
                 self.a2z.write( msg )
             elif r == self.f2a:
                 msg = r.read()
-                print('Functionality leak', msg)
                 self.f2a.reset()
                 self.a2z.write(msg)
             else:
