@@ -162,7 +162,6 @@ def z_mint(itm, adv, ledger, *to):
 
 def z_prot_input(z2p, msg):
     _write(z2p.to, msg)
-    #itm.input.set( (itm.sender, True, msg) )
     z2p.write( msg )
     dump.dump_wait()
 

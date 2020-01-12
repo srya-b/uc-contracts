@@ -2,7 +2,7 @@ import dump
 import gevent
 from itm import ITMFunctionality
 from comm import ishonest, isdishonest, isadversary, setFunctionality
-from utils import gwrite, print
+from utils2 import gwrite, print
 from queue import Queue as qqueue
 from hashlib import sha256
 from collections import defaultdict
@@ -19,17 +19,19 @@ class BD_SEC_Functionality(object):
         self.f2p=f2p; self.p2f=p2f
         self.f2a=f2a; self.a2f=a2f
         self.f2z=f2z; self.z2f=z2f
-        
+       
+        print('\033[1m[{}]\033[0m new bd_sec with M:{}'.format( self.sid, self.M ))
         self.leaks = []
 
     def leak(self, msg):
         self.leaks.append( msg )
 
     def input_send(self, msg):
+        #if self.M is not None: assert False
         self.D = 1; self.M = msg
         self.leak( ('send', self.M) )
         print('\033[1m[Leak]\033[0m', 'message: {}'.format(self.M))
-        self.f2a.write( (self.sender, ('sent',self.M)) )
+        self.f2a.write( (self.sender, ('sent',self.M)) )   # change sender to id of functionality
 
     def input_fetch(self):
         self.D -= 1
@@ -39,9 +41,9 @@ class BD_SEC_Functionality(object):
 
     def input_msg(self, sender, msg):
         sid,pid = sender
-        if msg[0] == 'send' and pid == self.sender:
+        if msg[0] == 'send' and pid == self.sender and ishonest(self.sid, self.sender):
             self.input_send(msg[1])
-        elif msg[0] == 'fetch' and pid == self.receiver:
+        elif msg[0] == 'fetch' and pid == self.receiver and ishonest(self.sid, self.receiver):
             self.input_fetch()
         else: dump.dump()
 
@@ -61,6 +63,10 @@ class BD_SEC_Functionality(object):
             self.adv_delay(msg[1])
         elif msg[0] == 'get-leaks':
             self.adv_get_leaks()
+        elif msg[0] == 'send' and isdishonest(self.sid, self.sender):
+            self.input_send(msg[1])
+        elif msg[0] == 'fetch' and isdishonest(self.sid, self.receiver):
+            self.input_fetch()
         else: dump.dump()
 
     def run(self):
@@ -90,6 +96,7 @@ import dump
 from comm import GenChannel, setAdversary
 from itm2 import FunctionalityWrapper, PartyWrapper, DummyAdversary
 from utils2 import z_inputs, z_ainputs, wait_for
+
 def test():
     sid = ('one',1,2)
     f2p,p2f = GenChannel(),GenChannel()

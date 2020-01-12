@@ -413,6 +413,9 @@ class ITMPassthrough2(object):
             r = ready[0]
             msg = r.read()
             if r == self.z2p:
+                if comm.isdishonest(self.sid, self.pid):
+                    self.z2p.reset()
+                    assert False
                 print('PASSTHROUGH MESSAGE', msg) 
                 if msg[0] == 'ping':
                     self.ping()
@@ -427,7 +430,9 @@ class ITMPassthrough2(object):
                 self.z2p.reset('z2p in itm')
             elif r == self.a2p:
                 self.a2p.reset()
-                print('\n\t alright then', msg)
+                if comm.ishonest(self.sid, self.pid):
+                    assert False
+                #print('\n\t alright then', msg)
                 self.p2f.write( msg )
                 #self.p2f.write( msg )
                 #dump.dump()
@@ -777,7 +782,10 @@ class ProtocolWrapper2:
         _2p, p2_ = self._newPID(self.sid, pid, self.p2pid, self.p2_, 'NA')
         
         #itm = ITMPassthrough2(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f) 
-        p = self.prot(self.sid, pid, _p2f,_f2p, _p2a,_a2p, _p2z,_z2p)
+        if comm.isdishonest(self.sid, pid):
+            p = ITMPassthrough2(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f)
+        else:
+            p = self.prot(self.sid, pid, _p2f,_f2p, _p2a,_a2p, _p2z,_z2p)
         setParty(p)
         gevent.spawn(p.run)
 

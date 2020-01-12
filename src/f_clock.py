@@ -9,6 +9,10 @@ from collections import defaultdict
 from gevent.event import AsyncResult
 from gevent.queue import Queue, Channel
 
+# TODO: F_clock should only wait for all corrupted parties to set d_i
+# in order to reser all d_j for all parties, i.e. corrupt parties can
+# force clock to advance. Can force some honest parties to move to the
+# next round and some stuck in the previous round.
 class Clock_Functionality(object):
     def __init__(self, sid, pid, f2p, p2f, f2a, a2f, f2z, z2f):
         self.sid = sid
@@ -30,7 +34,7 @@ class Clock_Functionality(object):
         if all(self.di[x]==1 for x in self.di):
             for p in self.di: self.di[p] = 0
         self.leak( ('switch',pid) ) #TODO do we need to return back? see clock todo 1 in bracha
-        print('\033[1m \n\t di = {} \n\033[0m'.format(self.di))
+        print('\033[1m \n\t[F_clock] di = {} \n\033[0m'.format(self.di))
         self.f2a.write( ('switch',pid) )
 
     def input_requestround(self, pid):
