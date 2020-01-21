@@ -35,6 +35,11 @@ class Bracha_Protocol(object):
         self.readyreceived = 0
         self.todo = [ (lambda: dump.dump(),()) for p in self.parties if p != self.pid ]   # only contains n-1 items (party never sends to itself), so the last round will send RoundOK to F_clock
 
+        # Sent roundok first
+        #print('[{}] Sending start synchronization...'.format(self.pid))
+        #self.p2f.write( ((self.sid,'F_clock'), ('RoundOK',)) )
+        #self.roundok = True
+
     def wait_for(self, chan):
         r = gevent.wait(objects=[chan],count=1)
         r = r[0]
@@ -72,6 +77,7 @@ class Bracha_Protocol(object):
         print('\033[1m\n\t [{}] READY with val {}\n\033[0m'.format(self.pid, m)); 
         if m != self.val: assert False; return # TODO remove assert
         print('Ready received', self.readyreceived)
+        self.valaccepted = True
         self.readyreceived += 1
         n = len(self.parties)
         if self.readyreceived == (2 * (n/3) + 1):
@@ -96,9 +102,9 @@ class Bracha_Protocol(object):
         elif self.clock_round == 4 and tag == 'READY':
             self.input_ready(m)
         # if dealer simulate a VAL message
-        elif self.clock_round == 2 and self.pid == 1:
-            print('\033[1m[Dealer] Simuating\033[0m VAL message')
-            self.input_val(self.val)
+        #elif self.clock_round == 2 and self.pid == 1:
+        #    print('\033[1m[Dealer] Simuating\033[0m VAL message')
+        #    self.input_val(self.val)
     
     def send_message(self, fbdsid, msg):
         _ssid,_fro,_to,_r = fbdsid
@@ -110,6 +116,12 @@ class Bracha_Protocol(object):
         # sees his own VAL message, no one will ever send to themselves (except dealer)
         # so it's okay
         #for p in self.except_me():
+        # If i'm the dealer, i know in round 2 i have to send ECHO messages
+        # to the other parties, so I call input_val in clock_round = 2 to 
+        # simulate a VAL message to myself
+        if self.clock_round == 2 and not self.valaccepted and self.pid == 1:
+            self.input_val(self.val)
+            return
         for p in self.parties:
             fbdsid = (self.ssid, p, self.pid, self.clock_round-1)
             self.fetch( fbdsid )
@@ -166,8 +178,9 @@ class Bracha_Protocol(object):
         self.val = v    # dealer won't deliver to himself, so just set it now
         self.todo = self.newtodo
         # send to yourself in this one case
-        fbdsid = (self.ssid, self.pid, self.pid, self.clock_round)
-        self.send_message( fbdsid, ('send', ('VAL',v)) )
+        dump.dump()
+        #fbdsid = (self.ssid, self.pid, self.pid, self.clock_round)
+        #self.send_message( fbdsid, ('send', ('VAL',v)) )
 
     def input_msg(self, sender, msg):
         sid,pid = sender
@@ -193,7 +206,7 @@ class Bracha_Protocol(object):
             else: dump.dump()
 
 
-import dump
+#import dump
 from itertools import combinations,permutations
 from comm import GenChannel, setAdversary
 from itm2 import FunctionalityWrapper, PartyWrapper, DummyAdversary, ProtocolWrapper2
@@ -220,10 +233,14 @@ def test_all_honest():
 
     p = ProtocolWrapper2(sid, z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
     gevent.spawn(p.run)
-    
-    # DEALER INPUT
+    #p.spawn(1); wait_for(a2z)
+    #p.spawn(2); wait_for(a2z)
+    #p.spawn(3); wait_for(a2z)
+
+    ## DEALER INPUT
     z2p.write( (1, ('input',1)) )
-    fro,msg = wait_for(a2z)
+    #fro,msg = wait_for(a2z)
+    wait_for(a2z)
 
     # N=3 ACTIVATIONS FOR ROUND=1
     for i in range(3):
@@ -405,7 +422,7 @@ def test_crupt_dealer_1_accept_1_not():
     z2p.write( (3, ('output',)) )
     wait_for(a2z)
 if __name__=='__main__':
-    #test_all_honest()
-    test_crupt_dealer_no_accept()
-    test_crupt_dealer_1_accept_1_not()
+    test_all_honest()
+    #test_crupt_dealer_no_accept()
+    #test_crupt_dealer_1_accept_1_not()
     

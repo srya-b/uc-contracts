@@ -448,7 +448,7 @@ class ITMPassthrough2(object):
 
 from comm import setFunctionality2, setParty
 class PartyWrapper:
-    def __init__(self, sid, z2p, p2z, f2p, p2f, a2p, p2a ):
+    def __init__(self, sid, z2p, p2z, f2p, p2f, a2p, p2a, tof):
         self.sid = sid
         self.z2pid = {}
         self.f2pid = {}
@@ -456,6 +456,7 @@ class PartyWrapper:
         self.z2p = z2p; self.p2z = p2z;
         self.f2p = f2p; self.p2f = p2f;
         self.a2p = a2p; self.p2a = p2a
+        self.tof = tof  # TODO: for GUC this will be a problems, who to passthrough message to?
 
     def _newPID(self, pid, _2pid, p2_, tag):
         pp2_ = comm.GenChannel(('write-translate',pid)) 
@@ -467,9 +468,10 @@ class PartyWrapper:
                 r = r[0]
                 msg = r.read()
                 pp2_.reset('pp2_ translate reset')
-                #print('\n\t Translating: {} --> {}'.format(msg, ((self.sid,pid),msg)))
-                print('\t\t\033[96m {} --> {}, msg={}\033[0m'.format((self.sid,pid), msg[0], msg[1]))
-                p2_.write( ((self.sid,pid), msg) )
+                print('\n\t Translating: {} --> {}'.format(msg, ((self.sid,pid),msg)))
+                #print('\t\t\033[96m {} --> {}, msg={}\033[0m'.format((self.sid,pid), msg[0], msg[1]))
+                #p2_.write( ((self.sid,pid), msg) )
+                p2_.write( ((self.sid,pid), (self.tof, msg)) )
         gevent.spawn(_translate)
 
         _2pid[pid] = _2pp
@@ -494,7 +496,7 @@ class PartyWrapper:
 
     def run(self):
         while True:
-            print('\t\033[94mStatus: z2p={}, f2p={}, a2p={}\033[0m'.format(self.z2p.is_set(),self.f2p.is_set(),self.a2p.is_set()))
+            #print('\t\033[94mStatus: z2p={}, f2p={}, a2p={}\033[0m'.format(self.z2p.is_set(),self.f2p.is_set(),self.a2p.is_set()))
             ready = gevent.wait(objects=[self.z2p, self.f2p, self.a2p], count=1)
             #assert len(ready) == 1
             r = ready[0]
@@ -805,6 +807,9 @@ class ProtocolWrapper2:
             self.newPID(pid)
             return _2pid[pid]
 
+    def spawn(self, pid):
+        self.newPID(pid)
+
     def run(self):
         while True:
             #print('\t\033[94mStatus: z2p={}, f2p={}, a2p={}\033[0m'.format(self.z2p.is_set(),self.f2p.is_set(),self.a2p.is_set()))
@@ -956,6 +961,10 @@ class FunctionalityWrapper:
             gevent.spawn(f.run)
         elif tag == 'F_clock':
             f = cls(sid, -1, _f2p,_p2f, _f2a,_a2f, _f2z,_z2f)
+            setFunctionality2(sid,tag)
+            gevent.spawn(f.run)
+        elif tag == 'F_sfe':
+            f = cls(sid, -1, _f2p, _p2f, _f2a, _a2f, _f2z, _z2f)
             setFunctionality2(sid,tag)
             gevent.spawn(f.run)
 
