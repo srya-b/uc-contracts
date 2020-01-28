@@ -152,7 +152,10 @@ class Bracha_Protocol(object):
                 self.clock_round += 1
                 self.read_messages()    # reads messagesna dn queues the messages to be sent
                 self.roundok = False
-            else: dump.dump(); return #TODO change to check
+            else: 
+                print('\033[1m [{}] early\033[0m'.format(self.pid))
+                self.p2z.write( ('early',) )
+                return #TODO change to check
 
         if len(self.todo) > 0:
             # pop off todo and do it
@@ -212,7 +215,7 @@ class Bracha_Protocol(object):
 from itertools import combinations,permutations
 from comm import GenChannel, setAdversary
 from itm2 import FunctionalityWrapper, PartyWrapper, DummyAdversary, ProtocolWrapper2
-from utils2 import z_inputs, z_ainputs, wait_for, z_get_leaks
+from utils2 import z_inputs, z_ainputs, wait_for, z_get_leaks, waits
 from f_clock import Clock_Functionality
 from f_bd_sec import BD_SEC_Functionality
 def test_all_honest():
@@ -235,13 +238,15 @@ def test_all_honest():
 
     p = ProtocolWrapper2(sid, z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
     gevent.spawn(p.run)
+
+    # Start synchronization requires roundOK first to determine honest parties
+    # giving input to a party before all have done this will result in Exception
     p.spawn(1); wait_for(a2z)
     p.spawn(2); wait_for(a2z)
     p.spawn(3); wait_for(a2z)
 
     ## DEALER INPUT
     z2p.write( (1, ('input',1)) )
-    #fro,msg = wait_for(a2z)
     wait_for(a2z)
 
     # N=3 ACTIVATIONS FOR ROUND=1
@@ -253,7 +258,7 @@ def test_all_honest():
         z2p.write( (3, ('output',)))
         wait_for(a2z)
 
-    ## N=3 ACTIVATIONS FOR ROUND=2
+    # N=3 ACTIVATIONS FOR ROUND=2
     for i in range(3):
         z2p.write( (1,('output',)) )
         wait_for(a2z)
@@ -305,6 +310,12 @@ def test_crupt_dealer_no_accept():
     p = ProtocolWrapper2(sid, z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
     gevent.spawn(p.run)
    
+    # Start synchronization requires roundOK first to determine honest parties
+    # giving input to a party before all have done this will result in Exception
+    p.spawn(1); wait_for(a2z)
+    p.spawn(2); wait_for(a2z)
+    p.spawn(3); wait_for(a2z)
+
     # corrupt the dealer
     # change protocol itm to a passthrough itm
     # register corruption with F_clock
@@ -342,7 +353,7 @@ def test_crupt_dealer_no_accept():
     z2a.write( ('A2P', (1, ( (('one',1,2,3),'F_bd'), ('send',('READY',3))))) )
     wait_for(a2z)
     # (*)
-    z2a.write( ('A2P', (1, ( (('one',1,3,2),'F_bd'), ('send',('BITCH',3))))) )
+    z2a.write( ('A2P', (1, ( (('one',1,3,3),'F_bd'), ('send',('READY',3))))) )
     wait_for(a2z)
     z2a.write( ('A2P', (1, ( ((sid, 'F_clock'), ('RoundOK',))))) )
     wait_for(a2z)
@@ -380,6 +391,12 @@ def test_crupt_dealer_1_accept_1_not():
     p = ProtocolWrapper2(sid, z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
     gevent.spawn(p.run)
    
+    # Start synchronization requires roundOK first to determine honest parties
+    # giving input to a party before all have done this will result in Exception
+    p.spawn(1); wait_for(a2z)
+    p.spawn(2); wait_for(a2z)
+    p.spawn(3); wait_for(a2z)
+
     # corrupt the dealer
     # change protocol itm to a passthrough itm
     # register corruption with F_clock

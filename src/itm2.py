@@ -446,6 +446,145 @@ class ITMPassthrough2(object):
             else:
                 print('else dumping somewhere ive never been'); dump.dump()
 
+class ITMSyncCruptProtocol(object):
+    def __init__(self, sid, pid, a2p, p2a, z2p, p2z, f2p, p2f):
+        self.sid = sid
+        self.pid = pid
+        self.sender = (sid,pid)
+
+        self.z2p = z2p; self.p2z = p2z
+        self.f2p = f2p; self.p2f = p2f###
+        self.a2p = a2p; self.p2a = p2a
+        #self.a2p = a2p; self.p2f = p2f; self.z2p = z2p 
+        #self.p2c = None; self.clock = None
+
+        self.input = AsyncResult()
+        self.subroutine = AsyncResult()
+        self.backdoor = AsyncResult()
+        self.outputidx = 0
+        self.roundok = False
+
+        print('[{}] Sending start synchronization...'.format(self.pid))
+        self.p2f.write( ((self.sid,'F_clock'), ('RoundOK',)) )
+        self.roundok = True
+       
+    def __str__(self):
+        return '\033[1mITM(%s, %s)\033[0m' % (self.sid, self.pid)
+
+    def write(self, to, msg):
+        gwrite(u'1m', 'ITM(%s, %s)'%(self.sid,self.pid), to, msg)
+
+    def init(self, functionality):
+        self.F = functionality
+        self.outputs = self.F.outputs
+
+    def set_clock(self, p2c, clock):
+        self.p2c = p2c; self.clock = clock
+
+    def clock_update(self):
+        self.p2c.write(('clock-update',))
+
+    def clock_register(self):
+        self.p2c.write(('register',))
+
+    def clock_read(self):
+        return self.clock.subroutine_msg( self.sender, ('clock-read',))
+
+    def subroutine_call(self, inp):
+        sender,reveal,msg = inp
+        if msg[0] == 'read':
+            return self.subroutine_read()
+        else:
+            return self.F.subroutine_call((
+                (self.sid, self.pid),
+                True,
+                msg
+            ))
+   
+    def ping(self):
+        o = self.F.subroutine_call((
+            (self.sid, self.pid),
+            True,
+            ('read',)
+        ))
+        if o:
+            z_write((self.sid,self.pid), o)
+        dump.dump()
+
+    def subroutine_read(self):
+        outputs = self.F.subroutine_call( (self.sender, True, ('read',)))
+        for o in outputs[self.outputidx:]:
+            z_write( (self.sid,self.pid), o )
+        self.outputidx = len(outputs)
+    
+    def input_write(self, p2_, msg):
+        p2_.write( msg )
+
+    def wait_for(self, chan):
+        r = gevent.wait(objects=[chan],count=1)
+        r = r[0]
+        fro,msg = r.read()
+        chan.reset()
+        return fro,msg
+
+    def run(self):
+        while True:
+            ready = gevent.wait(
+                #objects=[self.a2p, self.z2p],
+                objects=[self.z2p, self.a2p, self.f2p],
+                count=1
+            )
+            assert len(ready) == 1
+            r = ready[0]
+            if r == self.a2p: print('\t\ta2p')
+            if r == self.z2p: print('\t\tz2p')
+            if r == self.f2p: print('\t\tf2p')
+
+            if self.roundok:
+                print('Dummy requesting round')
+                self.p2f.write( ((self.sid,'F_clock'), ('RequestRound',)) )
+                fro,di = self.wait_for(self.f2p)
+                print('Dummy got back', fro, di)
+                if di == 1: raise Exception('Start synchronization not complete')
+                self.roundok = False
+                print('Proceed to processing this activation')
+
+            msg = r.read()
+            if r == self.z2p:
+                if comm.isdishonest(self.sid, self.pid):
+                    self.z2p.reset()
+                    assert False
+                print('PASSTHROUGH MESSAGE', msg) 
+                if msg[0] == 'ping':
+                    self.ping()
+                elif msg[0] == 'write':
+                    self.input_write(msg[1], msg[2])
+                elif msg[0] == 'clock-update':
+                    self.clock_update()
+                elif msg[0] == 'register':
+                    self.clock_register()
+                else:
+                    self.p2f.write( msg )
+                self.z2p.reset('z2p in itm')
+            elif r == self.a2p:
+                print('Heres the a2p in passthrough')
+                self.a2p.reset()
+                if comm.ishonest(self.sid, self.pid):
+                    assert False
+                print('\n\t alright then', msg)
+                self.p2f.write( msg )
+                #self.p2f.write( msg )
+                #dump.dump()
+            elif r == self.f2p:
+                self.f2p.reset()
+                print('F 2 P message in ITM', msg, self.sid, self.pid)
+                if comm.ishonest(self.sid,self.pid):
+                    self.p2z.write( msg )
+                else:
+                    self.p2a.write( msg )
+            else:
+                print('else dumping somewhere ive never been'); dump.dump()
+
 from comm import setFunctionality2, setParty
 class PartyWrapper:
     def __init__(self, sid, z2p, p2z, f2p, p2f, a2p, p2a, tof):
@@ -785,7 +924,9 @@ class ProtocolWrapper2:
         
         #itm = ITMPassthrough2(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f) 
         if comm.isdishonest(self.sid, pid):
-            p = ITMPassthrough2(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f)
+            #p = ITMPassthrough2(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f)
+            p = ITMSyncCruptProtocol(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f)
+            #dump.dump()
         else:
             p = self.prot(self.sid, pid, _p2f,_f2p, _p2a,_a2p, _p2z,_z2p)
         setParty(p)
@@ -839,12 +980,17 @@ class ProtocolWrapper2:
                 self.f2p.reset('f2p in party')
                 #_pid = self.getPID(self.f2pid,pid)
                 #if comm.ishonest(_s,_p):
-                if comm.ishonest(self.sid,_p):
-                    _pid = self.getPID(self.f2pid, _p)
-                    _pid.write( (fro,msg) )
-                else:
-                    self.p2a.write( (fro,msg) )
+                # TODO changed here so that message is always
+                # forwarded to the itm instead of p2a
+                #if comm.ishonest(self.sid,_p):
+                #    _pid = self.getPID(self.f2pid, _p)
+                #    _pid.write( (fro,msg) )
+                #else:
+                #    self.p2a.write( (fro,msg) )
+                _pid = self.getPID(self.f2pid, _p)
+                _pid.write( (fro, msg) )
             elif r == self.a2p:
+                print('\t\t its a2p in prot2') 
                 (pid, msg) = r.read() 
                 print('\033[92m[{}] A2P Message for ({}): {}\033[0m'.format(self.sid, pid, msg))
                 self.a2p.reset('a2p in party')

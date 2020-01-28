@@ -147,7 +147,7 @@ class GenChannel(Event):
             #print('\033[93m \t\tWriting {} id={}\033[0m'.format(data,self.i))
             self._data = data; self.set()
         else: 
-            raise Exception("\033[1mwriting to channel already full. Writing {} in {}\033[0m".format(data,self.i))
+            raise Exception("\033[1mwriting to channel already full with {}. Writing {} in {}\033[0m".format(self._data,data,self.i))
             dump.dump()
 
     def read(self): 

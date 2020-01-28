@@ -73,4 +73,31 @@ The functionality waits $Rnd = 3$ rounds to deliver the output. In the first rou
 In functionality round 2, activations ensure that all \msf{READY} messages are sent. The final functionality round 3, all \msf{READY}s are delivered and the simulates real world parties all output a value $v$.
 By the proof of the Bracha protocol, all real world parties output the same value. The simulator instructs 
 
+\paragraph{Typo in Katz paper}
+In synchronous protocols, parties can send at most $n = |\mathcal{P}|-1$ messages, one message to each other participant in the protocol.
+According to the functionality $\Fbdsec$, when a party sends a message, the adversary is activated by leaking information.
+This means that in one activation, each party can only send one message.
+The definition of synchronous protocols in the $\{\Fbdsec,\Fclock \}$-hybrid says that in each round each party must send (\texttt{RoundOK}) to $\Fclock$.
+Therefore, each party needs $n$ activations, $n-1$ for sending messages and 1 for sending \texttt{RoundOK}.
+Finally, any subsequent activation if $p_i$'s bit $d_i$ is still 1, $p_i$ outputs \texttt{early} to the environment.
+The ideal world needs these many acivations as well, to invoke the simulator enough to simulate the real world.
+
+The functionality as described in the paper, show in Figure~\ref{fig:sfe} allows the round to advance with only $n-1$ activations through the \texttt{output} message.
+The edit to make is to change the \texttt{activated} and \texttt{early} logic to wait until $t_i = 0$ instead of 1. That's all.
+
+
+\begin{figure}
+	\input{figures/f_sfe}
+	\label{fig:sfe}
+	\caption{The ideal functionality for secure function eveluation from Katz~\cite{synchronousuc}. It's parameterized by the function $f$ and a polynomial $Rnd$ representing the upper bound on the number of rounds the real world protocol takes. It proceeds in rounds where eact party requires $|\mathcal{P}|$ activations. And it's WRONG.}
+\end{figure}
+
+Below is the updated version with the correct number of activations.
+
+\begin{figure}
+	\input{figures/f_sfe_new}
+	\label{fig:sfe}
+	\caption{Same ideal functionality as Figure~\ref{fig:sfe} but corrected}
+\end{figure}
+
 
