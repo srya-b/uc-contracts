@@ -536,25 +536,18 @@ class ITMSyncCruptProtocol(object):
             )
             assert len(ready) == 1
             r = ready[0]
-            if r == self.a2p: print('\t\ta2p')
-            if r == self.z2p: print('\t\tz2p')
-            if r == self.f2p: print('\t\tf2p')
 
             if self.roundok:
-                print('Dummy requesting round')
                 self.p2f.write( ((self.sid,'F_clock'), ('RequestRound',)) )
                 fro,di = self.wait_for(self.f2p)
-                print('Dummy got back', fro, di)
                 if di == 1: raise Exception('Start synchronization not complete')
                 self.roundok = False
-                print('Proceed to processing this activation')
 
             msg = r.read()
             if r == self.z2p:
                 if comm.isdishonest(self.sid, self.pid):
                     self.z2p.reset()
                     assert False
-                print('PASSTHROUGH MESSAGE', msg) 
                 if msg[0] == 'ping':
                     self.ping()
                 elif msg[0] == 'write':
@@ -567,17 +560,12 @@ class ITMSyncCruptProtocol(object):
                     self.p2f.write( msg )
                 self.z2p.reset('z2p in itm')
             elif r == self.a2p:
-                print('Heres the a2p in passthrough')
                 self.a2p.reset()
                 if comm.ishonest(self.sid, self.pid):
                     assert False
-                print('\n\t alright then', msg)
                 self.p2f.write( msg )
-                #self.p2f.write( msg )
-                #dump.dump()
             elif r == self.f2p:
                 self.f2p.reset()
-                print('F 2 P message in ITM', msg, self.sid, self.pid)
                 if comm.ishonest(self.sid,self.pid):
                     self.p2z.write( msg )
                 else:
@@ -609,8 +597,8 @@ class PartyWrapper:
                 pp2_.reset('pp2_ translate reset')
                 print('\n\t Translating: {} --> {}'.format(msg, ((self.sid,pid),msg)))
                 #print('\t\t\033[96m {} --> {}, msg={}\033[0m'.format((self.sid,pid), msg[0], msg[1]))
-                #p2_.write( ((self.sid,pid), msg) )
-                p2_.write( ((self.sid,pid), (self.tof, msg)) )
+                p2_.write( ((self.sid,pid), msg) )
+                #p2_.write( ((self.sid,pid), (self.tof, msg)) )
         gevent.spawn(_translate)
 
         _2pid[pid] = _2pp
@@ -626,6 +614,8 @@ class PartyWrapper:
         itm = ITMPassthrough2(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f) 
         setParty(itm)
         gevent.spawn(itm.run)
+        # TODO maybe remove later but for start synchronization
+        dump.dump()
 
     def getPID(self, _2pid, pid):
         if pid in _2pid: return _2pid[pid]
@@ -633,15 +623,19 @@ class PartyWrapper:
             self.newPID(pid)
             return _2pid[pid]
 
+    def spawn(self,pid):
+        self.newPID(pid)
+
     def run(self):
         while True:
-            #print('\t\033[94mStatus: z2p={}, f2p={}, a2p={}\033[0m'.format(self.z2p.is_set(),self.f2p.is_set(),self.a2p.is_set()))
+            print('\t\033[94mStatus: z2p={}, f2p={}, a2p={}\033[0m'.format(self.z2p.is_set(),self.f2p.is_set(),self.a2p.is_set()))
             ready = gevent.wait(objects=[self.z2p, self.f2p, self.a2p], count=1)
             #assert len(ready) == 1
             r = ready[0]
-            (pid, msg) = r.read() 
-            print('[{}] Message for ({}): {}'.format(self.sid, pid, msg))
+            m = r.read() 
+            print('[{}] Message for: {}'.format(self.sid, m))
             if r == self.z2p:
+                pid,msg = m
                 self.z2p.reset('z2p party reset')
                 if not comm.ishonest(self.sid,pid):
                     raise Exception
@@ -649,19 +643,20 @@ class PartyWrapper:
                 # pass onto the functionality
                 _pid = self.getPID(self.z2pid,pid)
                 print('Part message', msg)
-                _pid.write(msg)
+                #_pid.write(msg)
+                _pid.write( (self.tof, msg) )
                 # TODO need to wait and try 
-                r = gevent.wait(objects=[self.f2p],count=1,timeout=0.2)
-                if r:
-                    r = r[0]
-                    #print('\n\nready early\n\n')
-                    msg = r.read()
-                    self.p2z.write(msg)
-                    #print('SOME RESPONS', r.read())
-                    # send response to z
-                    self.f2p.reset('reset f2p in z2p')
+                #r = gevent.wait(objects=[self.f2p],count=1,timeout=0.2)
+                #if r:
+                #    r = r[0]
+                #    msg = r.read()
+                #    self.p2z.write(msg)
+                #    # send response to z
+                #    self.f2p.reset('reset f2p in z2p')
             elif r == self.f2p:
                 self.f2p.reset('f2p in party')
+                print('F2P message, stripping the pid from the message', m)
+                fro,(to,msg) = m
                 _pid = self.getPID(self.f2pid,pid)
                 _pid.write(msg)
             elif r == self.a2p:
