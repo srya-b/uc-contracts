@@ -416,7 +416,7 @@ class ITMPassthrough2(object):
                 if comm.isdishonest(self.sid, self.pid):
                     self.z2p.reset()
                     assert False
-                print('PASSTHROUGH MESSAGE', msg) 
+                #print('PASSTHROUGH MESSAGE', msg) 
                 if msg[0] == 'ping':
                     self.ping()
                 elif msg[0] == 'write':
@@ -595,7 +595,7 @@ class PartyWrapper:
                 r = r[0]
                 msg = r.read()
                 pp2_.reset('pp2_ translate reset')
-                print('\n\t Translating: {} --> {}'.format(msg, ((self.sid,pid),msg)))
+                #print('\n\t Translating: {} --> {}'.format(msg, ((self.sid,pid),msg)))
                 #print('\t\t\033[96m {} --> {}, msg={}\033[0m'.format((self.sid,pid), msg[0], msg[1]))
                 p2_.write( ((self.sid,pid), msg) )
                 #p2_.write( ((self.sid,pid), (self.tof, msg)) )
@@ -628,7 +628,7 @@ class PartyWrapper:
 
     def run(self):
         while True:
-            print('\t\033[94mStatus: z2p={}, f2p={}, a2p={}\033[0m'.format(self.z2p.is_set(),self.f2p.is_set(),self.a2p.is_set()))
+            #print('\t\033[94mStatus: z2p={}, f2p={}, a2p={}\033[0m'.format(self.z2p.is_set(),self.f2p.is_set(),self.a2p.is_set()))
             ready = gevent.wait(objects=[self.z2p, self.f2p, self.a2p], count=1)
             #assert len(ready) == 1
             r = ready[0]
@@ -642,7 +642,7 @@ class PartyWrapper:
                 # TODO reject if corrupted party
                 # pass onto the functionality
                 _pid = self.getPID(self.z2pid,pid)
-                print('Part message', msg)
+                #print('Part message', msg)
                 #_pid.write(msg)
                 _pid.write( (self.tof, msg) )
                 # TODO need to wait and try 

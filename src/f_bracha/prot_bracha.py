@@ -185,6 +185,7 @@ class Bracha_Protocol(object):
         self.p2f.write( ((fbdsid,'F_bd'), ('send',('VAL',inp))) )
 
     def input_input(self, v):
+        print('\n\nInout input')
         if self.clock_round != 1: dump.dump(); return
         self.newtodo = []
         for p in self.except_me():
@@ -221,6 +222,7 @@ class Bracha_Protocol(object):
                  
             if r == self.z2p:
                 msg = r.read()
+                print('\n\t \033[1m message to prot_bracha={}, msg={}\033[0m'.format(self.pid, msg))
                 self.z2p.reset()
                 self.input_msg((-1,-1),msg)
             else: dump.dump()
