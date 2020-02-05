@@ -53,7 +53,7 @@ class Bracha_Protocol(object):
         return [p for p in self.parties if p != self.pid]
 
     def input_val(self, m):
-        print('\033[1m\n\t [{}] VAL with val {}\n\033[0m'.format(self.pid, m)) 
+        print('\033[1m\t [{}] VAL with val {}, round {}\033[0m'.format(self.pid, m, self.clock_round)) 
         self.val = m
         self.todo = []
         for pid in self.except_me():
@@ -64,7 +64,7 @@ class Bracha_Protocol(object):
         self.echoreceived = 1
 
     def input_echo(self, m):
-        print('\033[1m\n\t [{}] ECHO with val {}\n\033[0m'.format(self.pid, m)) 
+        print('\033[1m\t [{}] ECHO with val {}, round {}\033[0m'.format(self.pid, m, self.clock_round)) 
         if m != self.val: assert False; return # TODO remove assert
         self.echoreceived += 1
         n = len(self.parties)
@@ -73,13 +73,12 @@ class Bracha_Protocol(object):
             for pid in self.except_me():
                 fbdsid = (self.ssid, self.pid, pid, self.clock_round)
                 self.todo.append( (self.send_message, (fbdsid, ('send',('READY',self.val)))) )
-            print('\n\t my own ready received', self.readyreceived)
             self.readyreceived = 1
 
     def input_ready(self, m):
-        print('\033[1m\n\t [{}] READY with val {}\n\033[0m'.format(self.pid, m)); 
+        print('\033[1m\t [{}] READY with val {}, round {}\033[0m'.format(self.pid, m, self.clock_round)); 
         if m != self.val: assert False; return # TODO remove assert
-        print('Ready received', self.readyreceived)
+        #print('Ready received', self.readyreceived)
         self.readyreceived += 1
         n = len(self.parties)
         if self.readyreceived == (2 * (n/3) + 1):
@@ -94,7 +93,7 @@ class Bracha_Protocol(object):
         fro = fbdsid[1]
         self.p2f.write( ((fbdsid,'F_bd'), ('fetch',)) )
         _fro,_msg = self.wait_for(self.f2p)
-        print('\033[1m[{}]\033[0m for message M:{} from sid:{}'.format(self.pid, _msg, fbdsid))
+        #print('\033[1m[{}]\033[0m for message M:{} from sid:{}'.format(self.pid, _msg, fbdsid))
         _,msg = _msg
         if msg is None: return #dump.dump(); return
         tag,m = msg
@@ -110,7 +109,7 @@ class Bracha_Protocol(object):
     
     def send_message(self, fbdsid, msg):
         _ssid,_fro,_to,_r = fbdsid
-        print('\033[1m[{}]'.format(_fro), 'Sending message\033[0m {} to F_bd (fro:{}, to:{}, round:{})'.format(msg, _fro, _to, _r))
+        #print('\033[1m[{}]'.format(_fro), 'Sending message\033[0m {} to F_bd (fro:{}, to:{}, round:{})'.format(msg, _fro, _to, _r))
         self.p2f.write( ((fbdsid,'F_bd'), msg) )
 
     def read_messages(self):
@@ -151,7 +150,6 @@ class Bracha_Protocol(object):
         if self.broadcastcomplete:
             if len(self.todo) > 0: self.todo.pop(0); dump.dump()
             else:
-                print('Writing output')
                 self.p2z.write( self.val )
             return
 
@@ -160,13 +158,13 @@ class Bracha_Protocol(object):
             self.p2f.write( ((self.sid,'F_clock'),('RequestRound',)) )
             fro,di = self.wait_for(self.f2p)
             if di == 0:     # this means the round has ended
-                print('\033[1m ({}) new round {} \033[0m'.format(self.pid,self.clock_round+1))
+                #print('\033[1m ({}) new round {} \033[0m'.format(self.pid,self.clock_round+1))
                 self.clock_round += 1
                 self.read_messages()    # reads messagesna dn queues the messages to be sent
-                print('Done with round')
+                #print('Done with round')
                 self.roundok = False
             else: 
-                print('\033[1m [{}] early\033[0m'.format(self.pid))
+                #print('\033[1m [{}] early\033[0m'.format(self.pid))
                 self.p2z.write( ('early',) )
                 return #TODO change to check
 
@@ -185,16 +183,14 @@ class Bracha_Protocol(object):
         self.p2f.write( ((fbdsid,'F_bd'), ('send',('VAL',inp))) )
 
     def input_input(self, v):
-        print('\n\nInout input')
         if self.clock_round != 1: dump.dump(); return
         self.newtodo = []
         for p in self.except_me():
             fbdsid = (self.ssid, self.pid, p, self.clock_round) 
             self.newtodo.append( (self.send_message, (fbdsid, ('send', ('VAL',v)))) )
-            print('Sending VAL for', self.clock_round)
+            #print('Sending VAL for', self.clock_round)
         self.val = v    # dealer won't deliver to himself, so just set it now
         self.todo = self.newtodo
-        print(self.todo)
         dump.dump()
 
     def input_msg(self, sender, msg):
@@ -222,7 +218,7 @@ class Bracha_Protocol(object):
                  
             if r == self.z2p:
                 msg = r.read()
-                print('\n\t \033[1m message to prot_bracha={}, msg={}\033[0m'.format(self.pid, msg))
+                #print('\n\t \033[1m message to prot_bracha={}, msg={}\033[0m'.format(self.pid, msg))
                 self.z2p.reset()
                 self.input_msg((-1,-1),msg)
             else: dump.dump()
@@ -263,10 +259,10 @@ def test_all_honest():
     p.spawn(3); wait_for(a2z)
 
     ## DEALER INPUT
-    z2p.write( (1, ('input',1)) )
+    z2p.write( (1, ('input',10)) )
     wait_for(a2z)
 
-    # N=3 ACTIVATIONS FOR ROUND=1
+    # N=3 ACTIVATIONS FOR ROUND=1     (Dealer sends VAL)
     for i in range(3):
         z2p.write( (1, ('output',)))
         wait_for(a2z)
@@ -275,7 +271,7 @@ def test_all_honest():
         z2p.write( (3, ('output',)))
         wait_for(a2z)
 
-    # N=3 ACTIVATIONS FOR ROUND=2
+    # N=3 ACTIVATIONS FOR ROUND=2   (get VAL, send ECHO)
     for i in range(3):
         z2p.write( (1,('output',)) )
         wait_for(a2z)
@@ -284,7 +280,7 @@ def test_all_honest():
         z2p.write( (3, ('output',)))
         wait_for(a2z)
 
-    # N=3 ACTIVATIONS FOR ROUND=3
+    # N=3 ACTIVATIONS FOR ROUND=3   (get ECHO, send READY)
     for _ in range(2): 
         z2p.write( (1, ('output',)) )
         wait_for(a2z)
@@ -303,9 +299,8 @@ def test_all_honest():
     z2p.write( (3, ('output',)) )
     wait_for(a2z)
 
-    # First activation should get READY and ACCEPT 
+    # First activation should get READY and ACCEPT  (get READY, wait n activations to output)
     for i in range(3):
-        print('i =', i)
         z2p.write( (3, ('output',)) )
         wait_for(a2z)
         z2p.write( (1, ('output',)) )

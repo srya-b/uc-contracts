@@ -438,7 +438,6 @@ class ITMPassthrough2(object):
                 #dump.dump()
             elif r == self.f2p:
                 self.f2p.reset()
-                print('F 2 P message in ITM', msg, self.sid, self.pid)
                 if comm.ishonest(self.sid,self.pid):
                     self.p2z.write( msg )
                 else:
@@ -633,7 +632,7 @@ class PartyWrapper:
             #assert len(ready) == 1
             r = ready[0]
             m = r.read() 
-            print('[{}] Message for: {}'.format(self.sid, m))
+            #print('[{}] Message for: {}'.format(self.sid, m))
             if r == self.z2p:
                 pid,msg = m
                 self.z2p.reset('z2p party reset')
@@ -655,7 +654,6 @@ class PartyWrapper:
                 #    self.f2p.reset('reset f2p in z2p')
             elif r == self.f2p:
                 self.f2p.reset('f2p in party')
-                print('F2P message, stripping the pid from the message', m)
                 fro,(to,msg) = m
                 _pid = self.getPID(self.f2pid,pid)
                 _pid.write(msg)
@@ -1059,7 +1057,7 @@ class FunctionalityWrapper:
 
     #def newFID(self, sid, tag, params=()):
     def newFID(self, sid, tag, cls, params=()):
-        print('\033[1m[{}]\033[0m Creating new Functionality with pid: {}'.format('FWrapper', tag))
+        #print('\033[1m[{}]\033[0m Creating new Functionality with pid: {}'.format('FWrapper', tag))
         _z2f,_f2z = self._newFID(self.z2fid, self.f2z, sid, tag)
         _p2f,_f2p = self._newFID(self.p2fid, self.f2p, sid, tag)
         _a2f,_f2a = self._newFID(self.a2fid, self.f2a, sid, tag)

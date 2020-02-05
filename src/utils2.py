@@ -111,7 +111,7 @@ def wait_for(_2_):
         return r.read()
     except gevent.exceptions.LoopExit:
         dump.dump_wait()
-        print('DOESNT RETURN ANYTHING\n\n')
+#        print('DOESNT RETURN ANYTHING\n\n')
         return None
 
 def waits(c1, c2):

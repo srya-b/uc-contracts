@@ -34,7 +34,7 @@ class Clock_Functionality(object):
         if all(self.di[x]==1 for x in self.di):
             for p in self.di: self.di[p] = 0
         self.leak( ('switch',pid) ) #TODO do we need to return back? see clock todo 1 in bracha
-        print('\033[1m \n\t[F_clock] di = {} \n\033[0m'.format(self.di))
+        #print('\033[1m \n\t[F_clock] di = {} \n\033[0m'.format(self.di))
         self.f2a.write( ('switch',pid) )
 
     def input_requestround(self, pid):

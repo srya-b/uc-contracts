@@ -20,7 +20,7 @@ class BD_SEC_Functionality(object):
         self.f2a=f2a; self.a2f=a2f
         self.f2z=f2z; self.z2f=z2f
        
-        print('\033[1m[{}]\033[0m new bd_sec with M:{}'.format( self.sid, self.M ))
+        #print('\033[1m[{}]\033[0m new bd_sec with M:{}'.format( self.sid, self.M ))
         self.leaks = []
 
     def leak(self, msg):
@@ -30,7 +30,7 @@ class BD_SEC_Functionality(object):
         #if self.M is not None: assert False
         self.D = 1; self.M = msg
         self.leak( ('send', self.M) )
-        print('\033[1m[Leak]\033[0m', 'message: {}'.format(self.M))
+        #print('\033[1m[Leak]\033[0m', 'message: {}'.format(self.M))
         self.f2a.write( (self.sender, ('sent',self.M)) )   # change sender to id of functionality
 
     def input_fetch(self):
