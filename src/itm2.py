@@ -807,7 +807,7 @@ class ProtocolWrapper:
                     self.p2a.write( (fro,msg) )
             elif r == self.a2p:
                 (pid, msg) = r.read() 
-                print('\033[92m[{}] A2P Message for ({}): {}\033[0m'.format(self.sid, pid, msg))
+                #print('\033[92m[{}] A2P Message for ({}): {}\033[0m'.format(self.sid, pid, msg))
                 self.a2p.reset('a2p in party')
                 if msg == 'get-leaks':
                     r = list(self.leaks[pid])
@@ -983,9 +983,8 @@ class ProtocolWrapper2:
                 _pid = self.getPID(self.f2pid, _p)
                 _pid.write( (fro, msg) )
             elif r == self.a2p:
-                print('\t\t its a2p in prot2') 
                 (pid, msg) = r.read() 
-                print('\033[92m[{}] A2P Message for ({}): {}\033[0m'.format(self.sid, pid, msg))
+                #print('\033[92m[{}] A2P Message for ({}): {}\033[0m'.format(self.sid, pid, msg))
                 self.a2p.reset('a2p in party')
                 if msg == 'get-leaks':
                     r = list(self.leaks[pid])
@@ -1263,7 +1262,7 @@ class ITMAdversary2(object):
                 msg = r.read()
                 self.z2a.reset()
                 t,msg = msg
-                print('ADVERSARY MESSAGE ITM', t, msg)
+                #print('ADVERSARY MESSAGE ITM', t, msg)
                 if t == 'A2F':
                     if msg[0] == 'get-leaks':
                         print('A2F message', msg)
@@ -1368,7 +1367,7 @@ class DummyAdversary(object):
                 msg = r.read()
                 self.z2a.reset()
                 t,msg = msg
-                print('ADVERSARY MESSAGE ITM', t, msg)
+                #print('ADVERSARY MESSAGE ITM', t, msg)
                 if t == 'A2F':
                     if msg[0] == 'get-leaks':
                         print('A2F message', msg)
@@ -1380,7 +1379,7 @@ class DummyAdversary(object):
                     else:
                         self.a2f.write( msg )
                 elif t == 'A2P':
-                    print('Write A2P', msg)
+                    #print('Write A2P', msg)
                     self.a2p.write( msg )
                     #r = gevent.wait(objects=[self.p2a],count=1, timeout=0.1)
                     #if r:
@@ -1559,7 +1558,7 @@ class ITMPrinterAdversary(object):
             assert len(ready) == 1
             r = ready[0]
             sender,reveal,msg = r.get()
-            print('[ADVERSARY]', sender, reveal, msg)
+            #print('[ADVERSARY]', sender, reveal, msg)
 
             if r == self.input:
                 if msg[0] == 'corrupt':

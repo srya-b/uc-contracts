@@ -28,10 +28,17 @@ class Clock_Functionality(object):
 
     def leak(self, msg):
         self.leaks.append(msg)
+        
+    def honest_parties(self):
+        for p in self.parties:
+            if p not in self.crupted:
+                yield p
 
     def input_roundok(self, pid):
         self.di[pid] = 1
-        if all(self.di[x]==1 for x in self.di):
+        #if all(self.di[x]==1 for x in self.di):
+        #    for p in self.di: self.di[p] = 0
+        if all(self.di[x]==1 for x in self.honest_parties()):
             for p in self.di: self.di[p] = 0
         self.leak( ('switch',pid) ) #TODO do we need to return back? see clock todo 1 in bracha
         #print('\033[1m \n\t[F_clock] di = {} \n\033[0m'.format(self.di))

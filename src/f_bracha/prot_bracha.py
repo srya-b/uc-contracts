@@ -454,10 +454,6 @@ def test_crupt_dealer_1_accept_1_not():
         z2p.write( (3, ('output',)) )
         wait_for(a2z)
 
-    #z2a.write( ('A2P', (1, ( (('one',1,2,2),'F_bd'), ('send',('ECHO',3))))) )
-    #wait_for(a2z)
-    #z2a.write( ('A2P', (1, ( (('one',1,3,2),'F_bd'), ('send',('ECHO',3))))) )
-    #wait_for(a2z)
     z2a.write( ('A2P', (1, ( ((sid, 'F_clock'), ('RoundOK',))))) )
     wait_for(a2z)
     
