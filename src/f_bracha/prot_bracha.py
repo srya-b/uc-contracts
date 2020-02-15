@@ -19,7 +19,8 @@ class Bracha_Protocol(object):
     def __init__(self, sid, pid, _p2f, _f2p, _p2a, _a2p, _p2z, _z2p):
         self.sid = sid
         self.ssid = self.sid[0]
-        self.parties = self.sid[1]
+        # ignore sid[1] = Rnd
+        self.parties = self.sid[2]
         self.pid = pid
         if self.pid == 1: self.leader = True
         else: self.leader = False
@@ -81,7 +82,7 @@ class Bracha_Protocol(object):
         #print('Ready received', self.readyreceived)
         self.readyreceived += 1
         n = len(self.parties)
-        if self.readyreceived == (2 * (n/3) + 1):
+        if self.readyreceived == int(2 * (n/3) + 1):
             print(P2 + '[{}] Received {} READY and ACCEPTED {}'.format(self.pid,self.readyreceived,m) + ENDC)
             self.todo = []
             for _ in self.parties:
@@ -155,6 +156,7 @@ class Bracha_Protocol(object):
 
         # If RoundOK has been sent, then wait until we have a new round
         if self.roundok:
+            #print('\033[1m [{}] RoundOK already sent\033[0m'.format(self.pid))
             self.p2f.write( ((self.sid,'F_clock'),('RequestRound',)) )
             fro,di = self.wait_for(self.f2p)
             if di == 0:     # this means the round has ended
@@ -169,11 +171,13 @@ class Bracha_Protocol(object):
                 return #TODO change to check
 
         if len(self.todo) > 0:
+            #print('[{}] Still todo'.format(self.pid))
             # pop off todo and do it
             f,args = self.todo.pop(0)
             if f: f(*args)
             else: dump.dump()
         elif len(self.todo) == 0 and not self.broadcastcomplete:      
+            #print('[{}] RoundOK'.format(self.pid))
             self.p2f.write( ((self.sid,'F_clock'),('RoundOK',)) )
             self.roundok = True
         else: dump.dump()
@@ -188,7 +192,7 @@ class Bracha_Protocol(object):
         for p in self.except_me():
             fbdsid = (self.ssid, self.pid, p, self.clock_round) 
             self.newtodo.append( (self.send_message, (fbdsid, ('send', ('VAL',v)))) )
-            #print('Sending VAL for', self.clock_round)
+            print('Sending VAL for', self.clock_round)
         self.val = v    # dealer won't deliver to himself, so just set it now
         self.todo = self.newtodo
         dump.dump()
@@ -232,7 +236,7 @@ from utils2 import z_inputs, z_ainputs, wait_for, z_get_leaks, waits
 from f_clock import Clock_Functionality
 from f_bd_sec import BD_SEC_Functionality
 def test_all_honest():
-    sid = ('one',(1,2,3))
+    sid = ('one', 4, (1,2,3))
     f2p,p2f = GenChannel('f2p'),GenChannel('p2f')
     f2a,a2f = GenChannel('f2a'),GenChannel('a2f')
     f2z,z2f = GenChannel('f2z'),GenChannel('z2f')
@@ -323,7 +327,7 @@ def test_all_honest():
 # environment can make one party accept and not the other if the dealer
 # is corrupt.
 def test_crupt_dealer_no_accept():
-    sid = ('one',(1,2,3))
+    sid = ('one', 4, (1,2,3))
     f2p,p2f = GenChannel('f2p'),GenChannel('p2f')
     f2a,a2f = GenChannel('f2a'),GenChannel('a2f')
     f2z,z2f = GenChannel('f2z'),GenChannel('z2f')
@@ -403,8 +407,9 @@ def test_crupt_dealer_no_accept():
     wait_for(a2z)
 
 
+# TODO: should not be possible because t = n/3
 def test_crupt_dealer_1_accept_1_not():
-    sid = ('one',(1,2,3))
+    sid = ('one', 4, (1,2,3))
     f2p,p2f = GenChannel('f2p'),GenChannel('p2f')
     f2a,a2f = GenChannel('f2a'),GenChannel('a2f')
     f2z,z2f = GenChannel('f2z'),GenChannel('z2f')
@@ -476,8 +481,108 @@ def test_crupt_dealer_1_accept_1_not():
     wait_for(a2z)
     z2p.write( (3, ('output',)) )
     wait_for(a2z)
+
+def test_one_crupt_party():
+    sid = ('one', 4, (1,2,3,4))
+    f2p,p2f = GenChannel('f2p'),GenChannel('p2f')
+    f2a,a2f = GenChannel('f2a'),GenChannel('a2f')
+    f2z,z2f = GenChannel('f2z'),GenChannel('z2f')
+    p2a,a2p = GenChannel('p2a'),GenChannel('a2p')
+    p2z,z2p = GenChannel('p2z'),GenChannel('z2p')
+    z2a,a2z = GenChannel('z2a'),GenChannel('a2z')
+   
+    z_crupt(sid, 4)
+
+    f = FunctionalityWrapper(p2f,f2p, a2f,f2a, z2f,f2z)
+    gevent.spawn(f.run)
+    f.newcls('F_clock', Clock_Functionality)
+    f.newcls('F_bd', BD_SEC_Functionality)
+
+    advitm = DummyAdversary(sid,-1, z2a,a2z, p2a,a2p, a2f,f2a)
+    setAdversary(advitm)
+    gevent.spawn(advitm.run)
+
+    p = ProtocolWrapper2(sid, z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
+    gevent.spawn(p.run)
+    
+    #z2a.write( ('A2F', ('corrupt',4)) )
+    z2a.write( ('corrupt',4) )
+    wait_for(a2z)
+   
+    # Start synchronization requires roundOK first to determine honest parties
+    # giving input to a party before all have done this will result in Exception
+    p.spawn(1); wait_for(a2z)
+    p.spawn(2); wait_for(a2z)
+    p.spawn(3); wait_for(a2z)
+    p.spawn(4); wait_for(a2z)
+   
+    ## DEALER INPUT
+    z2p.write( (1, ('input',10)) )
+    wait_for(a2z)
+
+    # N=3 ACTIVATIONS FOR ROUND=1     (Dealer sends VAL)
+    for i in range(4):
+        z2p.write( (1, ('output',)))
+        wait_for(a2z)
+        z2p.write( (2, ('output',)))
+        wait_for(a2z)
+        z2p.write( (3, ('output',)))
+        wait_for(a2z)
+
+    z2a.write( ('A2P', (4, ( ((sid, 'F_clock'), ('RoundOK',))))) )
+    wait_for(a2z)
+
+    # N=3 ACTIVATIONS FOR ROUND=2   (get VAL, send ECHO)
+    for i in range(4):
+        z2p.write( (1,('output',)) )
+        wait_for(a2z)
+        z2p.write( (2, ('output',)) )
+        wait_for(a2z)
+        z2p.write( (3, ('output',)))
+        wait_for(a2z)
+
+    # N=3 ACTIVATIONS FOR ROUND=3   (get ECHO, send READY)
+    for _ in range(3): 
+        z2p.write( (1, ('output',)) )
+        wait_for(a2z)
+        z2p.write( (2, ('output',)) )
+        wait_for(a2z)
+        z2p.write( (3, ('output',)) )
+        wait_for(a2z)
+    
+    z2p.write( (1, ('output',)) )
+    wait_for(a2z)
+    z2p.write( (1, ('output',)) )
+    fro,msg = wait_for(p2z)
+    assert msg[0] == 'early'
+    z2p.write( (2, ('output',)) )
+    wait_for(a2z)
+    z2p.write( (3, ('output',)) )
+    wait_for(a2z)
+
+    # First activation should get READY and ACCEPT  (get READY, wait n activations to output)
+    for i in range(4):
+        z2p.write( (3, ('output',)) )
+        wait_for(a2z)
+        z2p.write( (1, ('output',)) )
+        wait_for(a2z)
+        z2p.write( (2, ('output',)) )
+        wait_for(a2z)
+
+    z2p.write( (1, ('output',)) )
+    fro,msg = wait_for(p2z)
+    print("P1 output", msg)
+    z2p.write( (2, ('output',)) )
+    fro,msg = wait_for(p2z)
+    print("P2 output", msg)
+    z2p.write( (3, ('output',)) )
+    fro,msg = wait_for(p2z)
+    print("P3 output", msg)
+    
+
 if __name__=='__main__':
-    test_all_honest()
+    #test_all_honest()
     #test_crupt_dealer_no_accept()
     #test_crupt_dealer_1_accept_1_not()
+    test_one_crupt_party()
     

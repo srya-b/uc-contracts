@@ -65,13 +65,11 @@ class SFE_Bracha_Functionality(object):
         #print('\t\033[1m OUTPUT call from: {} \t ti: {}, l: {}\033[0m'.format(pid, self.t[pid],self.l))
         if self.t[pid] > 0:
             self.t[pid] = self.t[pid]-1
-            #if self.are_all_0() and self.l < self.Rnd:
             if self.are_all_honest_0() and self.l < self.Rnd:
                 self.l += 1
                 for i in self.t: self.t[i] = len(self.parties)
             self.f2a.write( ('activated',pid) )
         elif self.t[pid] == 0 and self.l < self.Rnd:
-            #print('\n\t \033[1mOutput message\n\033[0m', pid)
             self.f2p.write( (pid, ('early',)) )
         else:
             # TODO only check that corrupt inputs have been set
@@ -94,7 +92,7 @@ class SFE_Bracha_Functionality(object):
         dump.dump()
 
     def adversary_msg(self, msg):
-        if msg[0] == 'corrupted':
+        if msg[0] == 'corrupt':
             self.adv_corrupt(msg[1])
         else: dump.dump()
 
@@ -130,7 +128,8 @@ class BrachaSimulator(object):
     def __init__(self, sid, pid, z2a, a2z, p2a, a2p, a2f, f2a):
         self.sid = sid
         self.ssid = self.sid[0]
-        self.parties = self.sid[1]
+        # ignore sid[1] which is Rnd
+        self.parties = self.sid[2]
         self.pid = pid
         self.sender = (sid,pid)
         self.z2a = z2a; self.a2z = a2z
@@ -153,16 +152,14 @@ class BrachaSimulator(object):
         f.newcls('F_bd', BD_SEC_Functionality)
 
         # spawn dummy adversary
-        advitm = DummyAdversary('adv', -1, self._z2a,self._a2z, self._p2a,self._a2p, self._a2f,self._f2a)
+        advitm = DummyAdversary(self.sid, -1, self._z2a,self._a2z, self._p2a,self._a2p, self._a2f,self._f2a)
         gevent.spawn(advitm.run)
 
         # spawn parties from sid information on parties
         p = ProtocolWrapper2(self.sid, self._z2p,self._p2z, self._f2p,self._p2f, self._a2p,self._p2a, Bracha_Protocol)
         gevent.spawn(p.run)
-        p.spawn(1); wait_for(self._a2z)
-        p.spawn(2); wait_for(self._a2z)
-        p.spawn(3); wait_for(self._a2z)
-
+        for x in self.parties:
+            p.spawn(x); wait_for(self._a2z)
         # track activations of parties
         self.num_activations = [len(self.parties) for _ in range(len(self.parties))]
 
@@ -189,6 +186,39 @@ class BrachaSimulator(object):
             self.leak_activation(*msg)
         else: dump.dump()
 
+    def input_corrupt(self, pid):
+        self._z2a.write( ('corrupt',pid) )
+        m = wait_for(self._a2z) # F_clock gives on output
+        assert m[1] == ('OK',)
+        #dump.dump_wait()
+        # Now we write to F_sfe2f
+        self.a2f.write( ((self.sid, 'F_sfe'), ('corrupt',pid)) )
+
+    def input_corrupt_leader(self, msg):
+        # TODO assumption about katz:
+        #   Assumption is that a party can change their input in F_sfe
+        #   before the function f is computed. This means that when
+        #   the simulator receives the first VAL message from corrupt
+        #   dealer, it sends the input to F_sfe, but waits to see 
+        #   if dealer sends VAL to enough players, if not set the input
+        #   of the dealer in F_sfe to \bot because in the real world
+        #   the party's would not reach consensus on the input and 
+        #   instead commit to \bot.
+        pass
+
+    def input_msg(self, msg):
+        print('\n\n sim message', msg)
+        if msg[0] == 'corrupt':
+            self.input_corrupt(msg[1])
+        #elif msg[0] == 'A2P':
+        #    _,msg = msg
+        #    if msg[0] == 1:     # message is for corrupt dealer
+        #        self.input_corrupt_leader(msg)
+        #    else:
+        #        print('z2a write', msg)
+        #        self._z2a.write(msg)
+        else: self._z2a.write(msg)#dummp.dump()
+
     # Skeleton sim that only forwards message to/from dummy adversary should work the same
     def run(self):
         while True:
@@ -198,24 +228,17 @@ class BrachaSimulator(object):
             )
             r = ready[0]
             if r == self.z2a:
+                m = self.z2a.read()
                 self.z2a.reset()
+                self.input_msg( m )
+                #self._z2a.write( m )
             elif r == self.f2a:
                 m = self.f2a.read()
                 self.f2a.reset()
                 self.functionality_msg(m)
-                ## Below: code to simply forward all to/from adversary
-                #m = self.f2a.read()
-                #self.f2a.reset()
-                #self._f2a.write(m)
-                #print('Got f2a message in Simulatore', m)
-                #ready = gevent.wait(objects=[self._a2z],count=1)
-                #r = ready[0]
-                #_m = r.read()
-                #self._a2z.reset()
-                #print("Received respons from dummy adversary", _m)
-                #self.a2z.write(_m)
             elif r == self.p2a:
                 self.p2a.reset()
+                dump.dump()
             elif r == self._a2z:
                 m = self._a2z.read()
                 self._a2z.reset()
@@ -223,7 +246,6 @@ class BrachaSimulator(object):
             elif r == self._p2z:
                 m = self._p2z.read()
                 self._p2z.reset()
-                print('\n p2z message', m)
                 dump.dump()
             else: dump.dump()
 
@@ -307,8 +329,8 @@ def test_all_honest():
     fro,msg = wait_for(p2z)
     print('P3 output', msg)
 
-def test_crupt_dealer_no_accept():
-    sid = ('one', 4, (1,2,3))
+def test_one_crupt_party():
+    sid = ('one', 4, (1,2,3,4))
     f2p,p2f = GenChannel('f2p'),GenChannel('p2f')
     f2a,a2f = GenChannel('f2a'),GenChannel('a2f')
     f2z,z2f = GenChannel('f2z'),GenChannel('z2f')
@@ -316,23 +338,74 @@ def test_crupt_dealer_no_accept():
     p2z,z2p = GenChannel('p2z'),GenChannel('z2p')
     z2a,a2z = GenChannel('z2a'),GenChannel('a2z')
    
-    z_crupt(sid, 1)
+    z_crupt(sid, 4)
 
     f = FunctionalityWrapper(p2f,f2p, a2f,f2a, z2f,f2z)
     gevent.spawn(f.run)
     f.newcls('F_sfe', SFE_Bracha_Functionality)
 
-    advitm = BrachaSimulator(('one',(1,2,3)),-1, z2a,a2z, p2a,a2p, a2f,f2a)
+    advitm = BrachaSimulator(sid,-1, z2a,a2z, p2a,a2p, a2f,f2a)
     setAdversary(advitm)
     gevent.spawn(advitm.run)
 
     p = PartyWrapper(sid, z2p, p2z, f2p, p2f, a2p, p2a, (sid, 'F_sfe'))
     gevent.spawn(p.run)
 
+    z2a.write( ('corrupt',4) )
+    wait_for(a2z)
+
     p.spawn(1); wait_for(a2z)
     p.spawn(2); wait_for(a2z)
     p.spawn(3); wait_for(a2z)
+    p.spawn(4); wait_for(a2z)
+   
+    z2p.write( (1, ('input',3)) )
+    m = wait_for(a2z)
+
+    #z2a.write( ('A2P', (4, ( ((sid, 'F_clock'), ('RoundOK',))))) )
+    #wait_for(a2z)
+
+    for _ in range(4):
+        z2p.write( (1, ('output',)) )
+        wait_for(a2z)
+        z2p.write( (2, ('output',)) )
+        wait_for(a2z)
+        z2p.write( (3, ('output',)) )
+        wait_for(a2z)
+
+    for _ in range(4):
+        z2p.write( (1, ('output',)) )
+        fro,msg = wait_for(a2z)
+        z2p.write( (2, ('output',)) )
+        wait_for(a2z)
+        z2p.write( (3, ('output',)) )
+        wait_for(a2z)
     
+    for _ in range(4):
+        z2p.write( (1, ('output',)) )
+        fro,msg = wait_for(a2z)
+        z2p.write( (2, ('output',)) )
+        wait_for(a2z)
+        z2p.write( (3, ('output',)) )
+        wait_for(a2z)
+    
+    for _ in range(4):
+        z2p.write( (1, ('output',)) )
+        wait_for(a2z)
+        z2p.write( (2, ('output',)) )
+        wait_for(a2z)
+        z2p.write( (3, ('output',)) )
+        wait_for(a2z)
+    
+    z2p.write( (1, ('output',)) )
+    fro,m = wait_for(p2z)
+    print('P1 output:', m)
+    z2p.write( (2, ('output',)) )
+    fro,m = wait_for(p2z)
+    print('P2 output;', m)
+    z2p.write( (3, ('output',)) )
+    fro,m = wait_for(p2z)
+    print('P3 output:', m)
 
 
 # Testing the simulator by simulating messages from the functionality
@@ -435,5 +508,6 @@ def test_sim():
     
 
 if __name__=='__main__':
-    test_all_honest()
+    #test_all_honest()
     #test_sim()
+    test_one_crupt_party()

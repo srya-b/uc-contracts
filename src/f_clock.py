@@ -16,7 +16,9 @@ from gevent.queue import Queue, Channel
 class Clock_Functionality(object):
     def __init__(self, sid, pid, f2p, p2f, f2a, a2f, f2z, z2f):
         self.sid = sid
-        self.parties = self.sid[1]
+        # ignore sid[0] == ssid
+        # ignore sid[1] == Rnd
+        self.parties = self.sid[2]
         self.pid = pid
         self.f2p = f2p; self.p2f = p2f
         self.f2a = f2a; self.a2f = a2f
@@ -30,21 +32,22 @@ class Clock_Functionality(object):
         self.leaks.append(msg)
         
     def honest_parties(self):
-        for p in self.parties:
-            if p not in self.crupted:
-                yield p
+        return [p for p in self.parties if p not in self.crupted]
 
     def input_roundok(self, pid):
         self.di[pid] = 1
         #if all(self.di[x]==1 for x in self.di):
         #    for p in self.di: self.di[p] = 0
         if all(self.di[x]==1 for x in self.honest_parties()):
+            #print("Switching")
             for p in self.di: self.di[p] = 0
         self.leak( ('switch',pid) ) #TODO do we need to return back? see clock todo 1 in bracha
-        #print('\033[1m \n\t[F_clock] di = {} \n\033[0m'.format(self.di))
+        if pid in self.crupted:
+            print('\033[91m \n\t[F_clock] di = {} \n\033[0m'.format(self.di))
         self.f2a.write( ('switch',pid) )
 
     def input_requestround(self, pid):
+        #print('\033[94m \n\t[F_clock] di = {} \n\033[0m'.format(self.di))
         self.f2p.write( (pid, self.di[pid]) )
 
     def input_msg(self, sender, msg):
@@ -57,7 +60,9 @@ class Clock_Functionality(object):
 
     def adv_corrupt(self, pid):
         self.crupted.add(pid)        
-        dump.dump()
+        print(self.parties)
+        self.f2a.write( ('OK',) )
+        #dump.dump()
 
     def adv_get_leaks(self):
         self.f2a.write( ('leaks', self.leaks) )

@@ -477,18 +477,6 @@ class ITMSyncCruptProtocol(object):
         self.F = functionality
         self.outputs = self.F.outputs
 
-    def set_clock(self, p2c, clock):
-        self.p2c = p2c; self.clock = clock
-
-    def clock_update(self):
-        self.p2c.write(('clock-update',))
-
-    def clock_register(self):
-        self.p2c.write(('register',))
-
-    def clock_read(self):
-        return self.clock.subroutine_msg( self.sender, ('clock-read',))
-
     def subroutine_call(self, inp):
         sender,reveal,msg = inp
         if msg[0] == 'read':
@@ -526,6 +514,12 @@ class ITMSyncCruptProtocol(object):
         chan.reset()
         return fro,msg
 
+    def adv_msg(self, msg):
+        if msg[0] == 'send':
+            self.adv_send(msg[1], msg[2])
+        else:
+            self.p2f.write(msg)
+
     def run(self):
         while True:
             ready = gevent.wait(
@@ -544,25 +538,12 @@ class ITMSyncCruptProtocol(object):
 
             msg = r.read()
             if r == self.z2p:
-                if comm.isdishonest(self.sid, self.pid):
-                    self.z2p.reset()
-                    assert False
-                if msg[0] == 'ping':
-                    self.ping()
-                elif msg[0] == 'write':
-                    self.input_write(msg[1], msg[2])
-                elif msg[0] == 'clock-update':
-                    self.clock_update()
-                elif msg[0] == 'register':
-                    self.clock_register()
-                else:
-                    self.p2f.write( msg )
-                self.z2p.reset('z2p in itm')
+                assert False
             elif r == self.a2p:
                 self.a2p.reset()
                 if comm.ishonest(self.sid, self.pid):
                     assert False
-                self.p2f.write( msg )
+                self.adv_msg(msg)
             elif r == self.f2p:
                 self.f2p.reset()
                 if comm.ishonest(self.sid,self.pid):
@@ -917,6 +898,7 @@ class ProtocolWrapper2:
         
         #itm = ITMPassthrough2(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f) 
         if comm.isdishonest(self.sid, pid):
+            print('\033[1m[{}]\033[0m Party is corrupt, so ITMSyncCruptProtocol')
             #p = ITMPassthrough2(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f)
             p = ITMSyncCruptProtocol(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f)
             #dump.dump()
@@ -1035,6 +1017,7 @@ class FunctionalityWrapper:
 
 
     def newcls(self, tag, cls):
+        print('New cls', tag, cls)
         self.tagtocls[tag] = cls
 
     def _newFID(self, _2fid, f2_, sid, tag):
@@ -1272,7 +1255,7 @@ class ITMAdversary2(object):
                     elif msg[0] == 'ping':
                         self.input_ping(msg[1])
                     else:
-                        print('fucked up'); dump.dump()
+                        dump.dump()
                 elif t == 'A2P':
                     self.a2p.write( msg )
                     #r = gevent.wait(objects=[self.p2a],count=1, timeout=0.1)
@@ -1349,6 +1332,9 @@ class DummyAdversary(object):
         self.a2z.write( msg )
         self.f2a.reset()
 
+    def input_corrupt(self, pid):
+        self.a2f.write( ((self.sid, 'F_clock'), ('corrupt',pid)) )
+
     '''
         Instead of waiting for a party to write to the adversary
         the adversary checks leak queues of all the parties in 
@@ -1366,28 +1352,17 @@ class DummyAdversary(object):
             if r == self.z2a:
                 msg = r.read()
                 self.z2a.reset()
-                t,msg = msg
-                #print('ADVERSARY MESSAGE ITM', t, msg)
-                if t == 'A2F':
+                if msg[0] == 'A2F':
+                    t,msg = msg
                     if msg[0] == 'get-leaks':
-                        print('A2F message', msg)
                         self.getLeaks(msg[1])
-                    elif msg[0] == 'delay-tx':
-                        self.input_delay_tx(msg[1], msg[2], msg[3])
-                    elif msg[0] == 'ping':
-                        self.input_ping(msg[1])
                     else:
                         self.a2f.write( msg )
-                elif t == 'A2P':
-                    #print('Write A2P', msg)
+                elif msg[0] == 'A2P':
+                    t,msg = msg
                     self.a2p.write( msg )
-                    #r = gevent.wait(objects=[self.p2a],count=1, timeout=0.1)
-                    #if r:
-                    #    r = r[0]
-                    #    msg = r.read()
-                    #    self.p2a.reset()
-                    #    print('\033[1mP2A: \033[0m', msg)
-                    #    self.a2z.write( msg )
+                elif msg[0] == 'corrupt':
+                    self.input_corrupt(msg[1])
             elif r == self.p2a:
                 msg = r.read()
                 self.p2a.reset()

@@ -128,7 +128,7 @@ Design Decision:
         in a specific order based on the protocol at hand. Which
         really blows.
     * Can't be ^ (above) either. If 'to' is the identifier and the
-        itm is got from 'comm' then you're fucked because you have 
+        itm is got from 'comm' then you're screwed because you have 
         to fake an identifier and register is in 'comm' for the 
         simulator to be able to sandbox run the adversary and
         intercept outputs.
