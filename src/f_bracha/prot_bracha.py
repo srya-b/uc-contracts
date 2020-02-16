@@ -201,15 +201,6 @@ class Bracha_Protocol(ITMSyncProtocol):
             self.check_round_ok()
         else: dump.dump()
 
-    def start_sync(self):
-        if self.roundok and self.startsync:
-            self.p2f.write( ((self.sid,'F_clock'),('RequestRound',)) )
-            fro,di = self.wait_for(self.f2p)
-            if di == 1: raise Exception('Start synchronization not done')
-            self.roundok = False
-            self.startsync = False
-
-#import dump
 from itertools import combinations,permutations
 from comm import GenChannel, setAdversary
 from itm2 import FunctionalityWrapper, PartyWrapper, DummyAdversary, ProtocolWrapper2

@@ -1,6 +1,7 @@
 import dump
 import gevent
 from itm import ITMFunctionality
+from itm2 import ITMSyncFunctionality
 from comm import ishonest, isdishonest, isadversary, isf, isparty
 from math import ceil
 from queue import Queue as qqueue
@@ -9,7 +10,8 @@ from hashlib import sha256
 from collections import defaultdict
 from gevent.queue import Queue, Channel
 
-class SFE_Bracha_Functionality(object):
+#class SFE_Bracha_Functionality(object):
+class SFE_Bracha_Functionality(ITMSyncFunctionality):
     def __init__(self, sid, pid, _f2p, _p2f, _f2a, _a2f, _f2z, _z2f):
         self.sid = sid
         self.ssid = self.sid[0]
@@ -26,23 +28,21 @@ class SFE_Bracha_Functionality(object):
         self.t = dict( (p,len(self.parties)) for p in self.parties )
         self.l = 1
         self.crupted = set()
+        
+        self.channels = [self.a2f, self.z2f, self.p2f]
+        self.handlers = {
+            self.a2f: self.adversary_msg,
+            self.p2f: self.input_msg,
+            self.z2f: lambda x: dump.dump()
+        }
+        
+        ITMSyncFunctionality.__init__(self, self.sid, self.channels, self.handlers)
 
     def input_input(self, pid, v):
         print('\033[1m[F_sfe]\033[0m someone called input with v:', v, pid)
         if pid != 1: dump.dump(); return  # ignore inputs not by dealer
         self.x[pid] = v
         self.f2a.write( ('input',pid, v) )
-
-    def are_all_1(self):
-        # TODO only care about `H` which is corrupt parties
-        for i in self.t.values():
-            if i != 1: return False
-        return True
-    def are_all_0(self):
-        # TODO only care about `H` which is corrupt parties
-        for i in self.t.values():
-            if i != 0: return False
-        return True
 
     def are_all_honest_0(self):
         for i in self.parties:
@@ -57,12 +57,9 @@ class SFE_Bracha_Functionality(object):
         return True
 
     def input_output(self, pid):
-        # TODO maintain internal corrupted set
         if pid == 1 and isdishonest(self.sid, pid) and self.x[pid] is None:
             dump.dump(); return
 
-        # TODO change to > 0 is explained in latex
-        #print('\t\033[1m OUTPUT call from: {} \t ti: {}, l: {}\033[0m'.format(pid, self.t[pid],self.l))
         if self.t[pid] > 0:
             self.t[pid] = self.t[pid]-1
             if self.are_all_honest_0() and self.l < self.Rnd:
@@ -79,7 +76,8 @@ class SFE_Bracha_Functionality(object):
                 for i in self.y: self.y[i] = o
             self.f2p.write( (pid, self.y[pid]) )
 
-    def input_msg(self, sender, msg):
+    def input_msg(self, msg):
+        sender,msg = msg
         sid,pid = sender
         if msg[0] == 'input' and pid in self.parties:
             self.input_input(pid, msg[1])
@@ -95,28 +93,6 @@ class SFE_Bracha_Functionality(object):
         if msg[0] == 'corrupt':
             self.adv_corrupt(msg[1])
         else: dump.dump()
-
-    def run(self):
-        while True:
-            ready = gevent.wait(
-                objects=[self.a2f,self.z2f,self.p2f],
-                count=1
-            )
-            assert len(ready) == 1
-            r = ready[0]
-            if r == self.z2f:
-                self.z2f.reset()
-                dump.dump()
-            elif r == self.p2f:
-                msg = r.read()
-                sender,msg = msg
-                self.p2f.reset()
-                self.input_msg(sender,msg)
-            elif r == self.a2f:
-                msg = r.read()
-                self.a2f.reset()
-                self.adversary_msg(msg)
-            else: dump.dump()
 
 from comm import GenChannel, setAdversary
 from itm2 import FunctionalityWrapper, PartyWrapper, DummyAdversary, ProtocolWrapper2
