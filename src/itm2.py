@@ -95,6 +95,33 @@ class ITMSyncProtocol(object):
             r.reset()
             self.handlers[r](msg)
 
+class ITMSyncFunctionality(object):
+    def __init__(self, sid, pid, channels, handlers):
+        self.sid = sid; self.pid = pid
+        self.ssid = self.sid[0]
+        self.Rnd = self.sid[1]
+        self.parties = self.sid[2]
+
+        self.channels = channels
+        self.handlers = handlers
+
+        self.x = dict( (p,None) for p in self.parties )
+        self.y = dict( (p,None) for p in self.parties )
+        self.t = dict( (p,len(self.parties)) for p in self.parties )
+        self.l = 1
+        self.crupted = set()
+
+    def run(self):
+        while True:
+            ready = gevent.wait(
+                objects=self.channels,
+                count=1
+            )
+            assert len(ready) == 1
+            r = ready[0]
+            msg = r.read()
+            r.reset()
+            self.handlers[r](msg)
 
 class ITMProtocol(object):
     def __init__(self, sid, pid, a2p, p2a, z2p, p2z, f2p, p2f, _2p, p2_):

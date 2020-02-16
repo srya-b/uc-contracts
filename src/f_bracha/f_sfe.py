@@ -13,22 +13,10 @@ from gevent.queue import Queue, Channel
 #class SFE_Bracha_Functionality(object):
 class SFE_Bracha_Functionality(ITMSyncFunctionality):
     def __init__(self, sid, pid, _f2p, _p2f, _f2a, _a2f, _f2z, _z2f):
-        self.sid = sid
-        self.ssid = self.sid[0]
-        self.Rnd = self.sid[1]
-        self.parties = self.sid[2]
-        self.pid = pid
-        
         self.f2p = _f2p; self.p2f = _p2f
         self.f2a = _f2a; self.a2f = _a2f
         self.f2z = _f2z; self.z2f = _z2f
 
-        self.x = dict( (p,None) for p in self.parties )
-        self.y = dict( (p,None) for p in self.parties )
-        self.t = dict( (p,len(self.parties)) for p in self.parties )
-        self.l = 1
-        self.crupted = set()
-        
         self.channels = [self.a2f, self.z2f, self.p2f]
         self.handlers = {
             self.a2f: self.adversary_msg,
@@ -36,8 +24,8 @@ class SFE_Bracha_Functionality(ITMSyncFunctionality):
             self.z2f: lambda x: dump.dump()
         }
         
-        ITMSyncFunctionality.__init__(self, self.sid, self.channels, self.handlers)
-
+        ITMSyncFunctionality.__init__(self, sid, pid, self.channels, self.handlers)
+        
     def input_input(self, pid, v):
         print('\033[1m[F_sfe]\033[0m someone called input with v:', v, pid)
         if pid != 1: dump.dump(); return  # ignore inputs not by dealer
