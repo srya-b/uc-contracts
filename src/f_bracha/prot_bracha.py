@@ -8,6 +8,7 @@ from utils2 import print, gwrite, z_write, z_crupt
 from hashlib import sha256
 from collections import defaultdict
 from gevent.queue import Queue, Channel
+from itm2 import ITMSyncProtocol
 
 BOLD = '\033[1m'
 ENDC = '\033[0m'
@@ -15,7 +16,7 @@ P1 = '\033[94m'
 P2 = '\033[92m'
 P3 = '\033[93m'
 
-class Bracha_Protocol(object):
+class Bracha_Protocol(ITMSyncProtocol):
     def __init__(self, sid, pid, _p2f, _f2p, _p2a, _a2p, _p2z, _z2p):
         self.sid = sid
         self.ssid = self.sid[0]
@@ -37,7 +38,15 @@ class Bracha_Protocol(object):
         self.todo = [ (lambda: dump.dump(),()) for p in self.parties if p != self.pid ]   # only contains n-1 items (party never sends to itself), so the last round will send RoundOK to F_clock
         self.startsync = True
         self.broadcastcomplete = False
+        self.channels_to_read = [self.a2p, self.z2p, self.f2p]
+        self.handlers = {
+            self.a2p: lambda x: dump.dump(),
+            self.f2p: lambda x: dump.dump(),
+            self.z2p: self.input_msg
+        }
 
+        ITMSyncProtocol.__init__(self, self.sid, self.channels_to_read, self.handlers)
+    
         # Sent roundok first
         print('[{}] Sending start synchronization...'.format(self.pid))
         self.p2f.write( ((self.sid,'F_clock'), ('RoundOK',)) )
@@ -79,7 +88,6 @@ class Bracha_Protocol(object):
     def input_ready(self, m):
         print('\033[1m\t [{}] READY with val {}, round {}\033[0m'.format(self.pid, m, self.clock_round)); 
         if m != self.val: assert False; return # TODO remove assert
-        #print('Ready received', self.readyreceived)
         self.readyreceived += 1
         n = len(self.parties)
         if self.readyreceived == int(2 * (n/3) + 1):
@@ -90,16 +98,13 @@ class Bracha_Protocol(object):
             self.broadcastcomplete = True
         
     def fetch(self, fbdsid):
-        #fbdsid = (self.ssid, fro, self.pid)
         fro = fbdsid[1]
         self.p2f.write( ((fbdsid,'F_bd'), ('fetch',)) )
         _fro,_msg = self.wait_for(self.f2p)
-        #print('\033[1m[{}]\033[0m for message M:{} from sid:{}'.format(self.pid, _msg, fbdsid))
         _,msg = _msg
         if msg is None: return #dump.dump(); return
         tag,m = msg
       
-        #print('\n\t\033[1m[{}]\033[0m fetching {}'.format(self.pid,fbdsid))
         # check message type and round and that VAL comes from delaer
         if self.clock_round == 2 and tag == 'VAL' and not self.valaccepted and fro == 1:
             self.input_val(m)
@@ -110,14 +115,12 @@ class Bracha_Protocol(object):
     
     def send_message(self, fbdsid, msg):
         _ssid,_fro,_to,_r = fbdsid
-        #print('\033[1m[{}]'.format(_fro), 'Sending message\033[0m {} to F_bd (fro:{}, to:{}, round:{})'.format(msg, _fro, _to, _r))
         self.p2f.write( ((fbdsid,'F_bd'), msg) )
 
     def read_messages(self):
         # Read even from myself so that the dealer
         # sees his own VAL message, no one will ever send to themselves (except dealer)
         # so it's okay
-        #for p in self.except_me():
         # If i'm the dealer, i know in round 2 i have to send ECHO messages
         # to the other parties, so I call input_val in clock_round = 2 to 
         # simulate a VAL message to myself
@@ -156,28 +159,22 @@ class Bracha_Protocol(object):
 
         # If RoundOK has been sent, then wait until we have a new round
         if self.roundok:
-            #print('\033[1m [{}] RoundOK already sent\033[0m'.format(self.pid))
             self.p2f.write( ((self.sid,'F_clock'),('RequestRound',)) )
             fro,di = self.wait_for(self.f2p)
             if di == 0:     # this means the round has ended
-                #print('\033[1m ({}) new round {} \033[0m'.format(self.pid,self.clock_round+1))
                 self.clock_round += 1
                 self.read_messages()    # reads messagesna dn queues the messages to be sent
-                #print('Done with round')
                 self.roundok = False
             else: 
-                #print('\033[1m [{}] early\033[0m'.format(self.pid))
                 self.p2z.write( ('early',) )
                 return #TODO change to check
 
         if len(self.todo) > 0:
-            #print('[{}] Still todo'.format(self.pid))
             # pop off todo and do it
             f,args = self.todo.pop(0)
             if f: f(*args)
             else: dump.dump()
         elif len(self.todo) == 0 and not self.broadcastcomplete:      
-            #print('[{}] RoundOK'.format(self.pid))
             self.p2f.write( ((self.sid,'F_clock'),('RoundOK',)) )
             self.roundok = True
         else: dump.dump()
@@ -197,36 +194,20 @@ class Bracha_Protocol(object):
         self.todo = self.newtodo
         dump.dump()
 
-    def input_msg(self, sender, msg):
-        sid,pid = sender
+    def input_msg(self, msg):
         if msg[0] == 'input' and self.leader:
             self.input_input(msg[1])
         elif msg[0] == 'output':
             self.check_round_ok()
         else: dump.dump()
 
-    def run(self):
-        while True:
-            ready = gevent.wait(
-                objects=[self.a2p, self.z2p, self.f2p],
-                count=1
-            )
-            assert len(ready) == 1
-            r = ready[0]
-            if self.roundok and self.startsync:
-                self.p2f.write( ((self.sid,'F_clock'),('RequestRound',)) )
-                fro,di = self.wait_for(self.f2p)
-                if di == 1: raise Exception('Start synchronization not done')
-                self.roundok = False
-                self.startsync = False
-                 
-            if r == self.z2p:
-                msg = r.read()
-                #print('\n\t \033[1m message to prot_bracha={}, msg={}\033[0m'.format(self.pid, msg))
-                self.z2p.reset()
-                self.input_msg((-1,-1),msg)
-            else: dump.dump()
-
+    def start_sync(self):
+        if self.roundok and self.startsync:
+            self.p2f.write( ((self.sid,'F_clock'),('RequestRound',)) )
+            fro,di = self.wait_for(self.f2p)
+            if di == 1: raise Exception('Start synchronization not done')
+            self.roundok = False
+            self.startsync = False
 
 #import dump
 from itertools import combinations,permutations

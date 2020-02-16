@@ -68,6 +68,32 @@ class ITMFunctionality2(object):
                 self.F.input_msg((_sid,_tag), msg)
             else: print('eLsE dUmPiNg LiKe A rEtArD'); dump.dump()
 
+class ITMSyncProtocol(object):
+    def __init__(self, sid, channels, handlers):
+        self.channels = channels
+        self.handlers = handlers
+        self.sid = sid
+
+    def start_sync(self):
+        if self.roundok and self.startsync:
+            self.p2f.write( ((self.sid, 'F_clock'),('RequestRound',)) )
+            fro,di = self.wait_for(self.f2p)
+            if di == 1: raise Exception('Start synchronization not done')
+            self.roundok = False
+            self.startsync = False
+
+    def run(self):
+        while True:
+            ready = gevent.wait(
+                objects=self.channels,
+                count=1
+            )
+            assert len(ready) == 1
+            r = ready[0]
+            self.start_sync()
+            msg = r.read()
+            r.reset()
+            self.handlers[r](msg)
 
 
 class ITMProtocol(object):
