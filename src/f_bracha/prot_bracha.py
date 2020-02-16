@@ -18,26 +18,10 @@ P3 = '\033[93m'
 
 class Bracha_Protocol(ITMSyncProtocol):
     def __init__(self, sid, pid, _p2f, _f2p, _p2a, _a2p, _p2z, _z2p):
-        self.sid = sid
-        self.ssid = self.sid[0]
-        # ignore sid[1] = Rnd
-        self.parties = self.sid[2]
-        self.pid = pid
-        if self.pid == 1: self.leader = True
-        else: self.leader = False
-        self.leaderpid = 11
+        # All protocols do this (below)
         self.p2f = _p2f; self.f2p = _f2p
         self.p2a = _p2a; self.a2p = _a2p
         self.p2z = _p2z; self.z2p = _z2p
-
-        self.clock_round = 1
-        self.roundok = False
-        self.valaccepted = False; self.val = None
-        self.echoreceived = 0
-        self.readyreceived = 0
-        self.todo = [ (lambda: dump.dump(),()) for p in self.parties if p != self.pid ]   # only contains n-1 items (party never sends to itself), so the last round will send RoundOK to F_clock
-        self.startsync = True
-        self.broadcastcomplete = False
         self.channels_to_read = [self.a2p, self.z2p, self.f2p]
         self.handlers = {
             self.a2p: lambda x: dump.dump(),
@@ -45,31 +29,24 @@ class Bracha_Protocol(ITMSyncProtocol):
             self.z2p: self.input_msg
         }
 
-        ITMSyncProtocol.__init__(self, self.sid, self.channels_to_read, self.handlers)
+        ITMSyncProtocol.__init__(self, sid, pid , self.channels_to_read, self.handlers)
+        
+        # specific to the broadcast
+        if self.pid == 1: self.leader = True
+        else: self.leader = False
+        self.leaderpid = 11
+        self.valaccepted = False; self.val = None
+        self.echoreceived = 0
+        self.readyreceived = 0
     
-        # Sent roundok first
-        print('[{}] Sending start synchronization...'.format(self.pid))
-        self.p2f.write( ((self.sid,'F_clock'), ('RoundOK',)) )
-        self.roundok = True
-
-    def wait_for(self, chan):
-        r = gevent.wait(objects=[chan],count=1)
-        r = r[0]
-        fro,msg = r.read()
-        chan.reset()
-        return fro,msg
-
     def except_me(self):
         return [p for p in self.parties if p != self.pid]
 
     def input_val(self, m):
         print('\033[1m\t [{}] VAL with val {}, round {}\033[0m'.format(self.pid, m, self.clock_round)) 
         self.val = m
-        self.todo = []
         for pid in self.except_me():
-            fbdsid = (self.ssid, self.pid, pid, self.clock_round)
-            # Not sending to self, so increment counter now
-            self.todo.append( (self.send_message, (fbdsid, ('send',('ECHO',self.val)))) )
+            self.send_in_o1(pid, ('ECHO',self.val))
         self.valaccepted = True
         self.echoreceived = 1
 
@@ -81,8 +58,7 @@ class Bracha_Protocol(ITMSyncProtocol):
         if self.echoreceived == (ceil(n + (n/3))/2):
             self.todo = []
             for pid in self.except_me():
-                fbdsid = (self.ssid, self.pid, pid, self.clock_round)
-                self.todo.append( (self.send_message, (fbdsid, ('send',('READY',self.val)))) )
+                self.send_in_o1(pid, ('READY',self.val))
             self.readyreceived = 1
 
     def input_ready(self, m):
@@ -95,7 +71,7 @@ class Bracha_Protocol(ITMSyncProtocol):
             self.todo = []
             for _ in self.parties:
                 self.todo.append( (None, None) ) 
-            self.broadcastcomplete = True
+            self.outputset = True
         
     def fetch(self, fbdsid):
         fro = fbdsid[1]
@@ -132,57 +108,6 @@ class Bracha_Protocol(ITMSyncProtocol):
             self.fetch( fbdsid )
 
 
-    # The way it's goint to work:
-    # Regular Party: 
-    #     At the start of every round, read all the incoming messages and
-    #     load the `todo` queue with the messages that need to be sent to
-    #     the other n-1 parties (don'nt need to send to yourself unless
-    #     you're the dealer. You also pop off todo and send the first message
-    #     in the first activation so that the last activation only does 
-    #     RoundOK to F_clock
-    # Dealer:
-    #     On input from the dealer, the dealer needs to send himself the 
-    #     input as well to trigger the sending of ECHO messages. This 
-    #     means that all `n` activations must be used for sending the first
-    #     VAL messages and leaving no activation for the RoundOK. Therefore
-    #     the dealer must do something else to send ECHO messages in the next
-    #     round. Perhaps a hardcoded behavior would be the best where the
-    #     dealer will check in 1st activation of round2 whether a VAL was
-    #     sent. If so initiate the subroutine as if a VAL messages had been
-    #     received.
-    def check_round_ok(self):
-        if self.broadcastcomplete:
-            if len(self.todo) > 0: self.todo.pop(0); dump.dump()
-            else:
-                self.p2z.write( self.val )
-            return
-
-        # If RoundOK has been sent, then wait until we have a new round
-        if self.roundok:
-            self.p2f.write( ((self.sid,'F_clock'),('RequestRound',)) )
-            fro,di = self.wait_for(self.f2p)
-            if di == 0:     # this means the round has ended
-                self.clock_round += 1
-                self.read_messages()    # reads messagesna dn queues the messages to be sent
-                self.roundok = False
-            else: 
-                self.p2z.write( ('early',) )
-                return #TODO change to check
-
-        if len(self.todo) > 0:
-            # pop off todo and do it
-            f,args = self.todo.pop(0)
-            if f: f(*args)
-            else: dump.dump()
-        elif len(self.todo) == 0 and not self.broadcastcomplete:      
-            self.p2f.write( ((self.sid,'F_clock'),('RoundOK',)) )
-            self.roundok = True
-        else: dump.dump()
-
-    def send_input(self, inp, pid):
-        fbdsid = (self.ssid, self.leaderpid, pid)
-        self.p2f.write( ((fbdsid,'F_bd'), ('send',('VAL',inp))) )
-
     def input_input(self, v):
         if self.clock_round != 1: dump.dump(); return
         self.newtodo = []
@@ -197,6 +122,7 @@ class Bracha_Protocol(ITMSyncProtocol):
     def input_msg(self, msg):
         if msg[0] == 'input' and self.leader:
             self.input_input(msg[1])
+        # TODO change this to be automatically handled in base class
         elif msg[0] == 'output':
             self.check_round_ok()
         else: dump.dump()
