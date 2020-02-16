@@ -23,46 +23,16 @@ class SFE_Bracha_Functionality(ITMSyncFunctionality):
             self.p2f: self.input_msg,
             self.z2f: lambda x: dump.dump()
         }
-        
         ITMSyncFunctionality.__init__(self, sid, pid, self.channels, self.handlers)
-        
-    def input_input(self, pid, v):
-        print('\033[1m[F_sfe]\033[0m someone called input with v:', v, pid)
-        if pid != 1: dump.dump(); return  # ignore inputs not by dealer
-        self.x[pid] = v
-        self.f2a.write( ('input',pid, v) )
 
-    def are_all_honest_0(self):
-        for i in self.parties:
-            if i not in self.crupted and self.t[i] != 0:
-                return False
-        return True
-
-    def outputs_set(self):
-        for i in self.y.values():
-            if i is None:
-                return False
-        return True
-
-    def input_output(self, pid):
-        if pid == 1 and isdishonest(self.sid, pid) and self.x[pid] is None:
-            dump.dump(); return
-
-        if self.t[pid] > 0:
-            self.t[pid] = self.t[pid]-1
-            if self.are_all_honest_0() and self.l < self.Rnd:
-                self.l += 1
-                for i in self.t: self.t[i] = len(self.parties)
-            self.f2a.write( ('activated',pid) )
-        elif self.t[pid] == 0 and self.l < self.Rnd:
-            self.f2p.write( (pid, ('early',)) )
-        else:
-            # TODO only check that corrupt inputs have been set
-            if self.x[1] is not None and not self.outputs_set():
-                # TODO functionality needs to sample randomness
-                o = self.x[1]
-                for i in self.y: self.y[i] = o
-            self.f2p.write( (pid, self.y[pid]) )
+        # Bracha only cares about honest dealer's input
+        for p in self.parties:
+            if p != 1:  # skip the dealer
+                self.x[p] = 'bot'
+    
+    # Require to be implemented by base class ITMSyncFunctionality
+    def function(self):
+        return dict( (p,self.x[1]) for p in self.parties)
 
     def input_msg(self, msg):
         sender,msg = msg
