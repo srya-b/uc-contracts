@@ -72,15 +72,9 @@ class Bracha_Protocol(ITMSyncProtocol):
             for _ in self.parties:
                 self.todo.append( (None, None) ) 
             self.outputset = True
-        
-    def fetch(self, fbdsid):
-        fro = fbdsid[1]
-        self.p2f.write( ((fbdsid,'F_bd'), ('fetch',)) )
-        _fro,_msg = self.wait_for(self.f2p)
-        _,msg = _msg
-        if msg is None: return #dump.dump(); return
+
+    def p2p_handler(self, fro, msg):
         tag,m = msg
-      
         # check message type and round and that VAL comes from delaer
         if self.clock_round == 2 and tag == 'VAL' and not self.valaccepted and fro == 1:
             self.input_val(m)
@@ -88,10 +82,7 @@ class Bracha_Protocol(ITMSyncProtocol):
             self.input_echo(m)
         elif self.clock_round == 4 and tag == 'READY':
             self.input_ready(m)
-    
-    def send_message(self, fbdsid, msg):
-        _ssid,_fro,_to,_r = fbdsid
-        self.p2f.write( ((fbdsid,'F_bd'), msg) )
+
 
     def read_messages(self):
         # Read even from myself so that the dealer
