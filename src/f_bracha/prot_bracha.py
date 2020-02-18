@@ -1,6 +1,5 @@
 import dump
 import gevent
-from itm import ITMFunctionality
 from comm import ishonest, isdishonest, isadversary, isf, isparty
 from math import ceil
 from queue import Queue as qqueue
@@ -8,7 +7,7 @@ from utils2 import print, gwrite, z_write, z_crupt
 from hashlib import sha256
 from collections import defaultdict
 from gevent.queue import Queue, Channel
-from itm2 import ITMSyncProtocol
+from itm import ITMSyncProtocol
 
 BOLD = '\033[1m'
 ENDC = '\033[0m'
@@ -120,10 +119,11 @@ class Bracha_Protocol(ITMSyncProtocol):
 
 from itertools import combinations,permutations
 from comm import GenChannel, setAdversary
-from itm2 import FunctionalityWrapper, PartyWrapper, DummyAdversary, ProtocolWrapper2
+from itm import FunctionalityWrapper, PartyWrapper, DummyAdversary, ProtocolWrapper2
 from utils2 import z_inputs, z_ainputs, wait_for, z_get_leaks, waits
-from f_clock import Clock_Functionality
-from f_bd_sec import BD_SEC_Functionality
+from syn_katz.f_clock import Clock_Functionality
+from syn_katz.f_bd_sec import BD_SEC_Functionality
+
 def test_all_honest():
     sid = ('one', 4, (1,2,3))
     f2p,p2f = GenChannel('f2p'),GenChannel('p2f')

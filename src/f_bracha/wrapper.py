@@ -1,6 +1,5 @@
 import dump
 import gevent
-from itm import ITMFunctionality
 from comm import ishonest, isdishonest, isadversary, isf, isparty, GenChannel
 from math import ceil
 from queue import Queue as qqueue

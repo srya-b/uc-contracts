@@ -17,6 +17,12 @@ It will read messages from $p_k$ to $p_i$, perform any local computation, and po
 Similarly, such a structure design must also be present in the real world, where the environment will provide the same $n$ \msf{output} to each itm.
 
 \begin{figure}[!h]
+	\input{figures/f_bracha_high}
+	\label{fig:functionality:broadcast_high}
+	\caption{The ideal functionality for the synchronous Byzantine broadcast protocol from~\cite{bracha}. This functionality abstracts away UC-related details for clarity. This description of the functionality will actually be compiled to the functionality below which is how the program be written to adhere to the UC framework.}
+\end{figure}
+
+\begin{figure}[!h]
 	\input{figures/f_bracha}
 	\label{fig:functionality:broadcast}
 	\caption{Ideal functionality for a byzantine broadcast. The ideal functionality is not specific to any potential real world protocol, but captures the guarantees of the broadcast. Additionally, the functionality is identical to the SFE functionality except for assumptions made for the application at hand.}

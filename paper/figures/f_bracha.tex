@@ -66,11 +66,11 @@ Intialize $x_\dealer := \bot, \ell := 1, \forall p_i : t_i = |\mathcal{P}|$
 	
 	\qquad \If ($p_i = \dealer$) and ($x_\dealer$ not set): ignore 
 
-	\qquad \Else \If $(t_i > 1)$: Set $t_i := t_i - 1$
+	\qquad \Else \If $(t_i > 0)$: Set $t_i := t_i - 1$
 
 		\qquad \quad \If $(\forall p_i \in \mathcal{H})$: Set $\ell := \ell + 1$
 
-	\qquad \Else \If $(t_i = 1)$ and $(\ell < Rnd)$: \Send (early) $\rightarrow p_i$
+	\qquad \Else \If $(t_i = 0)$ and $(\ell < Rnd)$: \Send (early) $\rightarrow p_i$
 
 	\qquad \Else \If $(y_1,...,y_n)$ not set:
 

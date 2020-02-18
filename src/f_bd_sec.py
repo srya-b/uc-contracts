@@ -1,6 +1,5 @@
 import dump
 import gevent
-from itm import ITMFunctionality
 from comm import ishonest, isdishonest, isadversary, setFunctionality
 from utils2 import gwrite, print
 from queue import Queue as qqueue
@@ -94,7 +93,7 @@ class BD_SEC_Functionality(object):
 
 import dump
 from comm import GenChannel, setAdversary
-from itm2 import FunctionalityWrapper, PartyWrapper, DummyAdversary
+from itm import FunctionalityWrapper, PartyWrapper, DummyAdversary
 from utils2 import z_inputs, z_ainputs, wait_for
 
 def test():

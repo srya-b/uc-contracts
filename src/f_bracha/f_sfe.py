@@ -1,7 +1,6 @@
 import dump
 import gevent
-from itm import ITMFunctionality
-from itm2 import ITMSyncFunctionality
+from itm import ITMSyncFunctionality
 from comm import ishonest, isdishonest, isadversary, isf, isparty
 from math import ceil
 from queue import Queue as qqueue
@@ -53,7 +52,7 @@ class SFE_Bracha_Functionality(ITMSyncFunctionality):
         else: dump.dump()
 
 from comm import GenChannel, setAdversary
-from itm2 import FunctionalityWrapper, PartyWrapper, DummyAdversary, ProtocolWrapper2
+from itm import FunctionalityWrapper, PartyWrapper, DummyAdversary, ProtocolWrapper2
 from utils2 import z_inputs, z_ainputs, wait_for
 from f_clock import Clock_Functionality
 from f_bd_sec import BD_SEC_Functionality
