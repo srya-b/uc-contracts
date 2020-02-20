@@ -4,7 +4,7 @@ from itm import ITMSyncFunctionality
 from comm import ishonest, isdishonest, isadversary, isf, isparty
 from math import ceil
 from queue import Queue as qqueue
-from utils2 import print, gwrite, z_write, z_crupt
+from utils import print, gwrite, z_write, z_crupt
 from hashlib import sha256
 from collections import defaultdict
 from gevent.queue import Queue, Channel
@@ -51,11 +51,12 @@ class SFE_Bracha_Functionality(ITMSyncFunctionality):
             self.adv_corrupt(msg[1])
         else: dump.dump()
 
-from comm import GenChannel, setAdversary
-from itm import FunctionalityWrapper, PartyWrapper, DummyAdversary, ProtocolWrapper2
-from utils2 import z_inputs, z_ainputs, wait_for
-from f_clock import Clock_Functionality
-from f_bd_sec import BD_SEC_Functionality
+from comm import setAdversary
+from itm import FunctionalityWrapper, PartyWrapper, ProtocolWrapper, GenChannel
+from syn_katz import KatzDummyAdversary, Clock_Functionality, BD_SEC_Functionality
+from utils import z_inputs, z_ainputs, wait_for
+#from f_clock import Clock_Functionality
+#from f_bd_sec import BD_SEC_Functionality
 from prot_bracha import Bracha_Protocol
 class BrachaSimulator(object):
     def __init__(self, sid, pid, z2a, a2z, p2a, a2p, a2f, f2a):
@@ -85,11 +86,11 @@ class BrachaSimulator(object):
         f.newcls('F_bd', BD_SEC_Functionality)
 
         # spawn dummy adversary
-        advitm = DummyAdversary(self.sid, -1, self._z2a,self._a2z, self._p2a,self._a2p, self._a2f,self._f2a)
+        advitm = KatzDummyAdversary(self.sid, -1, self._z2a,self._a2z, self._p2a,self._a2p, self._a2f,self._f2a)
         gevent.spawn(advitm.run)
 
         # spawn parties from sid information on parties
-        p = ProtocolWrapper2(self.sid, self._z2p,self._p2z, self._f2p,self._p2f, self._a2p,self._p2a, Bracha_Protocol)
+        p = ProtocolWrapper(self.sid, self._z2p,self._p2z, self._f2p,self._p2f, self._a2p,self._p2a, Bracha_Protocol)
         gevent.spawn(p.run)
         for x in self.parties:
             p.spawn(x); wait_for(self._a2z)

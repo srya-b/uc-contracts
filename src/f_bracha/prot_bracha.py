@@ -3,7 +3,7 @@ import gevent
 from comm import ishonest, isdishonest, isadversary, isf, isparty
 from math import ceil
 from queue import Queue as qqueue
-from utils2 import print, gwrite, z_write, z_crupt
+from utils import print, gwrite, z_write, z_crupt
 from hashlib import sha256
 from collections import defaultdict
 from gevent.queue import Queue, Channel
@@ -118,11 +118,10 @@ class Bracha_Protocol(ITMSyncProtocol):
         else: dump.dump()
 
 from itertools import combinations,permutations
-from comm import GenChannel, setAdversary
-from itm import FunctionalityWrapper, PartyWrapper, DummyAdversary, ProtocolWrapper2
-from utils2 import z_inputs, z_ainputs, wait_for, z_get_leaks, waits
-from syn_katz.f_clock import Clock_Functionality
-from syn_katz.f_bd_sec import BD_SEC_Functionality
+from comm import setAdversary
+from itm import FunctionalityWrapper, PartyWrapper, ProtocolWrapper, GenChannel
+from utils import z_inputs, z_ainputs, wait_for, z_get_leaks, waits
+from syn_katz import Clock_Functionality, BD_SEC_Functionality, KatzDummyAdversary
 
 def test_all_honest():
     sid = ('one', 4, (1,2,3))
@@ -138,11 +137,11 @@ def test_all_honest():
     f.newcls('F_clock', Clock_Functionality)
     f.newcls('F_bd', BD_SEC_Functionality)
 
-    advitm = DummyAdversary('adv',-1, z2a,a2z, p2a,a2p, a2f,f2a)
+    advitm = KatzDummyAdversary('adv',-1, z2a,a2z, p2a,a2p, a2f,f2a)
     setAdversary(advitm)
     gevent.spawn(advitm.run)
 
-    p = ProtocolWrapper2(sid, z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
+    p = ProtocolWrapper(sid, z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
     gevent.spawn(p.run)
 
     # Start synchronization requires roundOK first to determine honest parties
@@ -231,11 +230,11 @@ def test_crupt_dealer_no_accept():
     f.newcls('F_clock', Clock_Functionality)
     f.newcls('F_bd', BD_SEC_Functionality)
 
-    advitm = DummyAdversary('adv',-1, z2a,a2z, p2a,a2p, a2f,f2a)
+    advitm = KatzDummyAdversary('adv',-1, z2a,a2z, p2a,a2p, a2f,f2a)
     setAdversary(advitm)
     gevent.spawn(advitm.run)
 
-    p = ProtocolWrapper2(sid, z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
+    p = ProtocolWrapper(sid, z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
     gevent.spawn(p.run)
    
     # Start synchronization requires roundOK first to determine honest parties
@@ -313,11 +312,11 @@ def test_crupt_dealer_1_accept_1_not():
     f.newcls('F_clock', Clock_Functionality)
     f.newcls('F_bd', BD_SEC_Functionality)
 
-    advitm = DummyAdversary('adv',-1, z2a,a2z, p2a,a2p, a2f,f2a)
+    advitm = KatzDummyAdversary('adv',-1, z2a,a2z, p2a,a2p, a2f,f2a)
     setAdversary(advitm)
     gevent.spawn(advitm.run)
 
-    p = ProtocolWrapper2(sid, z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
+    p = ProtocolWrapper(sid, z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
     gevent.spawn(p.run)
    
     # Start synchronization requires roundOK first to determine honest parties
@@ -387,11 +386,11 @@ def test_one_crupt_party():
     f.newcls('F_clock', Clock_Functionality)
     f.newcls('F_bd', BD_SEC_Functionality)
 
-    advitm = DummyAdversary(sid,-1, z2a,a2z, p2a,a2p, a2f,f2a)
+    advitm = KatzDummyAdversary(sid,-1, z2a,a2z, p2a,a2p, a2f,f2a)
     setAdversary(advitm)
     gevent.spawn(advitm.run)
 
-    p = ProtocolWrapper2(sid, z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
+    p = ProtocolWrapper(sid, z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
     gevent.spawn(p.run)
     
     #z2a.write( ('A2F', ('corrupt',4)) )

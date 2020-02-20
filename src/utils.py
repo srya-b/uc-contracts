@@ -33,7 +33,6 @@ def gwrite(color, fro, to, msg):
     print(u'\033[{}{:>20}\033[0m -----> {}, msg={}'.format(color, fro, str(to), msg))
 
 def _write(to, msg):
-#    print('\033[94m{:>20}\033[0m -----> {}, msg={}'.format('Environment', str(comm.getitm(*to)), msg))
     gwrite(u'94m', 'Environment', comm.getitm(*to), msg)
 
 try:
@@ -50,30 +49,11 @@ def contracts_same(contract1, contract2):
 
     return inspect.getsource(type1).split(':',1)[1] == inspect.getsource(type2).split(':',1)[1]
 
-#def z_mine_blocks(n, itm, ledger):
-def z_mine_blocks(n, z2p, receiver):
-    #sender = (itm.sid, itm.pid)
+def z_mine_blocks(z2p, p2z, sid, pid, n):
     for i in range(n):
-        #itm.input.set( ('tick', sender) )
-        #ledger.input.set((
-        #    sender,
-        #    True,
-        #    ('tick', sender)
-        #))
-        msg = ('tick', receiver)
-        _write(z2p.to, msg)
-        z2p.write( msg )
-        #itm.input.set( msg )
-        dump.dump_wait()
-
-#def z_mine_block_perm(perm, itm, ledger):
-#    sender = (itm.sid,itm.pid)
-#    ledger.backdoor.set((
-#        sender,
-#        True,
-#        (True, ('tick', perm))
-#    ))
-#    dump.dump_wait()
+        z2p.write(( 1, ((69,'G_ledger'), ('tick', (sid,pid)))) )
+        resp = wait_for(p2z)
+        return resp
 
 def z_tx_leak(msg):
     _,leaks = msg
@@ -89,38 +69,33 @@ def z_tx_leaks(msg):
         fro,nonce = fro
         yield fro,nonce
 
-#def z_delay_tx(adv, fro, nonce, rounds):
-def z_delay_tx(z2a, fro, nonce, rounds):
-    #adv.input.set( ('delay-tx', fro, nonce, rounds) )
-    z2a.write( ('delay-tx', fro, nonce, rounds) )
-    dump.dump_wait()
+def z_delay_tx(z2a, a2z, fro, nonce, rounds):
+    z2a.write( ('A2F', ('delay-tx', fro, nonce, rounds)) )
+    resp = wait_for(a2z)
+    return resp
 
-#def z_get_leaks(itm, ledger):
-def z_get_leaks(z2a, ledger):
-    #sender = (itm.sid, itm.pid)
-    msg = ('get-leaks', (ledger.sid, ledger.pid))
-    _write(z2a.to, msg)
-    #itm.input.set( msg  )
+#def z_get_leaks(z2a, a2z, t, fro):
+#    msg = (t, ('get-leaks', fro))
+#    z2a.write( msg )
+#    resp = wait_for(a2z)
+#    return resp
+
+def z_get_leaks(z2a, a2z, t, fro):
+    msg = (t, (fro, ('get-leaks',)))
     z2a.write( msg )
-    #return ledger.subroutine_call((
-    #    sender,
-    #    True,
-    #    ('get-leaks',)
-    #))
-    dump.dump_wait()
+    resp = wait_for(a2z)
+    return resp
 
-#def z_set_delays(itm, ledger, delays):
-def z_set_delays(z2a, itm, ledger, delays):
-    #z_get_leaks(itm,ledger)
-    z_get_leaks(z2a, ledger)
-    leaks = itm.leakbuffer.pop(0)
-    
-    for i,(delay,leak) in enumerate(zip(delays,z_tx_leaks(leaks))):
-        fro,nonce = leak
-        #z_delay_tx(itm, fro, nonce, delay)
-        z_delay_tx(z2a, fro, nonce, delay)
-        #print('(from,nonce)=({},{}), delay={}'.format(fro,nonce,delay))
-    #print('delays={}, leaks={}, iterations={}'.format(len(delays), len(leaks), i+1))
+def z_set_delays(z2a, a2z, delays):
+    fro,leaks = z_get_leaks(z2a, a2z, 'A2F', (69,'G_ledger'))
+    print('\n\t LEAKS:', leaks, '\n')
+
+    for leak in leaks:
+        itm,msg = leak
+        (fro,nonce),tx = msg
+        #print('\n\tleak:', fro,nonce , '\n')
+        resp = z_delay_tx(z2a, a2z, fro, nonce, 0)
+        #print('\n\tDelay Resp:', resp, '\n')
 
 def z_mine_block_perm(perm, itm):
     msg = ('tick', perm)
@@ -128,21 +103,35 @@ def z_mine_block_perm(perm, itm):
     itm.input.set(msg)
     dump.dump_wait()
 
+def wait_for(_2_):
+    try:
+        r = gevent.wait(objects=[_2_],count=1)
+        r = r[0]
+        _2_.reset()
+        return r.read()
+    except gevent.exceptions.LoopExit:
+        dump.dump_wait()
+#        print('DOESNT RETURN ANYTHING\n\n')
+        return None
 
-#def z_send_money(v, to, itm, ledger):
-def z_send_money(v, to, z2p):
-    #sender = (itm.sid, itm.pid)
+def waits(c1, c2):
+    try:
+        r = gevent.wait(objects=[c1,c2],count=1)
+        r = r[0]
+        if r == c1: c1.reset()
+        if r == c2: c2.reset()
+        return r.read()
+    except gevent.exceptions.LoopExit:
+        dump.dump_wait()
+        print('DOESNT RETURN ANYTHING\n\n')
+        return None
     
-    #ledger.input.set((
-    #    sender,
-    #    True,
-    #    ('transfer', (to.sid,to.pid), v, (), 'does not matter')
-    #))
-    msg = ('transfer', (to.sid, to.pid), v, (), 'does not matter')
-    _write(z2p.to,msg)
-    #itm.input.set( msg )
-    z2p.write( msg )
-    dump.dump_wait()
+def z_send_money(_z2p, _p2z, sid, pid, v, to):
+    msg = ('transfer', (sid, to), v, (), 'does not matter')
+    _z2p.write( (pid, ((69,'G_ledger'), msg)) )
+    resp = wait_for(_p2z)
+    #print('SEND MONEY response', resp)
+    return resp
 
 def z_send_tx(val, to, data, itm, ledger):
     msg = ('transfer', (to.sid,ro.pid), val, data, 'doest matter')
@@ -162,20 +151,15 @@ def z_genym(sender, itm):
     addr = itm.subroutine_call((sender, True, ('genym',)))
     return addr
 
-#def z_deploy_contract(itm, adv, ledger, contract, *args):
-def z_deploy_contract(z2sp, z2a, itm, adv, ledger, contract, *args):
-    caddr = itm.subroutine_call( ((-1,-1), True, ('get-caddress',)) )
+def z_deploy_contract(z2p, p2z, z2a, a2z, fro, contract, *args):
+    msg = ((69, 'G_ledger'), ('get-caddress',))
+    caddr = z_inputs( msg, z2p, p2z, fro[1])
+    #print('\n\t\t\033[1mGot caddr\033[0m', caddr[0][1][1])
     
-    #itm.input.set(
-    #    ('contract-create', caddr, 0, (contract,args), False, 'bad')
-    #)
-    z2sp.write(
-        ('contract-create', caddr, 0, (contract,args), False, 'bad')
-    )
-    dump.dump_wait()
-    z_set_delays(z2a, adv, ledger, [0])
-    #z_mine_blocks(1, itm, ledger)
-    z_mine_blocks(1, z2sp, z2sp.to)
+    msg = ((69,'G_ledger'),('contract-create', caddr[0][1][1], 0, (contract,args), False, 'bad'))
+    resp = z_inputs( msg, z2p, p2z, fro[1]) 
+    z_set_delays(z2a, a2z, [0])
+    z_mine_blocks(z2p, p2z, fro[0], fro[1], 1) 
     return caddr
 
 #def z_ping(itm):
@@ -188,10 +172,8 @@ def z_mint(itm, adv, ledger, *to):
         z_send_money(10, t, itm, ledger)
     z_set_delays(adv, ledger, [0 for _ in range(len(to))])
 
-#def z_prot_input(itm, msg):
 def z_prot_input(z2p, msg):
     _write(z2p.to, msg)
-    #itm.input.set( (itm.sender, True, msg) )
     z2p.write( msg )
     dump.dump_wait()
 
@@ -199,33 +181,40 @@ def z_instant_input(z2p, msg):
     z_prot_input(z2p, msg)
 
 def z_tx_inputs(z2a, adv, ledger, msg, z2sp, *z2ps):
-    #for itm in itms:
     for z2p in z2ps:
-        #z_instant_input(itm, msg)
         z_instant_input(z2p, msg)
-    #z_set_delays(adv, ledger, [0 for _ in itms])
     z_set_delays(z2a, adv, ledger, [0 for _ in z2ps])
-    #z_mine_blocks(1, simparty, ledger)
     z_mine_blocks(1, z2sp, z2sp.to) 
 
-def z_inputs(msg, *z2ps):
-    #for itm in itms:
-    for z2p in z2ps:
-        z_instant_input(z2p, msg)
+def z_ainputs(msg, z2a, a2z):
+    z2a.write( msg )
+    #resp = wait_for(a2z)
+    #return resp
 
-def z_mint_mine(z2p, z2a, adv, ledger, *to):
+def z_inputs(msg, z2p, p2z, *pids):
+    ret = []
+    for pid in pids:
+        z2p.write( (pid, msg) )
+        resp = wait_for(p2z)
+        ret.append(resp)
+    return ret
+
+def z_a2p2f(pid, msg, z2a, a2z):
+    z_ainputs( ('A2P', (pid,  msg) ), z2a, a2z )
+
+def z_a2p(pid, msg, z2a, a2z):
+    z_ainputs( ('A2P', (pid, ('P', msg))) , z2a, a2z )
+
+def z_mint_mine(z2p, p2z, z2a, a2z, sid, pid, *to):
     for t in to:
-        #z_send_money(10, t, itm, ledger)
-        z_send_money(10, t, z2p)
-    #z_set_delays(adv, ledger, [0 for _ in range(len(to))])
-    z_set_delays(z2a, adv, ledger, [0 for _ in range(len(to))]) 
-    #z_mine_blocks(1, itm, ledger)
-    z_mine_blocks(1, z2p, z2p.to)
+        resp = z_send_money(z2p, p2z, sid, pid, 10, t)
+    z_set_delays(z2a, a2z, [0 for _ in range(len(to))])
+    resp = z_mine_blocks(z2p, p2z, sid, pid, pid)
+    print('MINE resp', resp)
 
 def z_start_ledger(sid, pid, cledger, cwrapperitm, a2f, f2f, p2f):
     g_ledger = cledger(sid,pid)
     protected, ledger_itm = cwrapperitm(sid,pid,g_ledger, a2f, f2f, p2f)
-    #gevent.spawn(ledger_itm.run)
     comm.setFunctionality(ledger_itm)
     return g_ledger, protected, ledger_itm
 
@@ -234,10 +223,11 @@ def z_start_clock(sid, pid, cclock, citm, a2f, f2f, p2f):
     comm.setFunctionality(clock_itm)
     return g_clock, clock_itm
 
+def z_crupt(sid, pid):
+    comm.corrupt(sid,pid)
+
 def z_ideal_parties(sid,pids,itm,f, a2ps, p2fs, z2ps):
     iparties = f(sid,pids,itm, a2ps, p2fs, z2ps)
-    #for party in iparties:
-    #    gevent.spawn(party.run)
     return iparties
 
 def z_real_parties(sid,pids,citm,protocol,functionality,G,C, a2ps, p2fs, p2gs, z2ps):
@@ -257,3 +247,21 @@ def z_sim_party(sid,pid,citm,itm, a2p, p2f, z2p):
     comm.setParty(simparty)
     return simparty
 
+
+def execUC(psid, nump, cpwrapper, pargs, cfwrapper, adv):
+    _a2z = GenChannel('a2z')
+    _z2a = GenChannel('z2a')
+    _z2p = GenChannel('z2p')
+    _p2z = GenChannel('p2z')
+    _f2p = GenChannel('f2p')
+    _p2f = GenChannel('p2f')
+    _a2p = GenChannel('a2p')
+    _p2a = GenChannel('p2a')
+    _a2f = GenChannel('a2f')
+    _f2a = GenChannel('f2a')
+    _z2f = GenChannel('z2f')
+    _f2z = GenChannel('f2z')
+
+    
+
+    

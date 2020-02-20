@@ -1,13 +1,65 @@
 import os
 import sys
 from gevent.queue import Queue, Channel, Empty
-from gevent.event import AsyncResult
+from gevent.event import AsyncResult, Event
 import dump
 import gevent
 import comm
 from utils import gwrite, z_write
 
-class ITMFunctionality2(object):
+'''
+There are 2 options with channels:
+    1. The channels are greenlets themselves where they wait for
+        the AsyncResult to be set and then write the result to the
+        input of the 'to' itm. However, the channel itself needs
+        to be the input to the itm, otherwise there's just an extra
+        layer that ads another call to it.
+    2. Calling 'write' on the channel writes to the input tape of the
+        'to' itm. This allows the same interface for the party that's
+        writing, but the recipient can be someone different. If the
+        simulator want to run a sandbox of the adversary, then the 
+        desired construction is that all channels connect to the 
+        simulator and the simulator can control the output messages
+        to the actual intended recipient.
+
+Design Decision:
+    * Instead 'to' and 'fro' will be just identifiers of the form
+        (sid,pid). Having 'to' be the AsyncResult itself means the 
+        code will still be at the mercy of having to spawn itms
+        in a specific order based on the protocol at hand. Which
+        really blows.
+    * Can't be ^ (above) either. If 'to' is the identifier and the
+        itm is got from 'comm' then you're screwed because you have 
+        to fake an identifier and register is in 'comm' for the 
+        simulator to be able to sandbox run the adversary and
+        intercept outputs.
+    * Actually, shit the channel has to be the AsyncResult itself
+        that's the only way. That's the way it was the first time
+        idk how I convinced myself to change it. rip
+'''
+class GenChannel(Event):
+    def __init__(self, i=-1):
+        Event.__init__(self)
+        self._data = None
+        self.i = i
+
+    def write(self,data):
+        if not self.is_set():
+            #print('\033[93m \t\tWriting {} id={}\033[0m'.format(data,self.i))
+            self._data = data; self.set()
+        else: 
+            raise Exception("\033[1mwriting to channel already full with {}. Writing {} in {}\033[0m".format(self._data,data,self.i))
+            dump.dump()
+
+    def read(self): 
+        #print('\033[91m Reading message: {} id={}\033[0m'.format(self._data,self.i)); 
+        return self._data
+    def reset(self, s=''): 
+        #print('\033[1m Resetting id={}, string={}\033[0m'.format(self.i,s)); 
+        self.clear()
+
+
+class ITMFunctionality(object):
 
     def __init__(self, sid, pid, a2f, f2a, z2f, f2z, p2f, f2p, _2f, f2_):
         self.sid = sid
@@ -351,7 +403,7 @@ class ITMProtocol(object):
                 for _r in self.extras: _r.reset()
             else: print('else dumping at itmprotocol'); dump.dump()
 
-class ITMPassthrough2(object):
+class ITMPassthrough(object):
     def __init__(self, sid, pid, a2p, p2a, z2p, p2z, f2p, p2f):
         self.sid = sid
         self.pid = pid
@@ -472,8 +524,6 @@ class ITMSyncCruptProtocol(object):
         self.z2p = z2p; self.p2z = p2z
         self.f2p = f2p; self.p2f = p2f###
         self.a2p = a2p; self.p2a = p2a
-        #self.a2p = a2p; self.p2f = p2f; self.z2p = z2p 
-        #self.p2c = None; self.clock = None
 
         self.input = AsyncResult()
         self.subroutine = AsyncResult()
@@ -584,8 +634,8 @@ class PartyWrapper:
         self.tof = tof  # TODO: for GUC this will be a problems, who to passthrough message to?
 
     def _newPID(self, pid, _2pid, p2_, tag):
-        pp2_ = comm.GenChannel(('write-translate',pid)) 
-        _2pp = comm.GenChannel(('read',pid)) # _ to 
+        pp2_ = GenChannel(('write-translate',pid)) 
+        _2pp = GenChannel(('read',pid)) # _ to 
 
         def _translate():
             while True:
@@ -606,7 +656,7 @@ class PartyWrapper:
         _f2p,_p2f = self._newPID(pid, self.f2pid, self.p2f, 'NA')
         _a2p,_p2a = self._newPID(pid, self.a2pid, self.p2a, 'NA')
         
-        itm = ITMPassthrough2(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f) 
+        itm = ITMPassthrough(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f) 
         setParty(itm)
         gevent.spawn(itm.run)
         # TODO maybe remove later but for start synchronization
@@ -654,7 +704,7 @@ class PartyWrapper:
         print('Its over??')
 
 from collections import defaultdict
-class ProtocolWrapper2:
+class ProtocolWrapper:
     def __init__(self, sid, z2p, p2z, f2p, p2f, a2p, p2a, prot):
         self.sid = sid
         self.z2pid = {}
@@ -664,7 +714,7 @@ class ProtocolWrapper2:
         self.z2p = z2p; self.p2z = p2z;
         self.f2p = f2p; self.p2f = p2f;
         self.a2p = a2p; self.p2a = p2a
-        self.p2_ = comm.GenChannel()
+        self.p2_ = GenChannel()
         self.prot = prot
         self.leaks = defaultdict(list)
 
@@ -680,8 +730,8 @@ class ProtocolWrapper2:
             print('\n\t aint nothing to deliver! \n')
     
     def async(self, pid, _2pid, p2_):
-        pp2_ = comm.GenChannel(('write-async',pid))
-        _2pp = comm.GenChannel(('read-async',pid))
+        pp2_ = GenChannel(('write-async',pid))
+        _2pp = GenChannel(('read-async',pid))
 
         def _translate():
             while True:
@@ -697,8 +747,8 @@ class ProtocolWrapper2:
 
 
     def _newPID(self, sid, pid, _2pid, p2_, tag):
-        pp2_ = comm.GenChannel(('write-translate',pid)) 
-        _2pp = comm.GenChannel(('read',pid)) # _ to 
+        pp2_ = GenChannel(('write-translate',pid)) 
+        _2pp = GenChannel(('read',pid)) # _ to 
 
         def _translate():
             while True:
@@ -745,7 +795,7 @@ class ProtocolWrapper2:
         _f2p,_p2f = self._newPID(self.sid, pid, self.f2pid, self.p2f, 'NA')
         _a2p,_p2a = self._newPID(self.sid, pid, self.a2pid, self.p2a, 'NA')
         
-        itm = ITMPassthrough2(self.sid,pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f)
+        itm = ITMPassthrough(self.sid,pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f)
         setParty(itm)
         gevent.spawn(itm.run)
 
@@ -820,7 +870,7 @@ class FunctionalityWrapper:
         self.p2f = p2f; self.f2p = f2p;
         self.a2f = a2f; self.f2a = f2a;
         self.z2f = z2f; self.f2z = f2z;
-        self.f2_ = comm.GenChannel('f2_')
+        self.f2_ = GenChannel('f2_')
         self.tagtocls = {}
 
 
@@ -829,8 +879,8 @@ class FunctionalityWrapper:
         self.tagtocls[tag] = cls
 
     def _newFID(self, _2fid, f2_, sid, tag):
-        ff2_ = comm.GenChannel(('write-translate',sid,tag))
-        _2ff = comm.GenChannel(('read',sid,tag))
+        ff2_ = GenChannel(('write-translate',sid,tag))
+        _2ff = GenChannel(('read',sid,tag))
 
         def _translate():
             while True:
@@ -845,7 +895,8 @@ class FunctionalityWrapper:
         return (_2ff, ff2_) 
 
 
-    #def newFID(self, sid, tag, params=()):
+    '''Received a message for a functionality that doesn't exist yet
+    create a new functionality and add it to the wrapper'''
     def newFID(self, sid, tag, cls, params=()):
         #print('\033[1m[{}]\033[0m Creating new Functionality with pid: {}'.format('FWrapper', tag))
         _z2f,_f2z = self._newFID(self.z2fid, self.f2z, sid, tag)
@@ -853,58 +904,21 @@ class FunctionalityWrapper:
         _a2f,_f2a = self._newFID(self.a2fid, self.f2a, sid, tag)
         _2f,_f2_ = self._newFID(self.f2fid, self.f2_, sid, tag)
        
-        if tag == 'G_ledger':
-            print('\033[94mG_ledger channel _2f={}, _f2_={}\033[0m'.format(_2f.i, _f2_.i))
-            g_ledger = Ledger_Functionality2(sid, -1, _f2p, _f2a, _f2z, _2f, _f2_)
-            pwrapper = Protected_Wrapper2(g_ledger)
-            ledger_itm = ITMFunctionality2(sid,-1, _a2f, _f2a, _z2f, _f2z, _p2f, _f2p, _2f, _f2_)
-            ledger_itm.init(pwrapper)
-            gevent.spawn(ledger_itm.run) 
-            setFunctionality2(sid,tag)
-        elif tag == 'G_clock':
-            print('\033[94mG_clock channel _2f={}, _f2_={}\033[0m'.format(_2f.i, _f2_.i))
-            c = Clock_Functionality2(sid, -1, _f2p, _f2a, _f2z, _2f, _f2_)
-            c_itm = ITMFunctionality2(sid,-1, _a2f, _f2a, _z2f, _f2z, _p2f, _f2p, _2f, _f2_)
-            c_itm.init(c)
-            gevent.spawn(c_itm.run)
-            setFunctionality2(sid,tag)
-        elif tag == 'F_state':
-            print('\033[94mF_state channel _2f={}, _f2_={}\033[0m'.format(_2f.i, _f2_.i))
-            f = StateChannel_Functionality2(sid, tag, self.f2p, self.f2a, self.f2z, _2f, _f2_, *params)
-            itm = ITMFunctionality2(sid, -1, _a2f, _f2a, _z2f, _f2z, _p2f, _f2p, _2f, _f2_)
-            itm.init(f)
-            gevent.spawn(itm.run)
-            setFunctionality2(sid,tag)
-        elif tag == 'F_bcast':
-            f = Broadcast_Functionality2(sid, tag, _f2p, _f2a, _f2z, _2f, _f2_, *params)
-            itm = ITMFunctionality2(sid, tag, _a2f, _f2a, _z2f, _f2z, _p2f, _f2p, _2f, _f2_)
-            itm.init(f)
-            setFunctionality2(sid,tag)
-            gevent.spawn(itm.run)
-        elif tag == 'F_bd':
-            f = cls(sid, -1, _f2p,_p2f, _f2a,_a2f, _f2z,_z2f)
-            #print('f2p', _f2p, 'p2f', _p2f)
-            #print('f2a', _f2a, 'a2f', _a2f)
-            #print('f2z', _f2z, 'z2f', _z2f)
-            setFunctionality2(sid,tag)
-            gevent.spawn(f.run)
-        elif tag == 'F_clock':
-            f = cls(sid, -1, _f2p,_p2f, _f2a,_a2f, _f2z,_z2f)
-            setFunctionality2(sid,tag)
-            gevent.spawn(f.run)
-        elif tag == 'F_sfe':
-            f = cls(sid, -1, _f2p, _p2f, _f2a, _a2f, _f2z, _z2f)
-            setFunctionality2(sid,tag)
-            gevent.spawn(f.run)
+        f = cls(sid, -1, _f2p, _p2f, _f2a, _a2f, _f2z, _z2f)
+        setFunctionality2(sid,tag)
+        gevent.spawn(f.run)
 
+    '''Get the relevant channel for the functionality with (sid,tag)
+    for example, if call is getFID(self, self.a2fid, sid, tag) this
+    means: get the a2f channel for the functionality.'''
     def getFID(self, _2pid, sid,tag):
-        #return _2pid[sid,tag]
         if (sid,tag) in _2pid: return _2pid[sid,tag]
         else:
             cls = self.tagtocls[tag]
             self.newFID(sid, tag, cls)
             return _2pid[sid,tag]
 
+    '''Basic gevent loop that will run forever'''
     def run(self):
         while True:
             ready = gevent.wait(objects=[self.z2f, self.p2f, self.a2f, self.f2_], count=1)
@@ -915,7 +929,6 @@ class FunctionalityWrapper:
             elif r == self.p2f:
                 ((_sid,_pid), msg) = r.read() 
                 self.p2f.reset()
-                #print('P2F message', msg)
                 ((__sid,_tag), msg) = msg
                 _fid = self.getFID(self.p2fid, __sid, _tag)
                 _fid.write( ((_sid,_pid), msg) )
@@ -923,7 +936,6 @@ class FunctionalityWrapper:
                 msg = r.read()
                 self.a2f.reset()
                 ((sid,tag), msg) = msg
-                # TODO if not corrupt, crash
                 _fid = self.getFID(self.a2fid, sid, tag)
                 _fid.write( msg )
             elif r == self.f2_:
@@ -936,107 +948,6 @@ class FunctionalityWrapper:
                 print('SHEEEit')
                 dump.dump()
 
-class DummyAdversary(object):
-    #def __init__(self, sid, pid, z2a, z2p, a2f, a2g):
-    def __init__(self, sid, pid, z2a, a2z, p2a, a2p, a2f, f2a):
-        self.sid = sid
-        self.pid = pid
-        self.sender = (sid,pid)
-        self.z2a = z2a; self.a2z = a2z
-        self.p2a = p2a; self.a2p = a2p
-        self.f2a = f2a; self.a2f = a2f
-
-        self.input = AsyncResult()
-        self.leak = AsyncResult()
-        self.parties = {}
-        self.leakbuffer = []
-    
-    def __str__(self):
-        return str(self.F)
-
-    def read(self, fro, msg):
-        print(u'{:>20} -----> {}, msg={}'.format(str(fro), str(self), msg))
-
-    def addParty(self, itm):
-        if (itm.sid,itm.pid) not in self.parties:
-            self.parties[itm.sid,itm.pid] = itm
-
-    def addParties(self, itms):
-        for itm in itms:
-            self.addParty(itm)
-
-    def partyInput(self, to, msg):
-        self.F.input_msg(('party-input', to, msg))
-
-    def input_delay_tx(self, fro, nonce, rounds):
-        msg = ('delay-tx', fro, nonce, rounds)
-        self.a2f.write( ((69,'G_ledger'), (False, msg)) )
-        r = gevent.wait(objects=[self.f2a],count=1)
-        r = r[0]
-        msg = r.read()
-        print('response DELAY', msg, '\n')
-        self.a2z.write(msg)
-        self.f2a.reset()
-
-    def input_ping(self, to):
-        self.a2f.write( (to, ('ping',)) )
-
-    def getLeaks(self, fro):
-        if fro[1] == 'G_ledger':
-            print('Write to a2f:', fro, (False, ('get-leaks',)))
-            self.a2f.write( (fro, (False,('get-leaks',))) )
-        else:
-            print('Write to a2f:', fro, ('get-leaks',))
-            self.a2f.write( (fro, ('get-leaks',)) )
-        r = gevent.wait(objects=[self.f2a],count=1)
-        r = r[0]
-        msg = r.read()
-        print('response F', msg)
-        self.a2z.write( msg )
-        self.f2a.reset()
-
-    def input_corrupt(self, pid):
-        self.a2f.write( ((self.sid, 'F_clock'), ('corrupt',pid)) )
-
-    '''
-        Instead of waiting for a party to write to the adversary
-        the adversary checks leak queues of all the parties in 
-        a loop and acts on the first message that is seen. The
-        environment can also tell the adversary to get all of the
-        messages from a particular ITM.
-    '''
-    def run(self):
-        while True:
-            ready = gevent.wait(
-                objects=[self.z2a, self.f2a, self.p2a],
-                count=1
-            )
-            r = ready[0]
-            if r == self.z2a:
-                msg = r.read()
-                self.z2a.reset()
-                if msg[0] == 'A2F':
-                    t,msg = msg
-                    if msg[0] == 'get-leaks':
-                        self.getLeaks(msg[1])
-                    else:
-                        self.a2f.write( msg )
-                elif msg[0] == 'A2P':
-                    t,msg = msg
-                    self.a2p.write( msg )
-                elif msg[0] == 'corrupt':
-                    self.input_corrupt(msg[1])
-            elif r == self.p2a:
-                msg = r.read()
-                self.p2a.reset()
-                print('Go back from party', msg)
-                self.a2z.write( msg )
-            elif r == self.f2a:
-                msg = r.read()
-                self.f2a.reset()
-                self.a2z.write(msg)
-            else:
-                print('else dumping right after leak'); dump.dump()
 
 ####
 ####
@@ -1160,7 +1071,7 @@ class ITMAdversary2(object):
             else:
                 print('else dumping right after leak'); dump.dump()
 
-class ProtocolWrapper:
+class ProtocolWrapperOld:
     def __init__(self, sid, z2p, p2z, f2p, p2f, a2p, p2a, prot):
         self.sid = sid
         self.z2pid = {}
@@ -1170,7 +1081,7 @@ class ProtocolWrapper:
         self.z2p = z2p; self.p2z = p2z;
         self.f2p = f2p; self.p2f = p2f;
         self.a2p = a2p; self.p2a = p2a
-        self.p2_ = comm.GenChannel()
+        self.p2_ = GenChannel()
         self.prot = prot
         self.leaks = defaultdict(list)
 
@@ -1186,8 +1097,8 @@ class ProtocolWrapper:
             print('\n\t aint nothing to deliver! \n')
     
     def async(self, pid, _2pid, p2_):
-        pp2_ = comm.GenChannel(('write-async',pid))
-        _2pp = comm.GenChannel(('read-async',pid))
+        pp2_ = GenChannel(('write-async',pid))
+        _2pp = GenChannel(('read-async',pid))
 
         def _translate():
             while True:
@@ -1204,8 +1115,8 @@ class ProtocolWrapper:
 
 
     def _newPID(self, sid, pid, _2pid, p2_, tag):
-        pp2_ = comm.GenChannel(('write-translate',pid)) 
-        _2pp = comm.GenChannel(('read',pid)) # _ to 
+        pp2_ = GenChannel(('write-translate',pid)) 
+        _2pp = GenChannel(('read',pid)) # _ to 
 
         def _translate():
             while True:
@@ -1238,7 +1149,7 @@ class ProtocolWrapper:
         _a2p,_p2a = self._newPID(self.sid, pid, self.a2pid, self.p2a, 'NA')
         _2p, p2_ = self._newPID(self.sid, pid, self.p2pid, self.p2_, 'NA')
         
-        #itm = ITMPassthrough2(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f) 
+        #itm = ITMPassthrough(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f) 
         p = self.prot(self.sid, pid, _p2f, _f2p, _p2a, _p2z, p2_, _2p, *params)
         itm = ITMProtocol(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f, _2p, p2_)
         itm.init(p)
@@ -1251,7 +1162,7 @@ class ProtocolWrapper:
         _f2p,_p2f = self._newPID(self.sid, pid, self.f2pid, self.p2f, 'NA')
         _a2p,_p2a = self._newPID(self.sid, pid, self.a2pid, self.p2a, 'NA')
         
-        itm = ITMPassthrough2(self.sid,pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f)
+        itm = ITMPassthrough(self.sid,pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f)
         setParty(itm)
         gevent.spawn(itm.run)
 
