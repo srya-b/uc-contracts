@@ -49,4 +49,75 @@ For this ITM we define a funtion `input_msg` that handles messages coming from t
 * `f2p`: In this experiment there are no functionalities that write to this party on their own.
 * `a2p`: This protocol, by it's very existence is honest (corrupt parties in the real world are replaced with a passthrough party) and therefore, will never expect messages from the adversary.
 
-**Note**: this protocol actually inherits from `ITMSyncProtocol` (from `itm.py`) which defines Katz-specific functionality that this protool will use.
+**Note**: this protocol actually inherits from `ITMSyncProtocol` (from `itm.py`) which defines Katz-specific functionality that this protool will use. The only difference is an additional action that happens on `corrupt`.
+
+The handlers above refer to the function `input_msg`. This function is shown below:
+```python
+    def input_msg(self, msg):
+        if msg[0] == 'input' and self.leader:
+            self.input_input(msg[1])
+        elif msg[0] == 'output':
+            self.check_round_ok()
+        else: dump.dump()
+```
+This function jst parses the message and calls the relevant functions. The `check_round_ok` function is a Katz-specific function that is already implemented in the base class. I'd recommend just checking out the paper to understand it better.
+For the purposes of learning to use python-saucy it's not really important to understand the implementation of any of the Katz-specific function. It's sufficient to understand the pieces.
+
+#### Running the real world
+In the same file, `f_bracha/prot_bracha.py`, you'll find a sample environment that runs the real world, `test_all_honest()`.
+The sid is set as follows, because the parties and functionalities in this run will parse that to learn the set of parties.
+```python
+sid = ('one', 4, (1,2,3))
+```
+Next all the channels that will be used are created:
+```python
+    f2p,p2f = GenChannel('f2p'),GenChannel('p2f')
+    f2a,a2f = GenChannel('f2a'),GenChannel('a2f')
+    f2z,z2f = GenChannel('f2z'),GenChannel('z2f')
+    p2a,a2p = GenChannel('p2a'),GenChannel('a2p')
+    p2z,z2p = GenChannel('p2z'),GenChannel('z2p')
+    z2a,a2z = GenChannel('z2a'),GenChannel('a2z')
+```
+
+Next up we initialize the functionalities for this run. Here we use the functionality wrapper that spawns new ITMs on request.
+```python
+    f = FunctionalityWrapper(p2f,f2p, a2f,f2a, z2f,f2z)
+    gevent.spawn(f.run)
+    f.newcls('F_clock', Clock_Functionality)
+    f.newcls('F_bd', BD_SEC_Functionality)
+```
+The channels are passed into the wrapper and the script must tell the wrapper what functionalities are to be included and the class that implements them.
+
+Next we create the dummy adversary. In this case, as we're dealing with the Katz framework, the dummy adversary is modified a little by `KatzDummyAdversary` to also inform the functionality `F_clock` of the corruption.
+```python
+    advitm = KatzDummyAdversary('adv',-1, z2a,a2z, p2a,a2p, a2f,f2a)
+    setAdversary(advitm)
+    gevent.spawn(advitm.run)
+```
+
+Lastly we initialize the wrapper that handles the parties:
+```python
+    p = ProtocolWrapper(sid, z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
+    gevent.spawn(p.run)
+```
+
+The last step in this environment is having to call `spawn` on the different parties that will be used in this round. This does defeat the purpose of the wrapper spawning parties on command, but the Katz framework already defines the set of parties in the `sid` of the functionalities. 
+Additionally, the Katz framework requires a special first action for all of the parties that necessitates having to call `spawn`. 
+```python
+    # Start synchronization requires roundOK first to determine honest parties
+    # giving input to a party before all have done this will result in Exception
+    p.spawn(1); wait_for(a2z)
+    p.spawn(2); wait_for(a2z)
+    p.spawn(3); wait_for(a2z)
+```
+
+In the snippet above, there's a function call `wait_for(a2z)` in here. This function is at the heart of how the UC framework is implemented. 
+Namely, the control function that determines when control comes back to the environment. In python-saucy when and ITM is activates, it can either write to another ITM or dump control back to the environment with `dump.dump()` <-- you'll see that everywhere in the code.
+`wait_for` tries to wait and read on the channel passed in to it. Gevent throws an error when it knows a waiting action will block foever. Therefore, `wait_for` waits for either a write on the channel specified or for some ITM to dump control back to the environment. `wait_for` is necessary after every write the environment makes. **In future iterations of the code base, I'll try to abstract away, but certainly there are times when you want to read on certain channels, as the environment, and assert certain outputs.**
+
+Finally, environment starts passing input into the parties by writing to `z2p`:
+```python
+    ## DEALER INPUT
+    z2p.write( (1, ('input',10)) )
+    wait_for(a2z)
+```
