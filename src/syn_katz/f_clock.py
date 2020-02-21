@@ -26,6 +26,9 @@ class Clock_Functionality(object):
         self.di = dict( (p,0) for p in self.parties)
         self.crupted = set()
         self.leaks = []
+        self.delta = 1
+        self.D = dict( (p,1) for p in self.parties)
+        self.roundD = dict( (p,1) for p in self.parties)
 
     def leak(self, msg):
         self.leaks.append(msg)
@@ -35,19 +38,19 @@ class Clock_Functionality(object):
 
     def input_roundok(self, pid):
         self.di[pid] = 1
-        #if all(self.di[x]==1 for x in self.di):
-        #    for p in self.di: self.di[p] = 0
         if all(self.di[x]==1 for x in self.honest_parties()):
-            #print("Switching")
             for p in self.di: self.di[p] = 0
-        self.leak( ('switch',pid) ) #TODO do we need to return back? see clock todo 1 in bracha
-        if pid in self.crupted:
-            print('\033[91m \n\t[F_clock] di = {} \n\033[0m'.format(self.di))
+            for p in self.D: self.D[p] = 1
+            for p in self.roundD: self.roundD[p] = 1
         self.f2a.write( ('switch',pid) )
 
     def input_requestround(self, pid):
         #print('\033[94m \n\t[F_clock] di = {} \n\033[0m'.format(self.di))
-        self.f2p.write( (pid, self.di[pid]) )
+        if self.di[pid] == 1 or self.D[pid] > 1:
+            self.D[pid] = self.D[pid] - 1
+            self.f2p.write( (pid, 1) )
+        elif self.di[pid] == 0 and self.D[pid] == 1:
+            self.f2p.write( (pid, self.di[pid]) )   
 
     def input_msg(self, sender, msg):
         sid,pid = sender
@@ -67,11 +70,21 @@ class Clock_Functionality(object):
         self.f2a.write( ('leaks', self.leaks) )
         self.leaks = []
     
+    def adv_delay(self, T, pid):
+        if self.roundD[pid]+T <= self.delta:
+            self.D[pid] = self.D[pid] + T
+            self.roundD[pid] = self.roundD[pid] + T
+            self.f2a.write( ('delay-set', pid) )
+        else: # ignore the message
+            dump.dump()
+
     def adversary_msg(self, msg):
         if msg[0] == 'corrupt':
             self.adv_corrupt(msg[1])
         elif msg[0] == 'get-leaks':
             self.adv_get_leaks()
+        elif msg[0] == 'delay':
+            self.adv_delay(msg[1], msg[2])
         else: dump.dump()
     
     def run(self):
