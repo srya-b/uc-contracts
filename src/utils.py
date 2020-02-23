@@ -262,6 +262,12 @@ def execUC(psid, nump, cpwrapper, pargs, cfwrapper, adv):
     _z2f = GenChannel('z2f')
     _f2z = GenChannel('f2z')
 
+class ChannelWrapper:
+    def __init__(self):
+        self.channels = defaultdict(lambda: None)
     
-
+    def setChannel(self, channelName, channel):
+        self.channels[channelName] = channel
     
+    def getChannel(self, channelName):
+        return self.channels[channelName]

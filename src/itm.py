@@ -57,7 +57,108 @@ class GenChannel(Event):
     def reset(self, s=''): 
         #print('\033[1m Resetting id={}, string={}\033[0m'.format(self.i,s)); 
         self.clear()
+        
+class ITM:
+    def __init__(self, sid, pid, channels, handlers):
+        self.sid = sid
+        self.pid = pid
+        self.channels = channels
+        self.handlers = handlers
+        
+    def run(self):
+        while True:
+            ready = gevent.wait(
+                objects=self.channels,
+                count=1
+            )
+            assert len(ready) == 1
+            r = ready[0]
+            msg = r.read()
+            r.reset()
+            self.handlers[r](msg)
 
+    def adv_execute(self, function, args):
+        Exception("adv_execute needs to be defined")
+
+    def leaks(self, msg):
+        Exception("leaks needs to be defined")
+
+class UCProtocol(ITM):
+    def __init__(self, sid, pid, channel_wrapper):
+        self.sid = sid
+        self.pid = pid
+
+        p2z = channel_wrapper.getChannel('p2z')
+        p2f = channel_wrapper.getChannel('p2f')
+        p2a = channel_wrapper.getChannel('p2a')
+        z2p = channel_wrapper.getChannel('z2p')
+        f2p = channel_wrapper.getChannel('f2p')
+        a2p = channel_wrapper.getChannel('a2p')
+        self.channels = [p2z, p2f, p2a, z2p, f2p, a2p]
+        self.handlers = {
+            self.a2p: self.adv_msg,
+            self.f2p: self.func_msg,
+            self.z2p: self.env_msg
+        }
+
+        ITM.__init__(self, self.sid, self.pid, self.channels, self.handlers)
+    
+    def adv_msg(self, msg):
+        Exception("adv_msg needs to be defined")
+
+    def func_msg(self, msg):
+        Exception("func_msg needs to be defined")
+
+    def env_msg(self, msg):
+        Exception("env_msg needs to be defined")
+
+    def adv_execute(self, function, args):
+        dump.dump()
+
+    def leak(self, msg):
+        dump.dump()
+
+class UCFunctionality(ITM):
+    def __init__(self, sid, pid, channel_wrapper):
+        self.sid = sid
+        self.pid = pid
+
+        f2z = channel_wrapper.getChannel('f2z')
+        f2p = channel_wrapper.getChannel('f2p')
+        f2a = channel_wrapper.getChannel('f2a')
+        z2f = channel_wrapper.getChannel('z2f')
+        p2f = channel_wrapper.getChannel('p2f')
+        a2f = channel_wrapper.getChannel('a2f')
+        f2w = channel_wrapper.getChannel('f2w')
+        w2f = channel_wrapper.getChannel('w2f')
+
+        self.channels = [f2z, f2p, f2a, f2w, z2f, p2f, a2f, w2f]
+        self.handlers = {
+            self.a2f: self.adv_msg,
+            self.p2f: self.party_msg,
+            self.z2f: self.env_msg,
+            self.w2f: self.wrapper_return
+        }
+
+        ITM.__init__(self, self.sid, self.pid, self.channels, self.handlers)
+
+    def adv_msg(self, msg):
+        Exception("adv_msg is not defined")
+
+    def party_msg(self, msg):
+        Exception("party_msg is not defined")
+
+    def env_msg(self, msg):
+        Exception("env_msg is not defined")
+
+    def set_wrapper(self, wrapper):
+        self.wrapper = wrapper
+
+    def adv_execute(self, func, args):
+        pass #self.wrapper is sent an adv_execute msg
+
+    def leak(self, msg):
+        pass #self.wrapper is sent a leak msg
 
 class ITMFunctionality(object):
 
@@ -69,7 +170,7 @@ class ITMFunctionality(object):
         self.z2f = z2f; self.f2z = f2z
         self.p2f = p2f; self.f2p = f2p
         self._2f = _2f; self.f2_ = f2_
-
+        
         self.input = AsyncResult()
         self.subroutine = AsyncResult()
         self.backdoor = AsyncResult()
@@ -234,7 +335,7 @@ class ITMSyncProtocol(object):
             r.reset()
             self.handlers[r](msg)
 
-
+        
 class ITMSyncFunctionality(object):
     def __init__(self, sid, pid, channels, handlers):
         self.sid = sid; self.pid = pid
