@@ -58,6 +58,36 @@ class GenChannel(Event):
     def reset(self, s=''): 
         #print('\033[1m Resetting id={}, string={}\033[0m'.format(self.i,s)); 
         self.clear()
+        
+class ITM:
+    def __init__(self, sid, pid, channels, handlers):
+        self.sid = sid
+        self.pid = pid
+        self.channels = channels
+        self.handlers = handlers
+        
+    def run(self):
+        while True:
+            ready = gevent.wait(
+                objects=self.channels,
+                count=1
+            )
+            assert len(ready) == 1
+            r = ready[0]
+            msg = r.read()
+            r.reset()
+            self.handlers[r](msg)
+
+    def adv_execute(self, function, args):
+        Exception("adv_execute needs to be defined")
+
+    def leaks(self, msg):
+        Exception("leaks needs to be defined")
+
+class UCProtocol(ITM):
+    def __init__(self, sid, pid, channel_wrapper):
+        self.sid = sid
+        self.pid = pid
 
 class ITM:
     def __init__(self, sid, pid, channels, handlers):
