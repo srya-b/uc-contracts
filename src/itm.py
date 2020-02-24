@@ -60,20 +60,13 @@ class GenChannel(Event):
 
 
 class ITMFunctionality(object):
-
-    def __init__(self, sid, pid, a2f, f2a, z2f, f2z, p2f, f2p, _2f, f2_):
-        self.sid = sid
-        self.pid = pid
+    #def __init__(self, sid, pid, a2f, f2a, z2f, f2z, p2f, f2p, _2f, f2_):
+    def __init__(self, sid, pid, channels, handlers):
+        self.sid = sid; self.pid = pid
         self.sender = (sid,pid)
-        self.a2f = a2f; self.f2a = f2a
-        self.z2f = z2f; self.f2z = f2z
-        self.p2f = p2f; self.f2p = f2p
-        self._2f = _2f; self.f2_ = f2_
+        self.channels = channels
+        self.handlers = handlers
 
-        self.input = AsyncResult()
-        self.subroutine = AsyncResult()
-        self.backdoor = AsyncResult()
-        self.f2c = None; self.clock = None
        
     def __str__(self):
         return str(self.F)
@@ -81,44 +74,84 @@ class ITMFunctionality(object):
     def init(self, functionality):
         self.F = functionality
         self.outputs = self.F.outputs
-
-    def set_clock(self, f2c, clock):
-        self.f2c = f2c; self.clock = clock
-        self.F.set_clock(f2c, clock)
-
-    def subroutine_call(self, inp):
-        sender,reveal,msg = inp
-        return self.F.subroutine_msg(sender if reveal else None, msg)
-
     def run(self):
         while True:
             ready = gevent.wait(
-                objects=[self.p2f, self.a2f, self._2f],
+                objects=self.channels,
                 count=1
             )
             assert len(ready) == 1
             r = ready[0]
-            #if r == self.f2f:
-            #    self.F.input_msg(None if not reveal else sender, msg)
-            #    self.f2f.reset()
-            if r == self.a2f:
-                if self.pid == 'F_state':
-                    self.a2f.reset()
-                    print('Shit'); dump.dump(); continue
-                msg = r.read()
-                self.a2f.reset()
-                self.F.adversary_msg(msg)
-            elif r == self.p2f: 
-                sender,reveal,msg = r.read()    
-                self.p2f.reset()
-                self.F.input_msg(sender, msg)   
-            elif r == self._2f:
-                ((_sid,_tag), msg) = r.read()
-                self._2f.reset()
-                #print('HOLY SHIT GOT THIS MESSAGE', msg) 
-                #self.f2_.write( ((_sid,_tag), 'MASSA COLONEL YOU A BITCH NIGGA') )
-                self.F.input_msg((_sid,_tag), msg)
-            else: print('eLsE dUmPiNg LiKe A rEtArD'); dump.dump()
+            msg = r.read()
+            r.reset()
+            self.handlers[r](msg)
+
+
+
+class ITMSyncFunctionality(object):
+    def __init__(self, sid, pid, channels, handlers):
+        self.sid = sid; self.pid = pid
+        self.ssid = self.sid[0]
+        self.Rnd = self.sid[1]
+        self.parties = self.sid[2]
+
+        self.channels = channels
+        self.handlers = handlers
+
+        self.x = dict( (p,None) for p in self.parties )
+        self.y = dict( (p,None) for p in self.parties )
+        self.t = dict( (p,len(self.parties)) for p in self.parties )
+        self.l = 1
+        self.crupted = set()
+
+    def function(self):
+        raise Exception("ITMSyncFunctinality.function must be defined in the deriving class!")
+
+    def outputs_set(self):
+        for i in self.y.values():
+            if i is None: return False
+        return True
+
+    def are_all_honest_0(self):
+        for i in self.parties:
+            if i not in self.crupted and self.t[i] != 0: return False
+        return True
+
+    def input_input(self, pid, v):
+        # TODO can input be set more than once??
+        self.x[pid] = v
+        self.f2a.write( ('input', pid, v) )
+
+    def input_output(self, pid):
+        #if pid not in self.crupted and self.x[pid] is None:
+        if comm.ishonest(self.sid, pid) and self.x[pid] is None:
+            dump.dump(); return
+
+        if self.t[pid] > 0:
+            self.t[pid] = self.t[pid]-1
+            if self.are_all_honest_0() and self.l < self.Rnd:
+                self.l += 1
+                for i in self.t: self.t[i] = len(self.parties)
+            self.f2a.write( ('activated',pid) )
+        elif self.t[pid] == 0 and self.l < self.Rnd:
+            self.f2p.write( (pid, ('early',)) )
+        else:
+            if self.x[1] is not None and not self.outputs_set():
+                self.y = self.function()
+            self.f2p.write( (pid, self.y[pid]) )
+
+    def run(self):
+        while True:
+            ready = gevent.wait(
+                objects=self.channels,
+                count=1
+            )
+            assert len(ready) == 1
+            r = ready[0]
+            msg = r.read()
+            r.reset()
+            self.handlers[r](msg)
+
 
 class ITMSyncProtocol(object):
     def __init__(self, sid, pid, channels, handlers):
@@ -235,69 +268,6 @@ class ITMSyncProtocol(object):
             self.handlers[r](msg)
 
 
-class ITMSyncFunctionality(object):
-    def __init__(self, sid, pid, channels, handlers):
-        self.sid = sid; self.pid = pid
-        self.ssid = self.sid[0]
-        self.Rnd = self.sid[1]
-        self.parties = self.sid[2]
-
-        self.channels = channels
-        self.handlers = handlers
-
-        self.x = dict( (p,None) for p in self.parties )
-        self.y = dict( (p,None) for p in self.parties )
-        self.t = dict( (p,len(self.parties)) for p in self.parties )
-        self.l = 1
-        self.crupted = set()
-
-    def function(self):
-        raise Exception("ITMSyncFunctinality.function must be defined in the deriving class!")
-
-    def outputs_set(self):
-        for i in self.y.values():
-            if i is None: return False
-        return True
-
-    def are_all_honest_0(self):
-        for i in self.parties:
-            if i not in self.crupted and self.t[i] != 0: return False
-        return True
-
-    def input_input(self, pid, v):
-        # TODO can input be set more than once??
-        self.x[pid] = v
-        self.f2a.write( ('input', pid, v) )
-
-    def input_output(self, pid):
-        #if pid not in self.crupted and self.x[pid] is None:
-        if comm.ishonest(self.sid, pid) and self.x[pid] is None:
-            dump.dump(); return
-
-        if self.t[pid] > 0:
-            self.t[pid] = self.t[pid]-1
-            if self.are_all_honest_0() and self.l < self.Rnd:
-                self.l += 1
-                for i in self.t: self.t[i] = len(self.parties)
-            self.f2a.write( ('activated',pid) )
-        elif self.t[pid] == 0 and self.l < self.Rnd:
-            self.f2p.write( (pid, ('early',)) )
-        else:
-            if self.x[1] is not None and not self.outputs_set():
-                self.y = self.function()
-            self.f2p.write( (pid, self.y[pid]) )
-
-    def run(self):
-        while True:
-            ready = gevent.wait(
-                objects=self.channels,
-                count=1
-            )
-            assert len(ready) == 1
-            r = ready[0]
-            msg = r.read()
-            r.reset()
-            self.handlers[r](msg)
 
 class ITMProtocol(object):
     def __init__(self, sid, pid, a2p, p2a, z2p, p2z, f2p, p2f, _2p, p2_):
