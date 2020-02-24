@@ -88,13 +88,13 @@ class UCProtocol(ITM):
         self.sid = sid
         self.pid = pid
 
-        p2z = channel_wrapper.getChannel('p2z')
-        p2f = channel_wrapper.getChannel('p2f')
-        p2a = channel_wrapper.getChannel('p2a')
-        z2p = channel_wrapper.getChannel('z2p')
-        f2p = channel_wrapper.getChannel('f2p')
-        a2p = channel_wrapper.getChannel('a2p')
-        self.channels = [p2z, p2f, p2a, z2p, f2p, a2p]
+        self.p2z = channel_wrapper.getChannel('p2z')
+        self.p2f = channel_wrapper.getChannel('p2f')
+        self.p2a = channel_wrapper.getChannel('p2a')
+        self.z2p = channel_wrapper.getChannel('z2p')
+        self.f2p = channel_wrapper.getChannel('f2p')
+        self.a2p = channel_wrapper.getChannel('a2p')
+        self.channels = [self.p2z, self.p2f, self.p2a, self.z2p, self.f2p, self.a2p]
         self.handlers = {
             self.a2p: self.adv_msg,
             self.f2p: self.func_msg,
@@ -123,16 +123,16 @@ class UCFunctionality(ITM):
         self.sid = sid
         self.pid = pid
 
-        f2z = channel_wrapper.getChannel('f2z')
-        f2p = channel_wrapper.getChannel('f2p')
-        f2a = channel_wrapper.getChannel('f2a')
-        z2f = channel_wrapper.getChannel('z2f')
-        p2f = channel_wrapper.getChannel('p2f')
-        a2f = channel_wrapper.getChannel('a2f')
-        f2w = channel_wrapper.getChannel('f2w')
-        w2f = channel_wrapper.getChannel('w2f')
+        self.f2z = channel_wrapper.getChannel('f2z')
+        self.f2p = channel_wrapper.getChannel('f2p')
+        self.f2a = channel_wrapper.getChannel('f2a')
+        self.z2f = channel_wrapper.getChannel('z2f')
+        self.p2f = channel_wrapper.getChannel('p2f')
+        self.a2f = channel_wrapper.getChannel('a2f')
+        self.f2w = channel_wrapper.getChannel('f2w')
+        self.w2f = channel_wrapper.getChannel('w2f')
 
-        self.channels = [f2z, f2p, f2a, f2w, z2f, p2f, a2f, w2f]
+        self.channels = [self.f2z, self.f2p, self.f2a, self.f2w, self.z2f, self.p2f, self.a2f, self.w2f]
         self.handlers = {
             self.a2f: self.adv_msg,
             self.p2f: self.party_msg,
@@ -151,8 +151,8 @@ class UCFunctionality(ITM):
     def env_msg(self, msg):
         Exception("env_msg is not defined")
 
-    def set_wrapper(self, wrapper):
-        self.wrapper = wrapper
+    def wrapper_return(self, msg):
+        Exception("wrapper_return is not defined")
 
     def adv_execute(self, func, args):
         pass #self.wrapper is sent an adv_execute msg
@@ -238,7 +238,7 @@ class ITMSyncProtocol(object):
         self.outputset = False
 
         print('[{}] Sending start synchronization...'.format(self.pid))
-        self.p2f.write( ((self.sid,'F_clock'),('RoundOK')) )
+        #self.p2f.write( ((self.sid,'F_clock'),('RoundOK')) )
         self.roundok = True
 
     def wait_for(self, chan):
@@ -830,7 +830,7 @@ class ProtocolWrapper:
         except ValueError:
             print('\n\t aint nothing to deliver! \n')
     
-    def async(self, pid, _2pid, p2_):
+    def async_(self, pid, _2pid, p2_):
         pp2_ = GenChannel(('write-async',pid))
         _2pp = GenChannel(('read-async',pid))
 
@@ -1197,7 +1197,7 @@ class ProtocolWrapperOld:
         except ValueError:
             print('\n\t aint nothing to deliver! \n')
     
-    def async(self, pid, _2pid, p2_):
+    def async_(self, pid, _2pid, p2_):
         pp2_ = GenChannel(('write-async',pid))
         _2pp = GenChannel(('read-async',pid))
 
