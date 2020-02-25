@@ -152,13 +152,13 @@ class UCFunctionality(ITM):
         Exception("env_msg is not defined")
 
     def wrapper_return(self, msg):
-        Exception("wrapper_return is not defined")
+        Exception("wrapper_return is not defined") # TODO: a generic and easy-to-use way to pick backup from wherever a functionality called adv_execute or leak
 
     def adv_execute(self, func, args):
-        pass #self.wrapper is sent an adv_execute msg
+        self.f2w.write(("adv_execute", (func, args)))
 
     def leak(self, msg):
-        pass #self.wrapper is sent a leak msg
+        self.f2w.write(("leak", msg))
 
 class ITMFunctionality(object):
 
