@@ -12,6 +12,7 @@ class BD_SEC_Functionality(object):
     def __init__(self, sid, pid, f2p, p2f, f2a, a2f, f2z, z2f):
         self.sid = sid
         self.ssid, self.sender, self.receiver, self.round = sid
+        #print('\tSender={}, receiver={}'.format(self.sender,self.receiver))
         self.pid = pid
         self.M = None; self.D = 1; self.Dhat = 1
         self.delta = 1
@@ -40,9 +41,9 @@ class BD_SEC_Functionality(object):
 
     def input_msg(self, sender, msg):
         sid,pid = sender
-        if msg[0] == 'send' and pid == self.sender and ishonest(self.sid, self.sender):
+        if msg[0] == 'send' and sender  == self.sender and ishonest(self.sid, self.sender):
             self.input_send(msg[1])
-        elif msg[0] == 'fetch' and pid == self.receiver and ishonest(self.sid, self.receiver):
+        elif msg[0] == 'fetch' and sender == self.receiver and ishonest(self.sid, self.receiver):
             self.input_fetch()
         else: dump.dump()
 

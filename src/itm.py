@@ -45,6 +45,7 @@ class GenChannel(Event):
 
     def write(self,data):
         if not self.is_set():
+            #if self.i == 'f2a':
             #print('\033[93m \t\tWriting {} id={}\033[0m'.format(data,self.i))
             self._data = data; self.set()
         else: 
@@ -58,6 +59,81 @@ class GenChannel(Event):
         #print('\033[1m Resetting id={}, string={}\033[0m'.format(self.i,s)); 
         self.clear()
 
+class ITM:
+    def __init__(self, sid, pid, channels, handlers):
+        self.sid = sid
+        self.pid = pid
+        self.channels = channels
+        self.handlers = handlers
+
+    def run(self):
+        while True:
+            ready = gevent.wait(
+                objects=self.channels,
+                count=1
+            )
+            assert len(ready) == 1
+            r = ready[0]
+            msg = r.read()
+            r.reset()
+            self.handlers[r](msg)
+
+class UCProtocol(ITM):
+    def __init__(self, sid, pid):
+        self.sid = sid
+        self.pid = pid
+
+        self.p2a = GenChannel('p2a'); self.a2p = GenChannel('a2p')
+        self.p2z = GenChannel('p2z'); self.z2p = GenChannel('p2z')
+        self.p2f = GenChannel('p2f'); self.f2p = GenChannel('f2p')
+        self.channels = [self.z2p, self.f2p, self.a2p]
+        self.handlers = {
+            self.z2p : self.env_msg,
+            self.f2p : self.func_msg,
+            self.a2p : self.adv_msg,
+        }
+
+        ITM.__init__(self, self.sid, self.pid, self.channels, self.handlers)
+
+    def adv_msg(self, msg):
+        Exception("adv_msg needs to be defined")
+
+    def func_msg(self, msg):
+        Exception("func_msg needs to be defined")
+
+    def env_msg(self, msg):
+        Exception("env_msg needs to be defined")
+
+    def leak(self, msg):
+        Exception("leak needs to be defined")
+
+class UCFunctionality(ITM):
+    def __init__(self, sid, pid):
+        self.sid = sid
+        self.pid = pid
+
+        self.f2a = GenChannel('f2a'); self.a2f = GenChannel('a2f')
+        self.f2z = GenChannel('f2z'); self.z2f = GenChannel('z2f')
+        self.f2p = GenChannel('f2p'); self.p2f = GenChannel('p2f')
+        self.channels = [self.z2f, self.p2f, self.a2f]
+        self.handlers = {
+            self.z2f : self.env_msg,
+            self.p2f : self.party_msg,
+            self.a2f : self.adv_msg,
+        }
+        ITM.__init__(self, self.sid, self.pid, self.channels, self.handlers)
+
+    def adv_msg(self, msg):
+        Exception("adv_msg needs to be defined")
+
+    def party_msg(self, msg):
+        Exception("func_msg needs to be defined")
+
+    def env_msg(self, msg):
+        Exception("env_msg needs to be defined")
+
+    def leak(self, msg):
+        Exception("leak needs to be defined")
 
 class ITMFunctionality(object):
     #def __init__(self, sid, pid, a2f, f2a, z2f, f2z, p2f, f2p, _2f, f2_):
@@ -164,6 +240,7 @@ class ITMSyncProtocol(object):
         self.clock_round = 1
         self.roundok = False
         # n-1 length todo function to ensure that many future activations
+        print('sid', self.sid, 'parties', self.parties)
         self.todo = [ (lambda: dump.dump(),()) for p in self.parties if p != self.pid]
         self.startsync = True
         # TODO change the name of this because it's not broadcast specific
@@ -196,7 +273,7 @@ class ITMSyncProtocol(object):
         self.p2f.write( ((fbdsid,'F_bd'), msg) )
 
     def send_in_o1(self, pid, msg):
-        fbdsid = (self.ssid, self.pid, pid, self.clock_round)
+        fbdsid = (self.ssid, (self.sid,self.pid), (self.sid,pid), self.clock_round)
         self.todo.append( (self.send_message, (fbdsid, ('send', msg))) )
    
     # The way it's goint to work:
@@ -593,8 +670,7 @@ class ITMSyncCruptProtocol(object):
 
 from comm import setFunctionality2, setParty
 class PartyWrapper:
-    def __init__(self, sid, z2p, p2z, f2p, p2f, a2p, p2a, tof):
-        self.sid = sid
+    def __init__(self, z2p, p2z, f2p, p2f, a2p, p2a, tof):
         self.z2pid = {}
         self.f2pid = {}
         self.a2pid = {}
@@ -603,9 +679,9 @@ class PartyWrapper:
         self.a2p = a2p; self.p2a = p2a
         self.tof = tof  # TODO: for GUC this will be a problems, who to passthrough message to?
 
-    def _newPID(self, pid, _2pid, p2_, tag):
-        pp2_ = GenChannel(('write-translate',pid)) 
-        _2pp = GenChannel(('read',pid)) # _ to 
+    def _newPID(self, sid, pid, _2pid, p2_, tag):
+        pp2_ = GenChannel(('write-translate',sid,pid)) 
+        _2pp = GenChannel(('read',sid,pid)) # _ to 
 
         def _translate():
             while True:
@@ -613,33 +689,35 @@ class PartyWrapper:
                 r = r[0]
                 msg = r.read()
                 pp2_.reset('pp2_ translate reset')
-                p2_.write( ((self.sid,pid), msg) )
+                p2_.write( ((sid,pid), msg) )
         gevent.spawn(_translate)
 
-        _2pid[pid] = _2pp
+        _2pid[sid,pid] = _2pp
         return (_2pp, pp2_) 
 
 
-    def newPID(self, pid):
-        print('[{}] Creating new party with pid: {}'.format(self.sid, pid))
-        _z2p,_p2z = self._newPID(pid, self.z2pid, self.p2z, 'NA')
-        _f2p,_p2f = self._newPID(pid, self.f2pid, self.p2f, 'NA')
-        _a2p,_p2a = self._newPID(pid, self.a2pid, self.p2a, 'NA')
+    def newPID(self, sid, pid):
+        print('[{}] Creating new party with pid: {}'.format(sid, pid))
+        _z2p,_p2z = self._newPID(sid, pid, self.z2pid, self.p2z, 'NA')
+        _f2p,_p2f = self._newPID(sid, pid, self.f2pid, self.p2f, 'NA')
+        _a2p,_p2a = self._newPID(sid, pid, self.a2pid, self.p2a, 'NA')
         
-        itm = ITMPassthrough(self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f) 
+        itm = ITMPassthrough(sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f) 
         setParty(itm)
         gevent.spawn(itm.run)
         # TODO maybe remove later but for start synchronization
         dump.dump()
 
-    def getPID(self, _2pid, pid):
-        if pid in _2pid: return _2pid[pid]
+    def getPID(self, _2pid, sid, pid):
+        #print('Requesting sid={}, pid={}'.format(sid,pid))
+        if (sid,pid) in _2pid: return _2pid[sid,pid]
         else:
-            self.newPID(pid)
-            return _2pid[pid]
+            self.newPID(sid, pid)
+            return _2pid[sid,pid]
 
-    def spawn(self,pid):
-        self.newPID(pid)
+    def spawn(self,sid,pid):
+        print('Spawning sid={}, pid={}'.format(sid,pid))
+        self.newPID(sid,pid)
 
     def run(self):
         while True:
@@ -647,22 +725,23 @@ class PartyWrapper:
             r = ready[0]
             m = r.read() 
             if r == self.z2p:
-                pid,msg = m
+                (sid,pid),msg = m
+         #       print('Z2P message', msg)
                 self.z2p.reset('z2p party reset')
-                if not comm.ishonest(self.sid,pid):
+                if not comm.ishonest(sid,pid):
                     raise Exception
-                _pid = self.getPID(self.z2pid,pid)
+                _pid = self.getPID(self.z2pid,sid,pid)
                 _pid.write( (self.tof, msg) )
             elif r == self.f2p:
                 self.f2p.reset('f2p in party')
                 fro,(to,msg) = m
-                _pid = self.getPID(self.f2pid,pid)
+                _pid = self.getPID(self.f2pid,sid,pid)
                 _pid.write(msg)
             elif r == self.a2p:
                 if comm.ishonest(self.sid,pid):
                     raise Exception
                 self.a2p.reset('a2p in party')
-                _pid = self.getPID(self.a2pid, pid)
+                _pid = self.getPID(self.a2pid, sid, pid)
                 _pid.write( msg )
                 r = gevent.wait(objects=[self.f2p], count=1, timeout=0.1)
                 if r:
@@ -673,8 +752,132 @@ class PartyWrapper:
                 dump.dump()
         print('Its over??')
 
+
 from collections import defaultdict
 class ProtocolWrapper:
+    def __init__(self, z2p, p2z, f2p, p2f, a2p, p2a, prot):
+        self.z2pid = {}
+        self.f2pid = {}
+        self.a2pid = {}
+        self.p2pid = {}
+        self.z2p = z2p; self.p2z = p2z;
+        self.f2p = f2p; self.p2f = p2f;
+        self.a2p = a2p; self.p2a = p2a
+        self.p2_ = GenChannel()
+        self.prot = prot
+        self.leaks = defaultdict(list)
+
+        # eventually_queue[x] = (msg, round, p2_)
+        self.eventually_queue = defaultdict(tuple)
+    
+    def deliver(self, sid, pid, msg):
+        try:
+            m,rnd,c = self.eventually_queue[sid,pid]
+            if msg == m:
+                c.write( m )
+        except ValueError:
+            print('\n\t aint nothing to deliver! \n')
+    
+    def _newPID(self, sid, pid, _2pid, p2_, tag):
+        pp2_ = GenChannel(('write-translate',sid,pid)) 
+        _2pp = GenChannel(('read',sid,pid)) # _ to 
+
+        def _translate():
+            while True:
+                r = gevent.wait(objects=[pp2_],count=1)
+                r = r[0]
+                msg = r.read()
+                pp2_.reset('pp2_ translate reset')
+                #print('\n\t Translating: {} --> {}'.format(msg, ((sid,pid),msg)))
+                #print('\t\t\033[93m {} --> {}, msg={}\033[0m'.format((self.sid,pid), msg[0], msg[1]))
+                self.leaks[sid,pid].append( msg )
+                p2_.write( ((sid,pid), msg) )
+        gevent.spawn(_translate)
+
+        _2pid[sid,pid] = _2pp
+        return (_2pp, pp2_) 
+
+    def newPID(self, sid, pid):
+        print('\033[1m[{}]\033[0m Creating new party with pid: {}'.format('PWrapper', pid))
+        _z2p,_p2z = self._newPID(sid, pid, self.z2pid, self.p2z, 'NA')
+        _f2p,_p2f = self._newPID(sid, pid, self.f2pid, self.p2f, 'NA')
+        _a2p,_p2a = self._newPID(sid, pid, self.a2pid, self.p2a, 'NA')
+        _2p, p2_ = self._newPID(sid, pid, self.p2pid, self.p2_, 'NA')
+        
+        if comm.isdishonest(sid, pid):
+            print('\033[1m[{}]\033[0m Party is corrupt, so ITMSyncCruptProtocol')
+            p = ITMSyncCruptProtocol(sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f)
+        else:
+            p = self.prot(sid, pid, _p2f,_f2p, _p2a,_a2p, _p2z,_z2p)
+        setParty(p)
+        gevent.spawn(p.run)
+
+    def newPassthroughPID(self, sid, pid, params=()):
+        print('[{}] Creating simulated passthrough party with pid: {}'.format(sid,pid))
+        _z2p,_p2z = self._newPID(sid, pid, self.z2pid, self.p2z, 'NA')
+        _f2p,_p2f = self._newPID(sid, pid, self.f2pid, self.p2f, 'NA')
+        _a2p,_p2a = self._newPID(sid, pid, self.a2pid, self.p2a, 'NA')
+        
+        itm = ITMPassthrough(sid,pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f)
+        setParty(itm)
+        gevent.spawn(itm.run)
+
+    def getPID(self, _2pid, sid, pid):
+        if (sid,pid) in _2pid: return _2pid[sid,pid]
+        else:
+            self.newPID(sid,pid)
+            return _2pid[sid,pid]
+
+    def spawn(self, sid, pid):
+        self.newPID(sid, pid)
+
+    def run(self):
+        while True:
+            ready = gevent.wait(objects=[self.z2p, self.f2p, self.a2p, self.p2_], count=1)
+            r = ready[0]
+            if r == self.z2p:
+                ((sid,pid), msg) = r.read() 
+                self.z2p.reset('z2p party reset')
+                if not comm.ishonest(sid,pid):
+                    raise Exception
+                # pass onto the functionality
+                _pid = self.getPID(self.z2pid,sid,pid)
+                _pid.write(msg)
+            elif r == self.f2p:
+                m = r.read()
+                (fro,(to,msg)) = m
+                sid,pid = to
+                self.f2p.reset('f2p in party')
+                _pid = self.getPID(self.f2pid, sid, pid)
+                _pid.write( (fro, msg) )
+            elif r == self.a2p:
+                (pid, msg) = r.read() 
+                self.a2p.reset('a2p in party')
+                if msg == 'get-leaks':
+                    r = list(self.leaks[sid,pid])
+                    self.leaks[sid,pid] = []
+                    self.p2a.write( ((sid,pid), r) )
+                else:
+                    if comm.ishonest(sid,pid):
+                        raise Exception
+                    _pid = self.getPID(self.a2pid, sid, pid)
+                    _pid.write( msg )
+            elif r == self.p2_:
+                (fro, msg) = r.read() 
+                self.p2_.reset()
+                _to,_m = msg
+                _s,_p = _to
+                print('[{}] Message for ({}): {}'.format(_s, _p, _m))
+                if comm.ishonest(_s,_p):
+                    _pid = self.getPID(self.p2pid,_s, _p)
+                    _pid.write( (fro, _m)  )
+                else:
+                    self.p2a.write( (fro,_m) )
+            else:
+                dump.dump()
+        print('Its over??')
+
+class ProtocolWrapper2:
     def __init__(self, sid, z2p, p2z, f2p, p2f, a2p, p2a, prot):
         self.sid = sid
         self.z2pid = {}
@@ -830,7 +1033,6 @@ class ProtocolWrapper:
                 dump.dump()
         print('Its over??')
 
-
 class FunctionalityWrapper:
     def __init__(self, p2f, f2p, a2f, f2a, z2f, f2z):
         self.z2fid = {}
@@ -868,12 +1070,12 @@ class FunctionalityWrapper:
     '''Received a message for a functionality that doesn't exist yet
     create a new functionality and add it to the wrapper'''
     def newFID(self, sid, tag, cls, params=()):
-        #print('\033[1m[{}]\033[0m Creating new Functionality with pid: {}'.format('FWrapper', tag))
+        #print('\033[1m[{}]\033[0m Creating new Functionality with sid={}, pid={}'.format('FWrapper',sid, tag))
         _z2f,_f2z = self._newFID(self.z2fid, self.f2z, sid, tag)
         _p2f,_f2p = self._newFID(self.p2fid, self.f2p, sid, tag)
         _a2f,_f2a = self._newFID(self.a2fid, self.f2a, sid, tag)
         _2f,_f2_ = self._newFID(self.f2fid, self.f2_, sid, tag)
-       
+      
         f = cls(sid, -1, _f2p, _p2f, _f2a, _a2f, _f2z, _z2f)
         setFunctionality2(sid,tag)
         gevent.spawn(f.run)

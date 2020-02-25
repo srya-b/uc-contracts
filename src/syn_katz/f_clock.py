@@ -1,6 +1,7 @@
 import dump
 import gevent
 from comm import ishonest, isdishonest, isadversary, setFunctionality
+from itm import UCFunctionality
 from utils import gwrite, print
 from queue import Queue as qqueue
 from hashlib import sha256
@@ -12,8 +13,10 @@ from gevent.queue import Queue, Channel
 # in order to reser all d_j for all parties, i.e. corrupt parties can
 # force clock to advance. Can force some honest parties to move to the
 # next round and some stuck in the previous round.
-class Clock_Functionality(object):
+class Clock_Functionality(UCFunctionality):
     def __init__(self, sid, pid, f2p, p2f, f2a, a2f, f2z, z2f):
+        #UCFunctionality.__init__(self, sid, pid)
+
         self.sid = sid
         # ignore sid[0] == ssid
         # ignore sid[1] == Rnd
@@ -30,8 +33,8 @@ class Clock_Functionality(object):
         self.D = dict( (p,1) for p in self.parties)
         self.roundD = dict( (p,1) for p in self.parties)
 
-    def leak(self, msg):
-        self.leaks.append(msg)
+    #def leak(self, msg):
+    #    self.leaks.append(msg)
         
     def honest_parties(self):
         return [p for p in self.parties if p not in self.crupted]
@@ -48,19 +51,27 @@ class Clock_Functionality(object):
         #print('\033[94m \n\t[F_clock] di = {} \n\033[0m'.format(self.di))
         if self.di[pid] == 1 or self.D[pid] > 1:
             self.D[pid] = self.D[pid] - 1
-            self.f2p.write( (pid, 1) )
+            self.f2p.write( ((self.sid,pid), 1) )
         elif self.di[pid] == 0 and self.D[pid] == 1:
-            self.f2p.write( (pid, self.di[pid]) )   
+            self.f2p.write( ((self.sid,pid), self.di[pid]) )   
 
-    def input_msg(self, sender, msg):
+    #def input_msg(self, sender, msg):
+    def party_msg(self, msg):
+        sender,msg = msg
         sid,pid = sender
+        if sid != self.sid: dump.dump(); return
         if msg[0] == 'RoundOK' and pid in self.parties:
             self.input_roundok(pid)
         elif msg[0] == 'RequestRound' and pid in self.parties:
             self.input_requestround(pid)
         else: dump.dump()
 
-    def adv_corrupt(self, pid):
+    def env_msg(self, msg):
+        dump.dump()
+
+    def adv_corrupt(self, ID):
+        sid,pid = ID
+        print('Corrupting', sid, pid)
         self.crupted.add(pid)        
         print(self.parties)
         self.f2a.write( ('OK',) )
@@ -78,7 +89,8 @@ class Clock_Functionality(object):
         else: # ignore the message
             dump.dump()
 
-    def adversary_msg(self, msg):
+    #def adversary_msg(self, msg):
+    def adv_msg(self, msg):
         if msg[0] == 'corrupt':
             self.adv_corrupt(msg[1])
         elif msg[0] == 'get-leaks':
@@ -86,7 +98,7 @@ class Clock_Functionality(object):
         elif msg[0] == 'delay':
             self.adv_delay(msg[1], msg[2])
         else: dump.dump()
-    
+
     def run(self):
         while True:
             ready = gevent.wait(
@@ -99,12 +111,12 @@ class Clock_Functionality(object):
             if r == self.a2f:
                 msg = r.read()
                 self.a2f.reset()
-                self.adversary_msg(msg)
+                self.adv_msg(msg)
             elif r == self.p2f:
                 msg = r.read()
-                sender,msg = msg
+                #sender,msg = msg
                 self.p2f.reset()
-                self.input_msg(sender,msg)
+                self.party_msg(msg)
             elif r == self.z2f:
                 self.z2f.reset()
                 dump.dump()

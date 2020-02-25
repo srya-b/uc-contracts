@@ -8,4 +8,4 @@ class KatzDummyAdversary(DummyAdversary):
     def input_corrupt(self, pid):
         print('or this one')
         comm.corrupt(self.sid, pid)
-        self.a2f.write( ((self.sid, 'F_clock'), ('corrupt',pid)) )
+        self.a2f.write( ((self.sid, 'F_clock'), ('corrupt',(self.sid,pid))) )

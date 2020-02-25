@@ -74,8 +74,9 @@ class Bracha_Protocol(ITMSyncProtocol):
 
     def p2p_handler(self, fro, msg):
         tag,m = msg
+        sid,pid = fro
         # check message type and round and that VAL comes from delaer
-        if self.clock_round == 2 and tag == 'VAL' and not self.valaccepted and fro == 1:
+        if self.clock_round == 2 and tag == 'VAL' and not self.valaccepted and pid == 1:
             self.input_val(m)
         elif self.clock_round == 3 and tag == 'ECHO':
             self.input_echo(m)
@@ -94,7 +95,7 @@ class Bracha_Protocol(ITMSyncProtocol):
             self.input_val(self.val)
             return
         for p in self.except_me():
-            fbdsid = (self.ssid, p, self.pid, self.clock_round-1)
+            fbdsid = (self.ssid, (self.sid,p), (self.sid,self.pid), self.clock_round-1)
             self.fetch( fbdsid )
 
 
@@ -102,7 +103,7 @@ class Bracha_Protocol(ITMSyncProtocol):
         if self.clock_round != 1: dump.dump(); return
         self.newtodo = []
         for p in self.except_me():
-            fbdsid = (self.ssid, self.pid, p, self.clock_round) 
+            fbdsid = (self.ssid, (self.sid,self.pid), (self.sid,p), self.clock_round) 
             self.newtodo.append( (self.send_message, (fbdsid, ('send', ('VAL',v)))) )
             print('Sending VAL for', self.clock_round)
         self.val = v    # dealer won't deliver to himself, so just set it now
@@ -390,80 +391,81 @@ def test_one_crupt_party():
     setAdversary(advitm)
     gevent.spawn(advitm.run)
 
-    p = ProtocolWrapper(sid, z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
+    p = ProtocolWrapper(z2p,p2z, f2p,p2f, a2p,p2a, Bracha_Protocol)
     gevent.spawn(p.run)
     
     #z2a.write( ('A2F', ('corrupt',4)) )
-    z2a.write( ('corrupt',4) )
+    #z2a.write( ('corrupt',(sid,4)) )
+    z2a.write( ('corrupt', 4) )
     wait_for(a2z)
    
     # Start synchronization requires roundOK first to determine honest parties
     # giving input to a party before all have done this will result in Exception
-    p.spawn(1); wait_for(a2z)
-    p.spawn(2); wait_for(a2z)
-    p.spawn(3); wait_for(a2z)
-    p.spawn(4); wait_for(a2z)
+    p.spawn(sid, 1); wait_for(a2z)
+    p.spawn(sid, 2); wait_for(a2z)
+    p.spawn(sid, 3); wait_for(a2z)
+    p.spawn(sid, 4); wait_for(a2z)
    
     ## DEALER INPUT
-    z2p.write( (1, ('input',10)) )
+    z2p.write( ((sid,1), ('input',10)) )
     wait_for(a2z)
 
     # N=3 ACTIVATIONS FOR ROUND=1     (Dealer sends VAL)
     for i in range(4):
-        z2p.write( (1, ('output',)))
+        z2p.write( ((sid,1), ('output',)))
         wait_for(a2z)
-        z2p.write( (2, ('output',)))
+        z2p.write( ((sid,2), ('output',)))
         wait_for(a2z)
-        z2p.write( (3, ('output',)))
+        z2p.write( ((sid,3), ('output',)))
         wait_for(a2z)
-
-    z2a.write( ('A2P', (4, ( ((sid, 'F_clock'), ('RoundOK',))))) )
-    wait_for(a2z)
-
-    # N=3 ACTIVATIONS FOR ROUND=2   (get VAL, send ECHO)
+#
+#    z2a.write( ('A2P', ((sid,4), ( ((sid, 'F_clock'), ('RoundOK',))))) )
+#    wait_for(a2z)
+#
+#    # N=3 ACTIVATIONS FOR ROUND=2   (get VAL, send ECHO)
     for i in range(4):
-        z2p.write( (1,('output',)) )
+        z2p.write( ((sid,1),('output',)) )
         wait_for(a2z)
-        z2p.write( (2, ('output',)) )
+        z2p.write( ((sid,2), ('output',)) )
         wait_for(a2z)
-        z2p.write( (3, ('output',)))
+        z2p.write( ((sid,3), ('output',)))
         wait_for(a2z)
 
     # N=3 ACTIVATIONS FOR ROUND=3   (get ECHO, send READY)
     for _ in range(3): 
-        z2p.write( (1, ('output',)) )
+        z2p.write( ((sid,1), ('output',)) )
         wait_for(a2z)
-        z2p.write( (2, ('output',)) )
+        z2p.write( ((sid,2), ('output',)) )
         wait_for(a2z)
-        z2p.write( (3, ('output',)) )
+        z2p.write( ((sid,3), ('output',)) )
         wait_for(a2z)
     
-    z2p.write( (1, ('output',)) )
+    z2p.write( ((sid,1), ('output',)) )
     wait_for(a2z)
-    z2p.write( (1, ('output',)) )
+    z2p.write( ((sid,1), ('output',)) )
     fro,msg = wait_for(p2z)
     assert msg[0] == 'early'
-    z2p.write( (2, ('output',)) )
+    z2p.write( ((sid,2), ('output',)) )
     wait_for(a2z)
-    z2p.write( (3, ('output',)) )
+    z2p.write( ((sid,3), ('output',)) )
     wait_for(a2z)
 
     # First activation should get READY and ACCEPT  (get READY, wait n activations to output)
     for i in range(4):
-        z2p.write( (3, ('output',)) )
+        z2p.write( ((sid,3), ('output',)) )
         wait_for(a2z)
-        z2p.write( (1, ('output',)) )
+        z2p.write( ((sid,1), ('output',)) )
         wait_for(a2z)
-        z2p.write( (2, ('output',)) )
+        z2p.write( ((sid,2), ('output',)) )
         wait_for(a2z)
 
-    z2p.write( (1, ('output',)) )
+    z2p.write( ((sid,1), ('output',)) )
     fro,msg = wait_for(p2z)
     print("P1 output", msg)
-    z2p.write( (2, ('output',)) )
+    z2p.write( ((sid,2), ('output',)) )
     fro,msg = wait_for(p2z)
     print("P2 output", msg)
-    z2p.write( (3, ('output',)) )
+    z2p.write( ((sid,3), ('output',)) )
     fro,msg = wait_for(p2z)
     print("P3 output", msg)
     

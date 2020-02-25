@@ -90,24 +90,24 @@ class BrachaSimulator(object):
         gevent.spawn(advitm.run)
 
         # spawn parties from sid information on parties
-        p = ProtocolWrapper(self.sid, self._z2p,self._p2z, self._f2p,self._p2f, self._a2p,self._p2a, Bracha_Protocol)
+        p = ProtocolWrapper(self._z2p,self._p2z, self._f2p,self._p2f, self._a2p,self._p2a, Bracha_Protocol)
         gevent.spawn(p.run)
         for x in self.parties:
-            p.spawn(x); wait_for(self._a2z)
+            p.spawn(self.sid, x); wait_for(self._a2z)
         # track activations of parties
         self.num_activations = [len(self.parties) for _ in range(len(self.parties))]
 
     def leak_input(self, _, pid, v):
         # send this input to the dealer
         leaderpid = 1
-        self._z2p.write( (leaderpid, ('input',v)) )
+        self._z2p.write( ((self.sid,leaderpid), ('input',v)) )
 
     def leak_activation(self, _, pid):
         # Is this the first time, deliver messages to pid
         activationsleft = self.num_activations[pid-1]
         if activationsleft == len(self.parties):  # first one
             # send an output signal to the parties to do its job
-            self._z2p.write( (pid, ('output',)) )
+            self._z2p.write( ((self.sid,pid), ('output',)) )
             # Party could respond with: [prot_bracha:170] self.p2z.write( ('early',) )
           
 
@@ -141,7 +141,6 @@ class BrachaSimulator(object):
         pass
 
     def input_msg(self, msg):
-        print('\n\n sim message', msg)
         if msg[0] == 'corrupt':
             self.input_corrupt(msg[1])
         #elif msg[0] == 'A2P':
@@ -183,6 +182,7 @@ class BrachaSimulator(object):
                 dump.dump()
             else: dump.dump()
 
+
 def test_all_honest(): 
     sid = ('one', 4, (1,2,3))
     f2p,p2f = GenChannel('f2p'),GenChannel('p2f')
@@ -197,69 +197,69 @@ def test_all_honest():
     f.newcls('F_sfe', SFE_Bracha_Functionality)
 
     #advitm = DummyAdversary('adv',-1, z2a,a2z, p2a,a2p, a2f,f2a)
-    advitm = BrachaSimulator(('one',(1,2,3)),-1, z2a,a2z, p2a,a2p, a2f,f2a)
+    advitm = BrachaSimulator(sid,-1, z2a,a2z, p2a,a2p, a2f,f2a)
     setAdversary(advitm)
     gevent.spawn(advitm.run)
 
-    p = PartyWrapper(sid, z2p, p2z, f2p, p2f, a2p, p2a, (sid, 'F_sfe'))
+    p = PartyWrapper(z2p, p2z, f2p, p2f, a2p, p2a, (sid, 'F_sfe'))
     gevent.spawn(p.run)
 
-    p.spawn(1); wait_for(a2z)
-    p.spawn(2); wait_for(a2z)
-    p.spawn(3); wait_for(a2z)
+    p.spawn(sid,1); wait_for(a2z)
+    p.spawn(sid,2); wait_for(a2z)
+    p.spawn(sid,3); wait_for(a2z)
 
-    z2p.write( (1, ('input',3)) )
+    z2p.write( ((sid,1), ('input',3)) )
     wait_for(a2z)
 
     for _ in range(3):
-        z2p.write( (1, ('output',)) )
+        z2p.write( ((sid,1), ('output',)) )
         wait_for(a2z)
-        z2p.write( (2, ('output',)) )
+        z2p.write( ((sid,2), ('output',)) )
         wait_for(a2z)
-        z2p.write( (3, ('output',)) )
+        z2p.write( ((sid,3), ('output',)) )
         wait_for(a2z)
 
     for _ in range(3):
-        z2p.write( (1, ('output',)) )
+        z2p.write( ((sid,1), ('output',)) )
         fro,msg = wait_for(a2z)
-        z2p.write( (2, ('output',)) )
+        z2p.write( ((sid,2), ('output',)) )
         wait_for(a2z)
-        z2p.write( (3, ('output',)) )
+        z2p.write( ((sid,3), ('output',)) )
         wait_for(a2z)
     
     for _ in range(2):
-        z2p.write( (1, ('output',)) )
+        z2p.write( ((sid,1), ('output',)) )
         wait_for(a2z)
-        z2p.write( (2, ('output',)) )
+        z2p.write( ((sid,2), ('output',)) )
         fro,msg = wait_for(a2z)
-        z2p.write( (3, ('output',)) )
+        z2p.write( ((sid,3), ('output',)) )
         wait_for(a2z)
     
-    z2p.write( (1, ('output',)) )
+    z2p.write( ((sid,1), ('output',)) )
     wait_for(a2z)
-    z2p.write( (1, ('output',)) )
+    z2p.write( ((sid,1), ('output',)) )
     fro,msg= wait_for(p2z)
     assert msg[0] == 'early'
-    z2p.write( (2, ('output',)) )
+    z2p.write( ((sid,2), ('output',)) )
     wait_for(a2z)
-    z2p.write( (3, ('output',)) )
+    z2p.write( ((sid,3), ('output',)) )
     wait_for(a2z)
     
     for _ in range(3):
-        z2p.write( (3, ('output',)) )
+        z2p.write( ((sid,3), ('output',)) )
         wait_for(a2z)
-        z2p.write( (1, ('output',)) )
+        z2p.write( ((sid,1), ('output',)) )
         wait_for(a2z)
-        z2p.write( (2, ('output',)) )
+        z2p.write( ((sid,2), ('output',)) )
         wait_for(a2z)
 
-    z2p.write( (1, ('output',)) )
+    z2p.write( ((sid,1), ('output',)) )
     fro,msg = wait_for(p2z);
     print('P1 output', msg)
-    z2p.write( (2, ('output',)) )
+    z2p.write( ((sid,2), ('output',)) )
     fro,msg = wait_for(p2z)
     print('P2 output', msg)
-    z2p.write( (3, ('output',)) )
+    z2p.write( ((sid,3), ('output',)) )
     fro,msg = wait_for(p2z)
     print('P3 output', msg)
 
@@ -282,62 +282,62 @@ def test_one_crupt_party():
     setAdversary(advitm)
     gevent.spawn(advitm.run)
 
-    p = PartyWrapper(sid, z2p, p2z, f2p, p2f, a2p, p2a, (sid, 'F_sfe'))
+    p = PartyWrapper(z2p, p2z, f2p, p2f, a2p, p2a, (sid, 'F_sfe'))
     gevent.spawn(p.run)
 
     z2a.write( ('corrupt',4) )
     wait_for(a2z)
 
-    p.spawn(1); wait_for(a2z)
-    p.spawn(2); wait_for(a2z)
-    p.spawn(3); wait_for(a2z)
-    p.spawn(4); wait_for(a2z)
+    p.spawn(sid,1); wait_for(a2z)
+    p.spawn(sid,2); wait_for(a2z)
+    p.spawn(sid,3); wait_for(a2z)
+    p.spawn(sid,4); wait_for(a2z)
    
-    z2p.write( (1, ('input',3)) )
+    z2p.write( ((sid,1), ('input',3)) )
     m = wait_for(a2z)
 
     #z2a.write( ('A2P', (4, ( ((sid, 'F_clock'), ('RoundOK',))))) )
     #wait_for(a2z)
 
     for _ in range(4):
-        z2p.write( (1, ('output',)) )
+        z2p.write( ((sid,1), ('output',)) )
         wait_for(a2z)
-        z2p.write( (2, ('output',)) )
+        z2p.write( ((sid,2), ('output',)) )
         wait_for(a2z)
-        z2p.write( (3, ('output',)) )
+        z2p.write( ((sid,3), ('output',)) )
         wait_for(a2z)
 
     for _ in range(4):
-        z2p.write( (1, ('output',)) )
+        z2p.write( ((sid,1), ('output',)) )
         fro,msg = wait_for(a2z)
-        z2p.write( (2, ('output',)) )
+        z2p.write( ((sid,2), ('output',)) )
         wait_for(a2z)
-        z2p.write( (3, ('output',)) )
+        z2p.write( ((sid,3), ('output',)) )
         wait_for(a2z)
     
     for _ in range(4):
-        z2p.write( (1, ('output',)) )
+        z2p.write( ((sid,1), ('output',)) )
         fro,msg = wait_for(a2z)
-        z2p.write( (2, ('output',)) )
+        z2p.write( ((sid,2), ('output',)) )
         wait_for(a2z)
-        z2p.write( (3, ('output',)) )
+        z2p.write( ((sid,3), ('output',)) )
         wait_for(a2z)
     
     for _ in range(4):
-        z2p.write( (1, ('output',)) )
+        z2p.write( ((sid,1), ('output',)) )
         wait_for(a2z)
-        z2p.write( (2, ('output',)) )
+        z2p.write( ((sid,2), ('output',)) )
         wait_for(a2z)
-        z2p.write( (3, ('output',)) )
+        z2p.write( ((sid,3), ('output',)) )
         wait_for(a2z)
     
-    z2p.write( (1, ('output',)) )
+    z2p.write( ((sid,1), ('output',)) )
     fro,m = wait_for(p2z)
     print('P1 output:', m)
-    z2p.write( (2, ('output',)) )
+    z2p.write( ((sid,2), ('output',)) )
     fro,m = wait_for(p2z)
     print('P2 output;', m)
-    z2p.write( (3, ('output',)) )
+    z2p.write( ((sid,3), ('output',)) )
     fro,m = wait_for(p2z)
     print('P3 output:', m)
 
