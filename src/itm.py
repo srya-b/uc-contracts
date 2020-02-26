@@ -108,20 +108,20 @@ class UCProtocol(ITM):
         Exception("leak needs to be defined")
 
 class UCFunctionality(ITM):
-    def __init__(self, sid, pid):
-        self.sid = sid
-        self.pid = pid
+    def __init__(self, sid, pid, channels, handlers):
+        #self.sid = sid
+        #self.pid = pid
 
-        self.f2a = GenChannel('f2a'); self.a2f = GenChannel('a2f')
-        self.f2z = GenChannel('f2z'); self.z2f = GenChannel('z2f')
-        self.f2p = GenChannel('f2p'); self.p2f = GenChannel('p2f')
-        self.channels = [self.z2f, self.p2f, self.a2f]
-        self.handlers = {
-            self.z2f : self.env_msg,
-            self.p2f : self.party_msg,
-            self.a2f : self.adv_msg,
-        }
-        ITM.__init__(self, self.sid, self.pid, self.channels, self.handlers)
+        #self.f2a = GenChannel('f2a'); self.a2f = GenChannel('a2f')
+        #self.f2z = GenChannel('f2z'); self.z2f = GenChannel('z2f')
+        #self.f2p = GenChannel('f2p'); self.p2f = GenChannel('p2f')
+        #self.channels = [self.z2f, self.p2f, self.a2f]
+        #self.handlers = {
+        #    self.z2f : self.env_msg,
+        #    self.p2f : self.party_msg,
+        #    self.a2f : self.adv_msg,
+        #}
+        ITM.__init__(self, sid, pid, channels, handlers)
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
@@ -161,73 +161,6 @@ class ITMFunctionality(object):
             msg = r.read()
             r.reset()
             self.handlers[r](msg)
-
-
-
-class ITMSyncFunctionality(object):
-    def __init__(self, sid, pid, channels, handlers):
-        self.sid = sid; self.pid = pid
-        self.ssid = self.sid[0]
-        self.Rnd = self.sid[1]
-        self.parties = self.sid[2]
-
-        self.channels = channels
-        self.handlers = handlers
-
-        self.x = dict( (p,None) for p in self.parties )
-        self.y = dict( (p,None) for p in self.parties )
-        self.t = dict( (p,len(self.parties)) for p in self.parties )
-        self.l = 1
-        self.crupted = set()
-
-    def function(self):
-        raise Exception("ITMSyncFunctinality.function must be defined in the deriving class!")
-
-    def outputs_set(self):
-        for i in self.y.values():
-            if i is None: return False
-        return True
-
-    def are_all_honest_0(self):
-        for i in self.parties:
-            if i not in self.crupted and self.t[i] != 0: return False
-        return True
-
-    def input_input(self, pid, v):
-        # TODO can input be set more than once??
-        self.x[pid] = v
-        self.f2a.write( ('input', pid, v) )
-
-    def input_output(self, pid):
-        #if pid not in self.crupted and self.x[pid] is None:
-        if comm.ishonest(self.sid, pid) and self.x[pid] is None:
-            dump.dump(); return
-
-        if self.t[pid] > 0:
-            self.t[pid] = self.t[pid]-1
-            if self.are_all_honest_0() and self.l < self.Rnd:
-                self.l += 1
-                for i in self.t: self.t[i] = len(self.parties)
-            self.f2a.write( ('activated',pid) )
-        elif self.t[pid] == 0 and self.l < self.Rnd:
-            self.f2p.write( (pid, ('early',)) )
-        else:
-            if self.x[1] is not None and not self.outputs_set():
-                self.y = self.function()
-            self.f2p.write( (pid, self.y[pid]) )
-
-    def run(self):
-        while True:
-            ready = gevent.wait(
-                objects=self.channels,
-                count=1
-            )
-            assert len(ready) == 1
-            r = ready[0]
-            msg = r.read()
-            r.reset()
-            self.handlers[r](msg)
-
 
 class ITMSyncProtocol(object):
     def __init__(self, sid, pid, channels, handlers):
@@ -731,7 +664,7 @@ class PartyWrapper:
                 if not comm.ishonest(sid,pid):
                     raise Exception
                 _pid = self.getPID(self.z2pid,sid,pid)
-                _pid.write( (self.tof, msg) )
+                _pid.write( ((sid,self.tof), msg) )
             elif r == self.f2p:
                 self.f2p.reset('f2p in party')
                 fro,(to,msg) = m

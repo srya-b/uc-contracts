@@ -1,6 +1,6 @@
 import dump
 import gevent
-from itm import ITMSyncFunctionality
+from syn_katz import ITMKatzSFE
 from comm import ishonest, isdishonest, isadversary, isf, isparty
 from math import ceil
 from queue import Queue as qqueue
@@ -9,8 +9,7 @@ from hashlib import sha256
 from collections import defaultdict
 from gevent.queue import Queue, Channel
 
-#class SFE_Bracha_Functionality(object):
-class SFE_Bracha_Functionality(ITMSyncFunctionality):
+class SFE_Bracha_Functionality(ITMKatzSFE):
     def __init__(self, sid, pid, _f2p, _p2f, _f2a, _a2f, _f2z, _z2f):
         self.f2p = _f2p; self.p2f = _p2f
         self.f2a = _f2a; self.a2f = _a2f
@@ -22,7 +21,7 @@ class SFE_Bracha_Functionality(ITMSyncFunctionality):
             self.p2f: self.input_msg,
             self.z2f: lambda x: dump.dump()
         }
-        ITMSyncFunctionality.__init__(self, sid, pid, self.channels, self.handlers)
+        ITMKatzSFE.__init__(self, sid, pid, self.channels, self.handlers)
 
         # Bracha only cares about honest dealer's input
         for p in self.parties:
@@ -182,6 +181,66 @@ class BrachaSimulator(object):
                 dump.dump()
             else: dump.dump()
 
+def env1(z2p, z2f, z2a, a2z, p2z, f2z, p):
+    p.spawn(sid,1); wait_for(a2z)
+    p.spawn(sid,2); wait_for(a2z)
+    p.spawn(sid,3); wait_for(a2z)
+
+    z2p.write( ((sid,1), ('input',3)) )
+    wait_for(a2z)
+
+    for _ in range(3):
+        z2p.write( ((sid,1), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,2), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,3), ('output',)) )
+        wait_for(a2z)
+
+    for _ in range(3):
+        z2p.write( ((sid,1), ('output',)) )
+        fro,msg = wait_for(a2z)
+        z2p.write( ((sid,2), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,3), ('output',)) )
+        wait_for(a2z)
+    
+    for _ in range(2):
+        z2p.write( ((sid,1), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,2), ('output',)) )
+        fro,msg = wait_for(a2z)
+        z2p.write( ((sid,3), ('output',)) )
+        wait_for(a2z)
+    
+    z2p.write( ((sid,1), ('output',)) )
+    wait_for(a2z)
+    z2p.write( ((sid,1), ('output',)) )
+    fro,msg= wait_for(p2z)
+    assert msg[0] == 'early'
+    z2p.write( ((sid,2), ('output',)) )
+    wait_for(a2z)
+    z2p.write( ((sid,3), ('output',)) )
+    wait_for(a2z)
+    
+    for _ in range(3):
+        z2p.write( ((sid,3), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,1), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,2), ('output',)) )
+        wait_for(a2z)
+
+    z2p.write( ((sid,1), ('output',)) )
+    fro,msg = wait_for(p2z);
+    print('P1 output', msg)
+    z2p.write( ((sid,2), ('output',)) )
+    fro,msg = wait_for(p2z)
+    print('P2 output', msg)
+    z2p.write( ((sid,3), ('output',)) )
+    fro,msg = wait_for(p2z)
+    print('P3 output', msg)
+    
 
 def test_all_honest(): 
     sid = ('one', 4, (1,2,3))
@@ -201,7 +260,7 @@ def test_all_honest():
     setAdversary(advitm)
     gevent.spawn(advitm.run)
 
-    p = PartyWrapper(z2p, p2z, f2p, p2f, a2p, p2a, (sid, 'F_sfe'))
+    p = PartyWrapper(z2p, p2z, f2p, p2f, a2p, p2a, 'F_sfe')
     gevent.spawn(p.run)
 
     p.spawn(sid,1); wait_for(a2z)
@@ -282,7 +341,7 @@ def test_one_crupt_party():
     setAdversary(advitm)
     gevent.spawn(advitm.run)
 
-    p = PartyWrapper(z2p, p2z, f2p, p2f, a2p, p2a, (sid, 'F_sfe'))
+    p = PartyWrapper(z2p, p2z, f2p, p2f, a2p, p2a, 'F_sfe')
     gevent.spawn(p.run)
 
     z2a.write( ('corrupt',4) )
@@ -361,7 +420,7 @@ def test_sim():
     setAdversary(advitm)
     gevent.spawn(advitm.run)
 
-    p = PartyWrapper(sid, z2p, p2z, f2p, p2f, a2p, p2a, (sid, 'F_sfe'))
+    p = PartyWrapper(sid, z2p, p2z, f2p, p2f, a2p, p2a, 'F_sfe')
     gevent.spawn(p.run)
 
     p.spawn(1); wait_for(a2z)
@@ -439,9 +498,72 @@ def test_sim():
         wait_for(a2z)
         f2a.write( ((sid,'F_sfe'), ('activated', 3)) )
         wait_for(a2z)
-    
 
+def env1(sid, z2p, z2f, z2a, a2z, p2z, f2z, p):
+    p.spawn(sid,1); wait_for(a2z)
+    p.spawn(sid,2); wait_for(a2z)
+    p.spawn(sid,3); wait_for(a2z)
+
+    z2p.write( ((sid,1), ('input',3)) )
+    wait_for(a2z)
+
+    for _ in range(3):
+        z2p.write( ((sid,1), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,2), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,3), ('output',)) )
+        wait_for(a2z)
+
+    for _ in range(3):
+        z2p.write( ((sid,1), ('output',)) )
+        fro,msg = wait_for(a2z)
+        z2p.write( ((sid,2), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,3), ('output',)) )
+        wait_for(a2z)
+    
+    for _ in range(2):
+        z2p.write( ((sid,1), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,2), ('output',)) )
+        fro,msg = wait_for(a2z)
+        z2p.write( ((sid,3), ('output',)) )
+        wait_for(a2z)
+    
+    z2p.write( ((sid,1), ('output',)) )
+    wait_for(a2z)
+    z2p.write( ((sid,1), ('output',)) )
+    fro,msg= wait_for(p2z)
+    assert msg[0] == 'early'
+    z2p.write( ((sid,2), ('output',)) )
+    wait_for(a2z)
+    z2p.write( ((sid,3), ('output',)) )
+    wait_for(a2z)
+    
+    for _ in range(3):
+        z2p.write( ((sid,3), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,1), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,2), ('output',)) )
+        wait_for(a2z)
+
+    z2p.write( ((sid,1), ('output',)) )
+    fro,msg = wait_for(p2z);
+    print('P1 output', msg)
+    z2p.write( ((sid,2), ('output',)) )
+    fro,msg = wait_for(p2z)
+    print('P2 output', msg)
+    z2p.write( ((sid,3), ('output',)) )
+    fro,msg = wait_for(p2z)
+    print('P3 output', msg)
+    
+    
+from uc import execUC
 if __name__=='__main__':
     #test_all_honest()
     #test_sim()
-    test_one_crupt_party()
+    #test_one_crupt_party()
+    sid = ('one', 4, (1,2,3))
+    execUC(sid, env1, [('F_sfe', SFE_Bracha_Functionality)], PartyWrapper, 'F_sfe', BrachaSimulator)

@@ -469,10 +469,93 @@ def test_one_crupt_party():
     fro,msg = wait_for(p2z)
     print("P3 output", msg)
     
+def env1(sid, z2p, z2f, z2a, a2z, p2z, f2z, p):
+    # Start synchronization requires roundOK first to determine honest parties
+    # giving input to a party before all have done this will result in Exception
+    p.spawn(sid, 1); wait_for(a2z)
+    p.spawn(sid, 2); wait_for(a2z)
+    p.spawn(sid, 3); wait_for(a2z)
+    p.spawn(sid, 4); wait_for(a2z)
+   
+    ## DEALER INPUT
+    z2p.write( ((sid,1), ('input',10)) )
+    wait_for(a2z)
 
+    # N=3 ACTIVATIONS FOR ROUND=1     (Dealer sends VAL)
+    for i in range(4):
+        z2p.write( ((sid,1), ('output',)))
+        wait_for(a2z)
+        z2p.write( ((sid,2), ('output',)))
+        wait_for(a2z)
+        z2p.write( ((sid,3), ('output',)))
+        wait_for(a2z)
+        z2p.write( ((sid,4), ('output',)))
+        wait_for(a2z)
+
+    # N=3 ACTIVATIONS FOR ROUND=2   (get VAL, send ECHO)
+    for i in range(4):
+        z2p.write( ((sid,1),('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,2), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,3), ('output',)))
+        wait_for(a2z)
+        z2p.write( ((sid,4), ('output',)))
+        wait_for(a2z)
+
+    # N=3 ACTIVATIONS FOR ROUND=3   (get ECHO, send READY)
+    for _ in range(3): 
+        z2p.write( ((sid,1), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,2), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,3), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,4), ('output',)))
+        wait_for(a2z)
+    
+    z2p.write( ((sid,1), ('output',)) )
+    wait_for(a2z)
+    z2p.write( ((sid,1), ('output',)) )
+    fro,msg = wait_for(p2z)
+    assert msg[0] == 'early'
+    z2p.write( ((sid,2), ('output',)) )
+    wait_for(a2z)
+    z2p.write( ((sid,3), ('output',)) )
+    wait_for(a2z)
+    z2p.write( ((sid,4), ('output',)))
+    wait_for(a2z)
+
+    # First activation should get READY and ACCEPT  (get READY, wait n activations to output)
+    for i in range(4):
+        z2p.write( ((sid,3), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,1), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,2), ('output',)) )
+        wait_for(a2z)
+        z2p.write( ((sid,4), ('output',)))
+        wait_for(a2z)
+        
+    z2p.write( ((sid,1), ('output',)) )
+    fro,msg = wait_for(p2z)
+    print("P1 output", msg)
+    z2p.write( ((sid,2), ('output',)) )
+    fro,msg = wait_for(p2z)
+    print("P2 output", msg)
+    z2p.write( ((sid,3), ('output',)) )
+    fro,msg = wait_for(p2z)
+    print("P3 output", msg)
+    z2p.write( ((sid,4), ('output',)))
+    fro,msg = wait_for(p2z)
+    print("P4 output", msg)
+
+from uc import execUC
 if __name__=='__main__':
     #test_all_honest()
     #test_crupt_dealer_no_accept()
     #test_crupt_dealer_1_accept_1_not()
-    test_one_crupt_party()
+    #test_one_crupt_party()
+    sid = ('one', 4, (1,2,3,4))
+    execUC(sid, env1, [('F_clock', Clock_Functionality),('F_bd',BD_SEC_Functionality)], ProtocolWrapper, Bracha_Protocol, KatzDummyAdversary)
     
