@@ -64,7 +64,7 @@ class ITM:
         self.pid = pid
         self.channels = channels
         self.handlers = handlers
-        
+
     def run(self):
         while True:
             ready = gevent.wait(
@@ -102,7 +102,7 @@ class UCProtocol(ITM):
         }
 
         ITM.__init__(self, self.sid, self.pid, self.channels, self.handlers)
-    
+
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
 
@@ -111,12 +111,6 @@ class UCProtocol(ITM):
 
     def env_msg(self, msg):
         Exception("env_msg needs to be defined")
-
-    def adv_execute(self, function, args):
-        dump.dump()
-
-    def leak(self, msg):
-        dump.dump()
 
 class UCFunctionality(ITM):
     def __init__(self, sid, pid, channel_wrapper):
@@ -129,15 +123,12 @@ class UCFunctionality(ITM):
         self.z2f = channel_wrapper.getChannel('z2f')
         self.p2f = channel_wrapper.getChannel('p2f')
         self.a2f = channel_wrapper.getChannel('a2f')
-        self.f2w = channel_wrapper.getChannel('f2w')
-        self.w2f = channel_wrapper.getChannel('w2f')
 
-        self.channels = [self.f2z, self.f2p, self.f2a, self.f2w, self.z2f, self.p2f, self.a2f, self.w2f]
+        self.channels = [self.f2z, self.f2p, self.f2a, self.z2f, self.p2f, self.a2f]
         self.handlers = {
             self.a2f: self.adv_msg,
             self.p2f: self.party_msg,
             self.z2f: self.env_msg,
-            self.w2f: self.wrapper_return
         }
 
         ITM.__init__(self, self.sid, self.pid, self.channels, self.handlers)
@@ -151,9 +142,9 @@ class UCFunctionality(ITM):
     def env_msg(self, msg):
         Exception("env_msg is not defined")
 
-    def wrapper_return(self, msg):
-        Exception("wrapper_return is not defined") # TODO: a generic and easy-to-use way to pick backup from wherever a functionality called adv_execute or leak
-
+class UCAsyncWrappedFunctionality(UCFunctionality):
+    def __init__(self, sid, pid, channel_wrapper):
+        UCFunctionality.__init__(self, sid, pid, channel_wrapper)
     def adv_execute(self, func, args):
         self.f2w.write(("adv_execute", (func, args)))
 
