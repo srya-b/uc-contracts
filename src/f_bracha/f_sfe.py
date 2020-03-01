@@ -11,15 +11,11 @@ from gevent.queue import Queue, Channel
 
 class SFE_Bracha_Functionality(ITMKatzSFE):
     def __init__(self, sid, pid, _f2p, _p2f, _f2a, _a2f, _f2z, _z2f):
-        self.f2p = _f2p; self.p2f = _p2f
-        self.f2a = _f2a; self.a2f = _a2f
-        self.f2z = _f2z; self.z2f = _z2f
-
-        self.channels = [self.a2f, self.z2f, self.p2f]
+        self.channels = {'a2f':_a2f, 'f2a':_f2a,'z2f':_z2f, 'f2z':_f2z, 'p2f':_p2f, 'f2p':_f2p}
         self.handlers = {
-            self.a2f: self.adversary_msg,
-            self.p2f: self.input_msg,
-            self.z2f: lambda x: dump.dump()
+            _a2f: self.adversary_msg,
+            _p2f: self.input_msg,
+            _z2f: lambda x: dump.dump()
         }
         ITMKatzSFE.__init__(self, sid, pid, self.channels, self.handlers)
 

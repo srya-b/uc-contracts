@@ -1,4 +1,5 @@
 import dump
+import sys
 import gevent
 from comm import ishonest, isdishonest, isadversary, isf, isparty
 from math import ceil
@@ -18,17 +19,18 @@ P3 = '\033[93m'
 class Bracha_Protocol(ITMSyncProtocol):
     def __init__(self, sid, pid, _p2f, _f2p, _p2a, _a2p, _p2z, _z2p):
         # All protocols do this (below)
-        self.p2f = _p2f; self.f2p = _f2p
-        self.p2a = _p2a; self.a2p = _a2p
-        self.p2z = _p2z; self.z2p = _z2p
-        self.channels_to_read = [self.a2p, self.z2p, self.f2p]
+        self.channels = {'a2p':_a2p, 'p2a':_p2a, 'f2p':_f2p, 'p2f':_p2f, 'z2p':_z2p, 'p2z':_p2z}
+        #self.p2f = _p2f; self.f2p = _f2p
+        #self.p2a = _p2a; self.a2p = _a2p
+        #self.p2z = _p2z; self.z2p = _z2p
+        #self.channels_to_read = [self.a2p, self.z2p, self.f2p]
         self.handlers = {
-            self.a2p: lambda x: dump.dump(),
-            self.f2p: lambda x: dump.dump(),
-            self.z2p: self.input_msg
+            _a2p: lambda x: dump.dump(),
+            _f2p: lambda x: dump.dump(),
+            _z2p: self.input_msg
         }
 
-        ITMSyncProtocol.__init__(self, sid, pid , self.channels_to_read, self.handlers)
+        ITMSyncProtocol.__init__(self, sid, pid , self.channels, self.handlers)
         
         # specific to the broadcast
         if self.pid == 1: self.leader = True
@@ -111,6 +113,7 @@ class Bracha_Protocol(ITMSyncProtocol):
         dump.dump()
 
     def input_msg(self, msg):
+        self.start_sync()
         if msg[0] == 'input' and self.leader:
             self.input_input(msg[1])
         # TODO change this to be automatically handled in base class
@@ -500,6 +503,7 @@ def env1(sid, z2p, z2f, z2a, a2z, p2z, f2z, p):
         wait_for(a2z)
         z2p.write( ((sid,3), ('output',)))
         wait_for(a2z)
+#        sys.exit(0)
         z2p.write( ((sid,4), ('output',)))
         wait_for(a2z)
 
