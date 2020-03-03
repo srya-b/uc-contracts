@@ -79,21 +79,21 @@ class ITM:
             self.handlers[r](msg)
 
 class UCProtocol(ITM):
-    def __init__(self, sid, pid):
+    def __init__(self, sid, pid, channels, handlers):
         self.sid = sid
         self.pid = pid
-
-        self.p2a = GenChannel('p2a'); self.a2p = GenChannel('a2p')
-        self.p2z = GenChannel('p2z'); self.z2p = GenChannel('p2z')
-        self.p2f = GenChannel('p2f'); self.f2p = GenChannel('f2p')
-        self.channels = [self.z2p, self.f2p, self.a2p]
+        self.p2a = channels['p2a']; self.a2p = channels['a2p']
+        self.p2f = channels['p2f']; self.f2p = channels['f2p']
+        self.p2z = channels['p2z']; self.z2p = channels['z2p']
+        #print('UCFunctionality channels', channels)
+        #print('UCFunctionality handlers', handlers)
         self.handlers = {
             self.z2p : self.env_msg,
             self.f2p : self.func_msg,
             self.a2p : self.adv_msg,
         }
 
-        ITM.__init__(self, self.sid, self.pid, self.channels, self.handlers)
+        ITM.__init__(self, sid, pid, handlers.keys(), handlers)
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
@@ -109,19 +109,17 @@ class UCProtocol(ITM):
 
 class UCFunctionality(ITM):
     def __init__(self, sid, pid, channels, handlers):
-        #self.sid = sid
-        #self.pid = pid
-
-        #self.f2a = GenChannel('f2a'); self.a2f = GenChannel('a2f')
-        #self.f2z = GenChannel('f2z'); self.z2f = GenChannel('z2f')
-        #self.f2p = GenChannel('f2p'); self.p2f = GenChannel('p2f')
-        #self.channels = [self.z2f, self.p2f, self.a2f]
-        #self.handlers = {
-        #    self.z2f : self.env_msg,
-        #    self.p2f : self.party_msg,
-        #    self.a2f : self.adv_msg,
-        #}
-        ITM.__init__(self, sid, pid, channels, handlers)
+        self.f2a = channels['f2a']; self.a2f = channels['a2f']
+        self.f2z = channels['f2z']; self.z2f = channels['z2f']
+        self.f2p = channels['f2p']; self.p2f = channels['p2f']
+        #print('UCFunctionality channels', channels)
+        #print('UCFunctionality handlers', handlers)
+        self.handlers = {
+            self.z2f : self.env_msg,
+            self.p2f : self.party_msg,
+            self.a2f : self.adv_msg,
+        }
+        ITM.__init__(self, sid, pid, handlers.keys(), handlers)
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
@@ -162,10 +160,10 @@ class ITMFunctionality(object):
             r.reset()
             self.handlers[r](msg)
 
-class ITMSyncProtocol(object):
+class ITMSyncProtocol(UCProtocol):
     def __init__(self, sid, pid, channels, handlers):
-        self.channels = channels
-        self.handlers = handlers
+        #self.channels = channels
+        #self.handlers = handlers
         self.sid = sid
         self.ssid = self.sid[0]
         self.parties = self.sid[2]
@@ -178,10 +176,17 @@ class ITMSyncProtocol(object):
         self.startsync = True
         # TODO change the name of this because it's not broadcast specific
         self.outputset = False
+        UCProtocol.__init__(self, sid, pid, channels, handlers)
 
-        print('[{}] Sending start synchronization...'.format(self.pid))
-        self.p2f.write( ((self.sid,'F_clock'),('RoundOK')) )
-        self.roundok = True
+        #print('[{}] Sending start synchronization...'.format(self.pid))
+        #self.p2f.write( ((self.sid,'F_clock'),('RoundOK',)) )
+        #self.roundok = True
+
+    def sync(self):
+        if self.startsync and not self.roundok:
+            print('[{}] Sending start synchronization...'.format(self.pid))
+            self.p2f.write( ((self.sid,'F_clock'),('RoundOK',)) )
+            self.roundok = True
 
     def wait_for(self, chan):
         r = gevent.wait(objects=[chan],count=1)
@@ -264,18 +269,18 @@ class ITMSyncProtocol(object):
             self.roundok = False
             self.startsync = False
 
-    def run(self):
-        while True:
-            ready = gevent.wait(
-                objects=self.channels,
-                count=1
-            )
-            assert len(ready) == 1
-            r = ready[0]
-            self.start_sync()
-            msg = r.read()
-            r.reset()
-            self.handlers[r](msg)
+    #def run(self):
+    #    while True:
+    #        ready = gevent.wait(
+    #            objects=self.channels,
+    #            count=1
+    #        )
+    #        assert len(ready) == 1
+    #        r = ready[0]
+    #        self.start_sync()
+    #        msg = r.read()
+    #        r.reset()
+    #        self.handlers[r](msg)
 
 
 
@@ -639,7 +644,7 @@ class PartyWrapper:
         setParty(itm)
         gevent.spawn(itm.run)
         # TODO maybe remove later but for start synchronization
-        dump.dump()
+        #dump.dump()
 
     def getPID(self, _2pid, sid, pid):
         #print('Requesting sid={}, pid={}'.format(sid,pid))

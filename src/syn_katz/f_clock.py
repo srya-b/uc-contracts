@@ -33,9 +33,6 @@ class Clock_Functionality(UCFunctionality):
         self.D = dict( (p,1) for p in self.parties)
         self.roundD = dict( (p,1) for p in self.parties)
 
-    #def leak(self, msg):
-    #    self.leaks.append(msg)
-        
     def honest_parties(self):
         return [p for p in self.parties if p not in self.crupted]
 
@@ -48,7 +45,6 @@ class Clock_Functionality(UCFunctionality):
         self.f2a.write( ('switch',pid) )
 
     def input_requestround(self, pid):
-        #print('\033[94m \n\t[F_clock] di = {} \n\033[0m'.format(self.di))
         if self.di[pid] == 1 or self.D[pid] > 1:
             self.D[pid] = self.D[pid] - 1
             self.f2p.write( ((self.sid,pid), 1) )
@@ -60,6 +56,7 @@ class Clock_Functionality(UCFunctionality):
         sender,msg = msg
         sid,pid = sender
         if sid != self.sid: dump.dump(); return
+        #print('Sender={}, msg={}, self.sid={}, parties={}'.format(sender, msg, self.sid, self.parties))
         if msg[0] == 'RoundOK' and pid in self.parties:
             self.input_roundok(pid)
         elif msg[0] == 'RequestRound' and pid in self.parties:
@@ -114,6 +111,7 @@ class Clock_Functionality(UCFunctionality):
                 self.adv_msg(msg)
             elif r == self.p2f:
                 msg = r.read()
+                #print('Z2F message in f_clock', msg)
                 #sender,msg = msg
                 self.p2f.reset()
                 self.party_msg(msg)
@@ -121,13 +119,13 @@ class Clock_Functionality(UCFunctionality):
                 self.z2f.reset()
                 dump.dump()
             else: dump.dump()
-
-import dump
+                 
+import dump      
 from comm import setAdversary
 from itm import FunctionalityWrapper, PartyWrapper, GenChannel
 from syn_katz.adv import KatzDummyAdversary
 from utils import z_inputs, z_ainputs, wait_for
-def test():
+def test():      
     sid = ('one', (1,2))
     f2p,p2f = GenChannel(),GenChannel()
     f2a,a2f = GenChannel(),GenChannel()

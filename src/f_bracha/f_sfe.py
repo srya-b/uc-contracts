@@ -88,8 +88,9 @@ class BrachaSimulator(object):
         p = ProtocolWrapper(self._z2p,self._p2z, self._f2p,self._p2f, self._a2p,self._p2a, Bracha_Protocol)
         gevent.spawn(p.run)
         for x in self.parties:
-            p.spawn(self.sid, x); wait_for(self._a2z)
-        # track activations of parties
+            self._z2p.write( ((self.sid,x), ('sync',)) )
+            wait_for(self._a2z)
+
         self.num_activations = [len(self.parties) for _ in range(len(self.parties))]
 
     def leak_input(self, _, pid, v):
@@ -177,66 +178,9 @@ class BrachaSimulator(object):
                 dump.dump()
             else: dump.dump()
 
-def env1(z2p, z2f, z2a, a2z, p2z, f2z, p):
-    p.spawn(sid,1); wait_for(a2z)
-    p.spawn(sid,2); wait_for(a2z)
-    p.spawn(sid,3); wait_for(a2z)
 
-    z2p.write( ((sid,1), ('input',3)) )
-    wait_for(a2z)
 
-    for _ in range(3):
-        z2p.write( ((sid,1), ('output',)) )
-        wait_for(a2z)
-        z2p.write( ((sid,2), ('output',)) )
-        wait_for(a2z)
-        z2p.write( ((sid,3), ('output',)) )
-        wait_for(a2z)
 
-    for _ in range(3):
-        z2p.write( ((sid,1), ('output',)) )
-        fro,msg = wait_for(a2z)
-        z2p.write( ((sid,2), ('output',)) )
-        wait_for(a2z)
-        z2p.write( ((sid,3), ('output',)) )
-        wait_for(a2z)
-    
-    for _ in range(2):
-        z2p.write( ((sid,1), ('output',)) )
-        wait_for(a2z)
-        z2p.write( ((sid,2), ('output',)) )
-        fro,msg = wait_for(a2z)
-        z2p.write( ((sid,3), ('output',)) )
-        wait_for(a2z)
-    
-    z2p.write( ((sid,1), ('output',)) )
-    wait_for(a2z)
-    z2p.write( ((sid,1), ('output',)) )
-    fro,msg= wait_for(p2z)
-    assert msg[0] == 'early'
-    z2p.write( ((sid,2), ('output',)) )
-    wait_for(a2z)
-    z2p.write( ((sid,3), ('output',)) )
-    wait_for(a2z)
-    
-    for _ in range(3):
-        z2p.write( ((sid,3), ('output',)) )
-        wait_for(a2z)
-        z2p.write( ((sid,1), ('output',)) )
-        wait_for(a2z)
-        z2p.write( ((sid,2), ('output',)) )
-        wait_for(a2z)
-
-    z2p.write( ((sid,1), ('output',)) )
-    fro,msg = wait_for(p2z);
-    print('P1 output', msg)
-    z2p.write( ((sid,2), ('output',)) )
-    fro,msg = wait_for(p2z)
-    print('P2 output', msg)
-    z2p.write( ((sid,3), ('output',)) )
-    fro,msg = wait_for(p2z)
-    print('P3 output', msg)
-    
 
 def test_all_honest(): 
     sid = ('one', 4, (1,2,3))
@@ -495,10 +439,18 @@ def test_sim():
         f2a.write( ((sid,'F_sfe'), ('activated', 3)) )
         wait_for(a2z)
 
-def env1(sid, z2p, z2f, z2a, a2z, p2z, f2z, p):
-    p.spawn(sid,1); wait_for(a2z)
-    p.spawn(sid,2); wait_for(a2z)
-    p.spawn(sid,3); wait_for(a2z)
+def env1(static, z2p, z2f, z2a, a2z, p2z, f2z):
+    sid = ('one', 4, (1,2,3))
+    static.write( ('sid',sid))
+
+    z2p.write( ((sid,1), ('sync',)) )
+    wait_for(a2z)
+    z2p.write( ((sid,2), ('sync',)) )
+    wait_for(a2z)
+    z2p.write( ((sid,3), ('sync',)) )
+    wait_for(a2z)
+    #z2p.write( ((sid,4), ('sync',)) )
+    #wait_for(a2z)
 
     z2p.write( ((sid,1), ('input',3)) )
     wait_for(a2z)
@@ -562,4 +514,4 @@ if __name__=='__main__':
     #test_sim()
     #test_one_crupt_party()
     sid = ('one', 4, (1,2,3))
-    execUC(sid, env1, [('F_sfe', SFE_Bracha_Functionality)], PartyWrapper, 'F_sfe', BrachaSimulator)
+    execUC(env1, [('F_sfe', SFE_Bracha_Functionality)], PartyWrapper, 'F_sfe', BrachaSimulator)

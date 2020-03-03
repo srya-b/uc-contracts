@@ -119,6 +119,8 @@ class Bracha_Protocol(ITMSyncProtocol):
         # TODO change this to be automatically handled in base class
         elif msg[0] == 'output':
             self.check_round_ok()
+        elif msg[0] == 'sync':
+            self.sync()
         else: dump.dump()
 
 from itertools import combinations,permutations
@@ -472,13 +474,20 @@ def test_one_crupt_party():
     fro,msg = wait_for(p2z)
     print("P3 output", msg)
     
-def env1(sid, z2p, z2f, z2a, a2z, p2z, f2z, p):
+def env1(static, z2p, z2f, z2a, a2z, p2z, f2z):
+    sid = ('one', 4, (1,2,3,4))
+    static.write( ('sid', sid) )
+
     # Start synchronization requires roundOK first to determine honest parties
     # giving input to a party before all have done this will result in Exception
-    p.spawn(sid, 1); wait_for(a2z)
-    p.spawn(sid, 2); wait_for(a2z)
-    p.spawn(sid, 3); wait_for(a2z)
-    p.spawn(sid, 4); wait_for(a2z)
+    z2p.write( ((sid,1), ('sync',)) )
+    wait_for(a2z)
+    z2p.write( ((sid,2), ('sync',)) )
+    wait_for(a2z)
+    z2p.write( ((sid,3), ('sync',)) )
+    wait_for(a2z)
+    z2p.write( ((sid,4), ('sync',)) )
+    wait_for(a2z)
    
     ## DEALER INPUT
     z2p.write( ((sid,1), ('input',10)) )
@@ -560,6 +569,6 @@ if __name__=='__main__':
     #test_crupt_dealer_no_accept()
     #test_crupt_dealer_1_accept_1_not()
     #test_one_crupt_party()
-    sid = ('one', 4, (1,2,3,4))
-    execUC(sid, env1, [('F_clock', Clock_Functionality),('F_bd',BD_SEC_Functionality)], ProtocolWrapper, Bracha_Protocol, KatzDummyAdversary)
+    #sid = ('one', 4, (1,2,3,4))
+    execUC(env1, [('F_clock', Clock_Functionality),('F_bd',BD_SEC_Functionality)], ProtocolWrapper, Bracha_Protocol, KatzDummyAdversary)
     
