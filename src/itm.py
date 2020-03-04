@@ -65,36 +65,6 @@ class ITM:
         self.pid = pid
         self.channels = channels
         self.handlers = handlers
-        
-    def run(self):
-        while True:
-            ready = gevent.wait(
-                objects=self.channels,
-                count=1
-            )
-            assert len(ready) == 1
-            r = ready[0]
-            msg = r.read()
-            r.reset()
-            self.handlers[r](msg)
-
-    def adv_execute(self, function, args):
-        Exception("adv_execute needs to be defined")
-
-    def leaks(self, msg):
-        Exception("leaks needs to be defined")
-
-class UCProtocol(ITM):
-    def __init__(self, sid, pid, channel_wrapper):
-        self.sid = sid
-        self.pid = pid
-
-class ITM:
-    def __init__(self, sid, pid, channels, handlers):
-        self.sid = sid
-        self.pid = pid
-        self.channels = channels
-        self.handlers = handlers
 
     def run(self):
         while True:
@@ -162,6 +132,16 @@ class UCFunctionality(ITM):
 
     def leak(self, msg):
         Exception("leak needs to be defined")
+
+class UCAsyncWrappedFunctionality(UCFunctionality):
+    def __init__(self, sid, pid, channel_wrapper):
+        UCFunctionality.__init__(self, sid, pid, channel_wrapper)
+    def adv_execute(self, func, args):
+        self.f2w.write(("adv_execute", (func, args)))
+
+    def leak(self, msg):
+        self.f2w.write(("leak", msg))
+
 
 class UCWrappedFunctionality(ITM):
     def __init__(self, sid, pid, channels, handlers):
@@ -672,7 +652,7 @@ class ProtocolWrapper2:
         except ValueError:
             print('\n\t aint nothing to deliver! \n')
     
-    def async(self, pid, _2pid, p2_):
+    def async_(self, pid, _2pid, p2_):
         pp2_ = GenChannel(('write-async',pid))
         _2pp = GenChannel(('read-async',pid))
 

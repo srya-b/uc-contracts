@@ -1,28 +1,31 @@
 import dump
 import gevent
-from itm import ITMFunctionality
-from comm import ishonest, isdishonest, isadversary, isf, isparty
-from math import ceil
-from queue import Queue as qqueue
-from utils import print, gwrite, z_write, z_crupt
-from hashlib import sha256
 from collections import defaultdict
-from gevent.queue import Queue, Channel
 
-class OfflinePhaseFunctionality(ITMFunctionality):
-    def __init__(self, sid, pid, f2p, p2f, f2a, a2f, f2z, z2f):
-        self.f2p = f2p; self.p2f = p2f
-        self.f2a = f2a; self.a2f = a2f
-        self.f2z = f2z; self.z2f = z2f
+from itm import UCAsyncWrappedFunctionality
 
-        self.channels = [self.a2f, self.z2f, self.p2f]
-        self.handlers = {
-            self.a2f: lambda x: dump.dump(),
-            self.p2f: self.input_msg,
-            self.z2f: lambda x: dump.dump()
-        }
-    def input_msg(self, msg):
-        sender,msg = msg
-        sid,pid = sender
-        
-        if msg[0] == 'rand'
+from honeybadgermpc.field import GF
+from honeybadgermpc.elliptic_curve import Subgroup
+from honeybadgermpc.polynomial import polynomials_over
+
+class OfflinePhaseFunctionality(UCAsyncWrappedFunctionality):
+    def __init__(self, sid, pid, channel_wrapper):
+        self.degree = 0 # sid needs to contain t
+        self.field = GF(Subgroup.BLS12_381)
+        self.Poly = polynomials_over(self.field)
+
+        self.polynomial_dict = defaultdict(lambda: self.Poly.random(degree=self.degree))
+
+        UCAsyncWrappedFunctionality.__init__(self, sid, pid, channel_wrapper)
+
+    def adv_msg(self, msg):
+        pass
+
+    def party_msg(self, msg):
+        pass
+
+    def env_msg(self, msg):
+        pass
+
+    def wrapper_return(self, msg):
+        pass
