@@ -2,7 +2,8 @@ from itm import ProtocolWrapper, FunctionalityWrapper, PartyWrapper, GenChannel
 from comm import setAdversary
 import gevent
 
-def execUC(env, fs, pwrapper, prot, adv):
+
+def createUC(fs, pwrapper, prot, adv):
     f2p,p2f = GenChannel(),GenChannel()
     f2a,a2f = GenChannel(),GenChannel()
     f2z,z2f = GenChannel(),GenChannel()
@@ -32,10 +33,11 @@ def execUC(env, fs, pwrapper, prot, adv):
         advitm = adv(sid, -1, z2a, a2z, p2a, a2p, a2f, f2a)
         setAdversary(advitm)
         gevent.spawn(advitm.run)
-
+    
     gevent.spawn(_exec)
+    return f2p,p2f,f2a,a2f,f2z,z2f,p2a,a2p,p2z,z2p,z2a,a2z,static
+
+def execUC(env, fs, pwrapper, prot, adv):
+    f2p,p2f,f2a,a2f,f2z,z2f,p2a,a2p,p2z,z2p,z2a,a2z,static = createUC(fs, pwrapper, prot, adv)
     env(static, z2p, z2f, z2a, a2z, p2z, f2z)
-
-
-
 

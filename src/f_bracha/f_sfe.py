@@ -50,9 +50,9 @@ from comm import setAdversary
 from itm import FunctionalityWrapper, PartyWrapper, ProtocolWrapper, GenChannel
 from syn_katz import KatzDummyAdversary, Clock_Functionality, BD_SEC_Functionality
 from utils import z_inputs, z_ainputs, wait_for
-#from f_clock import Clock_Functionality
-#from f_bd_sec import BD_SEC_Functionality
 from prot_bracha import Bracha_Protocol
+from uc import createUC
+
 class BrachaSimulator(object):
     def __init__(self, sid, pid, z2a, a2z, p2a, a2p, a2f, f2a):
         self.sid = sid
@@ -65,28 +65,19 @@ class BrachaSimulator(object):
         self.p2a = p2a; self.a2p = a2p
         self.f2a = f2a; self.a2f = a2f
 
-        # launch simulation of the real world
-        # channels for simulated world, simulator acts as environment
-        self._f2p,self._p2f = GenChannel(),GenChannel()
-        self._f2a,self._a2f = GenChannel(),GenChannel()
-        self._f2z,self._z2f = GenChannel(),GenChannel()
-        self._p2a,self._a2p = GenChannel(),GenChannel()
-        self._p2z,self._z2p = GenChannel(),GenChannel()
-        self._z2a,self._a2z = GenChannel(),GenChannel()
+        ## launch simulation of the real world
+        ## channels for simulated world, simulator acts as environment
+        _f2p,_p2f,_f2a,_a2f,_f2z,_z2f,_p2a,_a2p,_p2z,_z2p,_z2a,_a2z,_static = createUC( [('F_clock',Clock_Functionality),('F_bd',BD_SEC_Functionality)], ProtocolWrapper, Bracha_Protocol, KatzDummyAdversary)
+        self._f2p,self._p2f = _f2p,_p2f
+        self._f2a,self._a2f = _f2a,_a2f
+        self._f2z,self._z2f = _f2z,_z2f
+        self._p2a,self._a2p = _p2a,_a2p
+        self._p2z,self._z2p = _p2z,_z2p
+        self._z2a,self._a2z = _z2a,_a2z
+        self._static = _static
 
-        # simulated functionalities
-        f = FunctionalityWrapper(self._p2f,self._f2p, self._a2f,self._f2a, self._z2f,self._f2z)
-        gevent.spawn(f.run)
-        f.newcls('F_clock', Clock_Functionality)
-        f.newcls('F_bd', BD_SEC_Functionality)
+        self._static.write( ('sid',self.sid) )
 
-        # spawn dummy adversary
-        advitm = KatzDummyAdversary(self.sid, -1, self._z2a,self._a2z, self._p2a,self._a2p, self._a2f,self._f2a)
-        gevent.spawn(advitm.run)
-
-        # spawn parties from sid information on parties
-        p = ProtocolWrapper(self._z2p,self._p2z, self._f2p,self._p2f, self._a2p,self._p2a, Bracha_Protocol)
-        gevent.spawn(p.run)
         for x in self.parties:
             self._z2p.write( ((self.sid,x), ('sync',)) )
             wait_for(self._a2z)

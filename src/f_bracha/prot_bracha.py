@@ -8,7 +8,7 @@ from utils import print, gwrite, z_write, z_crupt
 from hashlib import sha256
 from collections import defaultdict
 from gevent.queue import Queue, Channel
-from itm import ITMSyncProtocol
+from syn_katz import ITMSyncProtocol
 
 BOLD = '\033[1m'
 ENDC = '\033[0m'
