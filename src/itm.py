@@ -133,6 +133,36 @@ class UCFunctionality(ITM):
     def leak(self, msg):
         Exception("leak needs to be defined")
 
+class UCWrappedFunctionality(ITM):
+    def __init__(self, sid, pid, channels, handlers):
+        self.f2a = channels['f2a']; self.a2f = channels['a2f']
+        self.f2z = channels['f2z']; self.z2f = channels['z2f']
+        self.f2p = channels['f2p']; self.p2f = channels['p2f']
+        self.f2w = channels['f2w']; self.w2f = channels['w2f']
+        self.handlers = {
+            self.z2f : self.env_msg,
+            self.p2f : self.party_msg,
+            self.a2f : self.adv_msg,
+            self.w2f : self.wrapper_msg,
+        }
+        ITM.__init__(self, sid, pid, handlers.keys(), handlers)
+
+    def adv_msg(self, msg):
+        Exception("adv_msg needs to be defined")
+
+    def party_msg(self, msg):
+        Exception("func_msg needs to be defined")
+
+    def env_msg(self, msg):
+        Exception("env_msg needs to be defined")
+
+    def wrapper_msg(self, msg):
+        Exception("wrapper_msg needs to be defined")
+
+    def leak(self, msg):
+        Exception("leak needs to be defined")
+
+
 class ITMFunctionality(object):
     #def __init__(self, sid, pid, a2f, f2a, z2f, f2z, p2f, f2p, _2f, f2_):
     def __init__(self, sid, pid, channels, handlers):
