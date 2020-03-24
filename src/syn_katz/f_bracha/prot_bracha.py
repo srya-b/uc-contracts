@@ -563,12 +563,7 @@ def env1(static, z2p, z2f, z2a, a2z, p2z, f2z):
     fro,msg = wait_for(p2z)
     print("P4 output", msg)
 
-from uc import execUC
+from execuc import execUC
 if __name__=='__main__':
-    #test_all_honest()
-    #test_crupt_dealer_no_accept()
-    #test_crupt_dealer_1_accept_1_not()
-    #test_one_crupt_party()
-    #sid = ('one', 4, (1,2,3,4))
     execUC(env1, [('F_clock', Clock_Functionality),('F_bd',BD_SEC_Functionality)], ProtocolWrapper, Bracha_Protocol, KatzDummyAdversary)
     
