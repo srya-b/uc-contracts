@@ -80,11 +80,15 @@ def z_delay_tx(z2a, a2z, fro, nonce, rounds):
 #    resp = wait_for(a2z)
 #    return resp
 
-def z_get_leaks(z2a, a2z, t, fro):
-    msg = (t, (fro, ('get-leaks',)))
-    z2a.write( msg )
-    resp = wait_for(a2z)
-    return resp
+#def z_get_leaks(z2a, a2z, t, fro):
+#    msg = (t, (fro, ('get-leaks',)))
+#    z2a.write( msg )
+#    resp = wait_for(a2z)
+#    return resp
+
+def z_get_leaks(z2a, a2z, to):
+    z2a.write( ('A2F', ( to, ('get-leaks',))) )
+    return wait_for(a2z)
 
 def z_set_delays(z2a, a2z, delays):
     fro,leaks = z_get_leaks(z2a, a2z, 'A2F', (69,'G_ledger'))
