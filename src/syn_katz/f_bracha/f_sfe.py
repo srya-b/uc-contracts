@@ -51,7 +51,7 @@ from itm import FunctionalityWrapper, PartyWrapper, ProtocolWrapper, GenChannel
 from syn_katz import KatzDummyAdversary, Clock_Functionality, BD_SEC_Functionality
 from utils import z_inputs, z_ainputs, wait_for
 from prot_bracha import Bracha_Protocol
-from uc import createUC
+from execuc import createUC
 
 class BrachaSimulator(object):
     def __init__(self, sid, pid, z2a, a2z, p2a, a2p, a2f, f2a):
@@ -499,7 +499,7 @@ def env1(static, z2p, z2f, z2a, a2z, p2z, f2z):
     print('P3 output', msg)
     
     
-from uc import execUC
+from execuc import execUC
 if __name__=='__main__':
     #test_all_honest()
     #test_sim()

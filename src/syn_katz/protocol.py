@@ -20,10 +20,6 @@ class ITMSyncProtocol(UCProtocol):
         self.outputset = False
         UCProtocol.__init__(self, sid, pid, channels, handlers)
 
-        #print('[{}] Sending start synchronization...'.format(self.pid))
-        #self.p2f.write( ((self.sid,'F_clock'),('RoundOK',)) )
-        #self.roundok = True
-
     def sync(self):
         if self.startsync and not self.roundok:
             print('[{}] Sending start synchronization...'.format(self.pid))
@@ -111,15 +107,3 @@ class ITMSyncProtocol(UCProtocol):
             self.roundok = False
             self.startsync = False
 
-    #def run(self):
-    #    while True:
-    #        ready = gevent.wait(
-    #            objects=self.channels,
-    #            count=1
-    #        )
-    #        assert len(ready) == 1
-    #        r = ready[0]
-    #        self.start_sync()
-    #        msg = r.read()
-    #        r.reset()
-    #        self.handlers[r](msg)

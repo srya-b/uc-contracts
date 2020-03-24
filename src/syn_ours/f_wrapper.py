@@ -1,58 +1,111 @@
 import dump
 import gevent
-from itm import ITM
+from itm import ITM, UCWrapper
 from collections import defaultdict
 
-class Syn_FWrapper(ITM):
-    def __init__(self, sid, pid, _f2p, _p2f, _f2a, _a2f, _f2z, _z2f):
+class Syn_FWrapper(UCWrapper):
+    def __init__(self, channels):
         self.curr_round = 1
-        self.todo = defaultdict(list)
-        base.__init__(self, sid, pid, _a2f, _f2a, _z2f, _f2z, _p2f, _f2p)
-        self.totalD = defaultdict(int)
-        self.delta = 1
+        self.delay = 0
+        self.todo = { self.curr_round: [] }
+        # TODO keep the round here until something happens
+        # alternate theory: the round won't change unless something exists todo
+        # in future rounds
+        #self.adv_callme(self.curr_round)
+        UCWrapper.__init__(self, 'wrap', 'me', channels)
 
-    def exec_in_o1(self, f, args=()):
-        self.todo[self.curr_round+1].append( (f, args) )
-        # tell adversary about: request, round, index in todo
-        #self.f2a.write( ('exec',self.curr_round+1,len(self.todo[self.curr_round+1])-1) )
- 
-    def poll(self):
-        if len(self.todo[self.curr_round]) == 0: dump.dump; return
+    def fschedule(self, sender, f, args, delta):
+        print('\033[1mFschedule\033[0m', sender, delta)
+        if self.curr_round+delta not in self.todo:
+            self.todo[self.curr_round + delta] = []
+        self.todo[self.curr_round + delta].append( (f,args) )
+        self.delay += 1
+        print('new delay', self.delay)
+        self.w2f.write( (sender, ('OK',)) )
 
-        f,args = self.todo[self.curr_round].pop(0)
+    def pschedule(self, sender, f, args, delta):
+        print('\033[1mPschedule\033[0m', sender, delta)
+        if self.curr_round+delta not in self.todo:
+            self.todo[self.curr_round + delta] = []
+        self.todo[self.curr_round + delta].append( (f,args) )
+        self.delay += 1
+        print('new delay', self.delay)
+        self.w2p.write( (sender, ('OK',)) )
+
+    def adv_delay(self, t):
+        self.delay += t
+        dump.dump()
+
+    def adv_execute(self, r, i):
+        print('Execing a codeblock')
+        f,args = self.todo[r].pop(i)
         f(*args)
 
-        if len(self.todo[self.curr_round]) == 0:
-            self.curr_round += 1
-        # TODO: tell adversary of the round change? 
+    def next_round(self):
+        rounds = self.todo.keys()
+        for r in sorted(rounds):
+            if r >= self.curr_round and len(self.todo[r])>0:
+                return r
+        raise self.curr_round
 
-    def delay(self, oldr, newr, idx):
-        if idx < len(self.todo[oldr]) and self.delta > 1:
-            # TODO bound the delay
-            task = self.todo[oldr].pop(idx)
-            self.todo[newr].append( task )
-
-    def get_round(self):
-        return self.curr_round
-
-
-    def party_msg(self, msg):
-        print('Party message in the wrapper')
-        # wrapper doesn't care about this
-        base.party_msg(self, msg)
-
-    def adv_msg(self, msg):
-        if msg[0] == 'poll':
-            pass
-        elif msg[0] == 'delay':
-            pass
+    def poll(self):
+        if self.delay > 0:
+            self.delay -= 1
+            print('delay', self.delay)
+            self.w2a.write( ('poll',) )
         else:
-            base.adv_msg(self, msg)
+            self.curr_round = self.next_round()
+            print('New round', self.curr_round)
+            r = self.curr_round
+            if len(self.todo[r]): self.adv_execute(r, 0)
+            else: dump.dump()
+
+    def clock_round(self, sender, channel):
+        channel.write( (sender, ('round',self.curr_round)) )
 
     def env_msg(self, msg):
         if msg[0] == 'poll':
-            pass
+            self.poll()
         else:
-            base.env_msg(msg)
-return Syn_FWrapper
-             
+            dump.dump()
+
+    def func_msg(self, msg):
+        sender,msg = msg
+        if msg[0] == 'schedule':
+            self.fschedule(sender, msg[1], msg[2], msg[3])
+        else:
+            dump.dump()
+
+    # TODO revisit this to see if adversary can delay callme actions
+    def party_callme(self, r):
+        if r not in self.todo: self.todo[r] = []
+        self.todo[r].append( (lambda: self.w2a.write(('shotout',)), ()) )
+        self.w2p.write( ('OK',) )
+
+    def party_msg(self, msg):
+        sender,msg = msg
+        if msg[0] == 'schedule':
+            self.pschedule(msg[1], msg[2], msg[3])
+        elif msg[0] == 'clock-round':
+            self.clock_round(sender, self.w2p)
+        elif msg[0] == 'callme':
+            self.party_callme(sender)
+        else:
+            dump.dump()
+
+    def adv_callme(self, r):
+        if r not in self.todo: self.todo[r] = []
+        self.todo[r].append( (lambda: self.w2a.write(('shoutout',)), ()) )
+        self.w2a.write( ('OK',) )
+
+    def adv_msg(self, msg):
+        print('msg', msg)
+        if msg[0] == 'delay':
+            self.adv_delay(msg[1])
+        elif msg[0] == 'exec':
+            self.adv_execute(msg[1], msg[2])
+        elif msg[0] == 'callme':
+            self.adv_callme(msg[1])
+        else:
+            dump.dump()
+
