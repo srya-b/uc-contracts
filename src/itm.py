@@ -91,7 +91,7 @@ class ITM:
             self.handlers[r](msg)
 
 class UCProtocol(ITM):
-    def __init__(self, sid, pid, channels, handlers):
+    def __init__(self, sid, pid, channels):
         self.sid = sid
         self.pid = pid
         self.p2a = channels['p2a']; self.a2p = channels['a2p']
@@ -102,8 +102,7 @@ class UCProtocol(ITM):
             self.f2p : self.func_msg,
             self.a2p : self.adv_msg,
         }
-
-        ITM.__init__(self, sid, pid, handlers.keys(), handlers)
+        ITM.__init__(self, sid, pid, channels, self.handlers)
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
@@ -114,11 +113,8 @@ class UCProtocol(ITM):
     def env_msg(self, msg):
         Exception("env_msg needs to be defined")
 
-    def leak(self, msg):
-        Exception("leak needs to be defined")
-
 class UCFunctionality(ITM):
-    def __init__(self, sid, pid, channels, handlers):
+    def __init__(self, sid, pid, channels):
         self.f2a = channels['f2a']; self.a2f = channels['a2f']
         self.f2z = channels['f2z']; self.z2f = channels['z2f']
         self.f2p = channels['f2p']; self.p2f = channels['p2f']
@@ -129,7 +125,7 @@ class UCFunctionality(ITM):
             self.p2f : self.party_msg,
             self.a2f : self.adv_msg,
         }
-        ITM.__init__(self, sid, pid, handlers.keys(), handlers)
+        ITM.__init__(self, sid, pid, channels, self.handlers)
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
@@ -139,9 +135,6 @@ class UCFunctionality(ITM):
 
     def env_msg(self, msg):
         Exception("env_msg needs to be defined")
-
-    def leak(self, msg):
-        Exception("leak needs to be defined")
 
 class UCWrappedFunctionality(ITM):
     def __init__(self, sid, pid, channels):
@@ -155,7 +148,7 @@ class UCWrappedFunctionality(ITM):
             self.a2f : self.adv_msg,
             self.w2f : self.wrapper_msg,
         }
-        ITM.__init__(self, sid, pid, self.handlers.keys(), self.handlers)
+        ITM.__init__(self, sid, pid, channels, self.handlers)
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
