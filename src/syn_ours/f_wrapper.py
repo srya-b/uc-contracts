@@ -52,6 +52,7 @@ class Syn_FWrapper(UCWrapper):
         if self.delay > 0:
             self.delay -= 1
             print('delay', self.delay)
+            print('writing to w2a')
             self.w2a.write( ('poll',) )
         else:
             self.curr_round = self.next_round()
@@ -63,13 +64,17 @@ class Syn_FWrapper(UCWrapper):
     def clock_round(self, sender, channel):
         channel.write( (sender, ('round',self.curr_round)) )
 
-    def env_msg(self, msg):
+    def env_msg(self, d):
+        msg = d.msg
+        imp = d.imp
         if msg[0] == 'poll':
             self.poll()
         else:
             dump.dump()
 
-    def func_msg(self, msg):
+    def func_msg(self, d):
+        msg = d.msg
+        imp = d.imp
         sender,msg = msg
         if msg[0] == 'schedule':
             self.fschedule(sender, msg[1], msg[2], msg[3])
@@ -82,7 +87,9 @@ class Syn_FWrapper(UCWrapper):
         self.todo[r].append( (lambda: self.w2a.write(('shotout',)), ()) )
         self.w2p.write( ('OK',) )
 
-    def party_msg(self, msg):
+    def party_msg(self, d):
+        msg = d.msg
+        imp = d.imp
         sender,msg = msg
         if msg[0] == 'schedule':
             self.pschedule(msg[1], msg[2], msg[3])
@@ -98,7 +105,9 @@ class Syn_FWrapper(UCWrapper):
         self.todo[r].append( (lambda: self.w2a.write(('shoutout',)), ()) )
         self.w2a.write( ('OK',) )
 
-    def adv_msg(self, msg):
+    def adv_msg(self, d):
+        msg = d.msg
+        imp = d.imp
         print('msg', msg)
         if msg[0] == 'delay':
             self.adv_delay(msg[1])
