@@ -15,12 +15,13 @@ class Syn_Channel(UCWrappedFunctionality):
         print('leaking', msg, 'fro', self.sender, 'to', self.receiver)
         self.leakbuffer = msg
 
-    def send_message(self, msg):
-        self.f2p.write( (self.receiver, msg) )
+    def send_message(self, msg, imp):
+        self.f2p.write( (self.receiver, msg), imp)
 
-    def party_send(self, sender, msg):
+    def party_send(self, sender, msg, imp):
+        print('Party send')
         if sender == self.sender:
-            self.f2w.write( ('schedule', self.send_message, (msg,), self.delta) )
+            self.f2w.write( ('schedule', self.send_message, (msg,imp), self.delta), 0 )
             assert wait_for(self.w2f).msg == ('OK',)
             self.leak( msg )
             self.f2p.write( (self.sender, 'OK') )
@@ -33,20 +34,24 @@ class Syn_Channel(UCWrappedFunctionality):
         else:
             dump.dump()
 
-    def party_msg(self, msg):
+    def party_msg(self, d):
+        msg = d.msg
+        imp = d.imp
         sender,msg = msg
         if msg[0] == 'send':
-            self.party_send(sender, msg)
+            self.party_send(sender, msg, imp)
         elif msg[0] == 'fetch':
             self.party_fetch(sender, msg)
         else:
             dump.dump()
 
     def adv_get_leaks(self):
-        self.f2a.write( self.leakbuffer )
+        self.f2a.write( self.leakbuffer, 0 )
         self.leakbuffer = []
 
-    def adv_msg(self, msg):
+    def adv_msg(self, d):
+        msg = d.msg
+        imp = d.imp
         if msg[0] == 'get-leaks':
             self.adv_get_leaks()
         else:

@@ -71,7 +71,8 @@ class DummyAdversary(object):
                 print('else dumping right after leak'); dump.dump()
 
 
-class DummyWrappedAdversary(ITM):
+#class DummyWrappedAdversary(ITM):
+class DummyWrappedAdversary:
     '''Implementation of the dummy adversary. Doesn't do anything locally,
      just forwards all messages to the intended party. Z communicates with
      corrupt parties through dummy adversary'''

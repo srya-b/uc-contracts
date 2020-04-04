@@ -3,6 +3,7 @@ import sys
 from utils import gwrite, z_write, wait_for
 from gevent.queue import Queue, Channel, Empty
 from gevent.event import AsyncResult, Event
+from numpy.polynomial.polynomial import Polynomial
 import dump
 import gevent
 import comm
@@ -51,13 +52,16 @@ class GenChannel(Event):
         self.i = i
 
     def write(self, data, imp=1):
+        #print('imp', imp)
         if not self.is_set():
             self._data = MSG(data, imp); self.set()
+            #print('\033[93m WRITE id={}, msg={}\033[0m'.format(self.i, self._data))
         else: 
             raise Exception("\033[1mwriting to channel already full with {}. Writing {} in {}\033[0m".format(self._data,data,self.i))
             dump.dump()
 
     def read(self): 
+        #print('\033[91m READ id={}, msg={}\033[0m'.format(self.i, self._data))
         return self._data
     def reset(self, s=''): 
         self.clear()
@@ -74,8 +78,26 @@ class ITM:
         self.spent = 0
         self.marked = 0
 
-    def write(self, ch, msg):
-        self.channels[ch].write(msg)
+    def write(self, ch, msg, imp=1):
+        print('\033[93m[ITM WRITE] pid={}] \n\timp_in={}, \n\timp_out={}, \n\tmsg import={}, msg={}\033[0m\n'.format(self.pid, self.imp_in, self.imp_out, imp, msg))
+        self.tick(1)    # each write consumes a tick
+        if self.imp_in - self.imp_out >= imp:
+            #print("Writing ms={} to channel={}".format(msg, ch))
+            self.imp_out += imp
+            self.channels[ch].write(msg, imp)
+        else:
+            #print("Import in: {}, Import out: {}, IMP: {}".format(self.imp_in, self.imp_out, imp))
+            raise Exception("out of import")
+
+    def T(self, n):
+        return self.poly()(n)
+    
+    def poly(self):
+        raise("polynomial is not defined")
+   
+    def tick(self, n):
+        if self.T(self.marked) >= self.spent + n:
+            self.spent += n
 
     def run(self):
         while True:
@@ -87,8 +109,12 @@ class ITM:
             r = ready[0]
             d = r.read()
             msg = d.msg
+            imp = d.imp
+            self.imp_in += imp
+            print('\033[92m[ITM READ] sid={}, pid={}] \n\timp_in={}, \n\timp_out={}, \n\tmsg import={}, msg={}\033[0m\n'.format(self.sid, self.pid, self.imp_in, self.imp_out, imp, msg))
             r.reset()
-            self.handlers[r](msg)
+            #self.handlers[r](msg)
+            self.handlers[r](d)
 
 class UCProtocol(ITM):
     def __init__(self, sid, pid, channels, handlers):
@@ -682,6 +708,7 @@ class WrappedProtocolWrapper:
                 pp2_.reset('pp2_ translate reset')
                 #print('\n\t Translating: {} --> {}'.format(msg, ((sid,pid),msg)))
                 #print('\t\t\033[93m {} --> {}, msg={}\033[0m'.format((self.sid,pid), msg[0], msg[1]))
+                print('\ntranslate protocol, pid={}, msg={}, import={}\n'.format(pid, msg, imp))
                 self.leaks[sid,pid].append( msg )
                 p2_.write( ((sid,pid), msg), imp )
         gevent.spawn(_translate)
@@ -727,14 +754,14 @@ class WrappedProtocolWrapper:
                     raise Exception
                 # pass onto the functionality
                 _pid = self.getPID(self.z2pid,sid,pid)
-                _pid.write(msg)
+                _pid.write(msg, d.imp)
             elif r == self.f2p:
                 d = r.read()
                 (fro,(to,msg)) = d.msg
                 sid,pid = to
                 self.f2p.reset('f2p in party')
                 _pid = self.getPID(self.f2pid, sid, pid)
-                _pid.write( (fro, msg) )
+                _pid.write( (fro, msg), d.imp)
             elif r == self.a2p:
                 (pid, msg) = r.read() 
                 self.a2p.reset('a2p in party')
@@ -758,7 +785,7 @@ class WrappedProtocolWrapper:
                 (_s,_p),msg = d.msg
                 self.w2p.reset()
                 _pid = self.getPID(self.w2pid, _s, _p)
-                _pid.write( msg )
+                _pid.write( msg, d.imp )
             else:
                 dump.dump()
         print('Its over??')
@@ -1077,12 +1104,11 @@ class WrappedFunctionalityWrapper:
                 self.z2f.reset()
             elif r == self.p2f:
                 d = r.read()
-                print('d', d)
                 ((_sid,_pid), msg) = d.msg
                 self.p2f.reset()
                 ((__sid,_tag), msg) = msg
                 _fid = self.getFID(self.p2fid, __sid, _tag)
-                _fid.write( ((_sid,_pid), msg) )
+                _fid.write( ((_sid,_pid), msg), d.imp)
             elif r == self.a2f:
                 d = r.read()
                 msg = d.msg
@@ -1101,7 +1127,7 @@ class WrappedFunctionalityWrapper:
                 ((__sid,__pid), _msg) = d.msg
                 self.w2f.reset()
                 _fid = self.getFID(self.w2fid, __sid, __pid) 
-                _fid.write( _msg )
+                _fid.write( _msg, d.imp )
             else:
                 print('SHEEEit')
                 dump.dump()
