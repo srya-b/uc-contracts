@@ -5,13 +5,19 @@ from collections import defaultdict
 
 from itm import UCAsyncWrappedFunctionality
 
+from enum import Enum
+
 from honeybadgermpc.polywrapper import PolyWrapper
 from honeybadgermpc.elliptic_curve import Subgroup
 from honeybadgermpc.field import GF
 
 class OfflinePhaseFunctionality(UCAsyncWrappedFunctionality):
+    def MessageType(Enum):
+        RAND = 1
+        LABEL = 2
+        TRIPLE = 3
     def __init__(self, sid, pid, channels):
-        self.parties = [] # TODO: define sid with party list
+        self.ssid, self.parties = sid # TODO: define sid with party list
         self.n = len(self.parties)
         
         self.poly_wrapper = PolyWrapper(self.n)
@@ -26,16 +32,18 @@ class OfflinePhaseFunctionality(UCAsyncWrappedFunctionality):
 
     def party_msg(self, msg):
         sender, msg = msg
+        msg = msg.msg
+        imp = msg.imp
         # need to convert sender to [0, n-1]
-        if msg[0] == 'rand':
+        if msg[0] == MessageType.RAND:
             self.idx = max(keys(self.poly_dict))+1
-            self.f2p.write( (sender, ('rand', self.polynomial_dict[self.idx][sender])) ) 
-        if msg[0] == 'label' and isinstance(msg[1], int):
-            self.f2p.write( (sender, ('rand', self.polynomial_dict[msg[1]][sender])) ) 
-        if msg[0] == 'triple':
+            self.write('f2p', (sender, (MessageType.RAND, self.polynomial_dict[self.idx][sender])) ) 
+        if msg[0] == MessageType.LABEL and isinstance(msg[1], int):
+            self.write('f2p', (sender, (MessageType.LABEL, self.polynomial_dict[msg[1]][sender])) ) 
+        if msg[0] == MessageType.TRIPLE:
             a, b, ab = self.polynomial_dict[msg[1]]
             points = (a[sender], b[sender], c[sender])
-            self.f2p.write( (sender, ('rand', points)) )
+            self.write('f2p', (sender, (MessageType.TRIPLE, points)) )
 
     def env_msg(self, msg):
         dump.dump() # environment should not attempt to contact functionality
