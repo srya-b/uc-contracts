@@ -16,6 +16,8 @@ class AtomicBroadcastFunctionality(UCAsyncWrappedFunctionality):
 
     def party_msg(self, msg):
         dealer, msg = msg
+        msg = msg.msg
+        imp = msg.imp
         # need to convert sender to [0, n-1]
         if msg[0] == 'tx':
             tx = msg[1]
@@ -29,6 +31,6 @@ class AtomicBroadcastFunctionality(UCAsyncWrappedFunctionality):
         
     def append_tx(self, tx, dealer):
         self.BC.append((tx, dealer))
-        j = len(self.BC)
+        pos = len(self.BC)
         for party in self.parties:
-            self.eventually(lambda j: self.f2p.write( (party, ('blockchain', self.BC[1:j])) ), [j])
+            self.eventually(lambda j: self.write('f2p', ((self.sid, party), ('blockchain', self.BC[1:j])) ), [pos])
