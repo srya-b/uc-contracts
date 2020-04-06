@@ -12,8 +12,11 @@ class AsyncBroadcastFunctionality(UCAsyncWrappedFunctionality):
 
     def party_msg(self, msg):
         sender, msg = msg
+        msg = msg.msg
+        imp = msg.imp
         if sender == self.sender:
             self.eventually(self.send_msg, [msg])
+            self.write('f2a', ('sent'))
 
     def env_msg(self, msg):
         dump.dump() # environment should not attempt to contact functionality
@@ -22,4 +25,4 @@ class AsyncBroadcastFunctionality(UCAsyncWrappedFunctionality):
         pass # ignore any activation by wrapper
         
     def send_msg(self, msg):
-         self.f2p.write( (self.receiver, ('sent', msg)) )
+         self.write('f2p', (self.receiver, ('sent', msg)) )
