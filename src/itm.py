@@ -259,10 +259,10 @@ class UCAsyncWrappedFunctionality(UCWrappedFunctionality):
         UCWrappedFunctionality.__init__(self, sid, pid, channels)
         
     def leak(self, msg):
-        self.f2w(("leak", msg))
+        self.write('f2w', (("leak", msg)))
         
     def eventually(self, msg):
-        self.f2w(("eventually", msg))
+        self.write('f2w', (("eventually", msg)))
         
 class UCAsyncWrappedProtocol(UCWrappedProtocol):
     def __init__(self, sid, pid, channels):
