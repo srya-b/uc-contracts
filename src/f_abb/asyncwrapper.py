@@ -1,55 +1,63 @@
 import dump
 import gevent
 from collections import defaultdict, deque
-from itm import ITM
+from itm import UCWrapper
+from enum import Enum
 
-class AsyncWrapper(ITM):
+class AsyncWrapper(UCWrapper):
+    class MessageType(Enum):
+        LEAK = 1
+        EVENTUALLY = 2
+        ADVANCE = 3
+        EXECUTE = 4
+        DELAY = 5
+        SEND_LEAKS = 6
+        REJECT = 7
+        
     def __init__(self, sid, pid, channels):
-        self.sid = sid
-        self.pid = pid
-
-        self.f2w = channels['f2w']
-        self.z2w = channels['z2w']
-        self.a2w = channels['a2w']
-        self.w2f = channels['w2f']
-        self.w2z = channels['w2z']
-        self.w2a = channels['w2a']
-        self.channels = [self.f2w, self.z2w, self.a2w]
-        self.handlers = {
-            self.f2w: self.func_msg,
-            self.z2w: self.env_msg,
-            self.a2w: self.adv_msg
-        }
-
         self.delay = 0
         self.runqueue = deque()
         self.leaks = list()
 
-        ITM.__init__(self, self.sid, self.pid, self.channels, self.handlers)
+        UCWrapper.__init__(self, self.sid, self.pid, self.channels)
 
     def func_msg(self, msg):
-        if msg[0] == "leak":
-            self.leaks.append(msg[1])
-        elif msg[0] == "eventually":
-            self.runqueue.append(msg[1])
+        sender, msg = msg
+        msg = msg.msg
+        imp = msg.imp
+        if msg[0] == MessageType.LEAK:
+            self.leaks.append((sender, msg[1]))
+        elif msg[0] == MessageType.EVENTUALLY:
+            func, args = msg[1]
+            self.runqueue.append((sender, msg[1]))
+            self.leaks.append((sender, func.__name__))
 
     def env_msg(self, msg):
-        if msg[0] == "advance":
+        sender, msg = msg
+        msg = msg.msg
+        imp = msg.imp
+        if msg[0] == MessageType.ADVANCE:
             if self.delay > 0:
                 delay = delay-1
-                self.w2a.write("advance")
+                self.write('w2a', MessageType.ADVANCE)
             elif len(self.runqueue) > 0:
-                func, args = self.runqueue.popleft()
-                func(*args)
+                sender, funcargs = self.runqueue.popleft()
+                self.write('w2f', ((self.sid, sender), (MessageType.EXECUTE, funcargs)))
 
     def adv_msg(self, msg):
-        if msg[0] == "deliver" and msg[1] < len(self.runqueue) and msg[1] > 0:
-            func, args = self.runqueue[msg[1]]
+        sender, msg = msg
+        msg = msg.msg
+        imp = msg.imp
+        if msg[0] == MessageType.EXECUTE and msg[1] < len(self.runqueue) and msg[1] > 0:
+            sender, funcargs = self.runqueue[msg[1]]
             del self.runqueue[msg[1]]
-            func(args)
-        elif msg[0] == "delay" and msg[1] >= 0:
-            self.delay += msg[1]
-        elif msg[0] == "sent_leaks":
+            self.write('w2f', ((self.sid, sender), (MessageType.EXECUTE, funcargs)))
+        elif msg[0] == MessageType.DELAY and msg[1] >= 0:
+            if imp >= msg[1]:
+                self.delay += msg[1]
+            else:
+                self.write('w2a', MessageType.REJECT, imp-1)
+        elif msg[0] == MessageType.SEND_LEAKS:
             leaks = self.leaks.copy()
             self.leaks.clear()
-            self.w2a.write(leaks)
+            self.write('w2a', (MessageType.SEND_LEAKS, leaks))
