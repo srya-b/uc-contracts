@@ -259,6 +259,16 @@ class UCAsyncWrappedFunctionality(UCWrappedFunctionality):
     def eventually(self, msg):
         self.f2w(("eventually", msg))
         
+class UCAsyncWrappedProtocol(UCWrappedProtocol):
+    def __init__(self, sid, pid, channels):
+        UCWrappedProtocol.__init__(self, sid, pid, channels)
+        
+    def leak(self, msg):
+        dump.dump() # should not generally happen
+        
+    def eventually(self, msg):
+        dump.dump() # should not generally happen
+        
 class ITMFunctionality(object):
     #def __init__(self, sid, pid, a2f, f2a, z2f, f2z, p2f, f2p, _2f, f2_):
     def __init__(self, sid, pid, channels, handlers):
