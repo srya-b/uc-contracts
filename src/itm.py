@@ -51,11 +51,10 @@ class GenChannel(Event):
         self._data = None
         self.i = i
 
-    def write(self, data, imp=1):
-        #print('imp', imp)
+    def write(self, data, imp=0):
         if not self.is_set():
             self._data = MSG(data, imp); self.set()
-            #print('\033[93m WRITE id={}, msg={}\033[0m'.format(self.i, self._data))
+            #print('\033[91m WRITE id={}, msg={}, imp={}\033[0m'.format(self.i, self._data, imp))
         else: 
             raise Exception("\033[1mwriting to channel already full with {}. Writing {} in {}\033[0m".format(self._data,data,self.i))
             dump.dump()
@@ -78,15 +77,14 @@ class ITM:
         self.spent = 0
         self.marked = 0
 
-    def write(self, ch, msg, imp=1):
-        print('\033[93m[ITM WRITE] pid={}] \n\timp_in={}, \n\timp_out={}, \n\tmsg import={}, msg={}\033[0m\n'.format(self.pid, self.imp_in, self.imp_out, imp, msg))
-        self.tick(1)    # each write consumes a tick
+    def write(self, ch, msg, imp=0):
+        #self.tick(1)    # each write consumes a tick
+        #print('\033[93m[ITM WRITE] pid={}] msg={}, imp={}, \n\timp_in={}, \n\timp_out={}\033[0m\n'.format(self.pid, msg, imp, self.imp_in, self.imp_out))
+        #print('\033[93m[ITM WRITE] pid={}] msg={}, imp={}\033[0m\n'.format(self.pid, msg, imp))
         if self.imp_in - self.imp_out >= imp:
-            #print("Writing ms={} to channel={}".format(msg, ch))
             self.imp_out += imp
             self.channels[ch].write(msg, imp)
         else:
-            #print("Import in: {}, Import out: {}, IMP: {}".format(self.imp_in, self.imp_out, imp))
             raise Exception("out of import")
 
     def T(self, n):
@@ -111,7 +109,8 @@ class ITM:
             msg = d.msg
             imp = d.imp
             self.imp_in += imp
-            print('\033[92m[ITM READ] sid={}, pid={}] \n\timp_in={}, \n\timp_out={}, \n\tmsg import={}, msg={}\033[0m\n'.format(self.sid, self.pid, self.imp_in, self.imp_out, imp, msg))
+            #print('\033[92m[ITM READ] sid={}, pid={}] msg={}, imp={} \n\timp_in={}, \n\timp_out={}\033[0m\n'.format(self.sid, self.pid, msg, imp, self.imp_in, self.imp_out))
+            #print('\033[92m[ITM READ] sid={}, pid={}] msg={}, imp={}\033[0m\n'.format(self.sid, self.pid, msg, imp))
             r.reset()
             #self.handlers[r](msg)
             self.handlers[r](d)
@@ -151,7 +150,6 @@ class UCFunctionality(ITM):
         #print('UCFunctionality channels', channels)
         #print('UCFunctionality handlers', handlers)
         self.handlers = {
-            self.z2f : self.env_msg,
             self.p2f : self.party_msg,
             self.a2f : self.adv_msg,
         }
@@ -181,7 +179,7 @@ class UCWrappedFunctionality(ITM):
             self.a2f : self.adv_msg,
             self.w2f : self.wrapper_msg,
         }
-        ITM.__init__(self, sid, pid, self.handlers.keys(), self.handlers)
+        ITM.__init__(self, sid, pid, channels, self.handlers)
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
@@ -195,8 +193,9 @@ class UCWrappedFunctionality(ITM):
     def wrapper_msg(self, msg):
         Exception("wrapper_msg needs to be defined")
 
-    def leak(self, msg):
-        Exception("leak needs to be defined")
+    def leak(self, msg, imp):
+        #self.channels['f2w'].write( ('leak', msg), imp)
+        self.write('f2w', ('leak',msg), imp)
 
 class UCWrappedProtocol(ITM):
     def __init__(self, sid, pid, channels):
@@ -501,6 +500,60 @@ class ITMSyncCruptProtocol(object):
             else:
                 print('else dumping somewhere ive never been'); dump.dump()
 
+class ITMWrappedPassthrough(ITM):
+    def __init__(self, sid, pid, a2p, p2a, z2p, p2z, f2p, p2f, w2p, p2w):
+        self.sid = sid
+        self.pid = pid
+        self.sender = (sid,pid)
+
+        self.z2p = z2p; self.p2z = p2z
+        self.f2p = f2p; self.p2f = p2f###
+        self.a2p = a2p; self.p2a = p2a
+        self.w2p = w2p; self.p2w = p2w
+
+        channels = {'z2p':z2p, 'p2z':p2z, 'a2p':a2p,'p2a':p2a, 'f2p':f2p,'p2f':p2f, 'w2p':w2p, 'p2w':p2w}
+
+        handlers = {
+            z2p: self.env_msg,
+            f2p: self.func_msg,
+            a2p: self.adv_msg,
+            w2p: self.wrapper_msg
+        }
+
+        ITM.__init__(self, sid, pid, channels, handlers)
+
+    def __str__(self):
+        return '\033[1mITM(%s, %s)\033[0m' % (self.sid, self.pid)
+
+    def input_write(self, p2_, msg):
+        p2_.write( msg )
+
+    def env_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        if comm.ishonest(self.sid, self.pid):
+            self.z2p.reset()
+            self.write('p2f', msg, imp )
+        else: assert False
+
+    def adv_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        if comm.ishonest(self.sid, self.pid):
+            assert False
+        self.write('p2f', msg, imp )
+
+    def func_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        if comm.ishonest(self.sid,self.pid):
+            self.write('p2z', msg, imp )
+        else:
+            self.write('p2a', msg, imp )
+
+    def wrapper_msg(self, d):
+        dump.dump()
+
 from comm import setFunctionality2, setParty
 class PartyWrapper:
     def __init__(self, z2p, p2z, f2p, p2f, a2p, p2a, tof):
@@ -679,8 +732,93 @@ class ProtocolWrapper:
                 dump.dump()
         print('Its over??')
 
+class WrappedPartyWrapper:
+    def __init__(self, z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, tof):
+        self.z2pid = {}
+        self.f2pid = {}
+        self.a2pid = {}
+        self.w2pid = {}
+        self.z2p = z2p; self.p2z = p2z
+        self.f2p = f2p; self.p2f = p2f
+        self.a2p = a2p; self.p2a = p2a
+        self.w2p = w2p; self.p2w = p2w
+        self.tof = tof  # TODO: for GUC this will be a problems, who to passthrough message to?
+
+    def _newPID(self, sid, pid, _2pid, p2_, tag):
+        pp2_ = GenChannel(('write-translate',sid,pid))
+        _2pp = GenChannel(('read',sid,pid)) # _ to 
+
+        def _translate():
+            while True:
+                r = gevent.wait(objects=[pp2_],count=1)
+                r = r[0]
+                d = r.read()
+                msg = d.msg
+                imp = d.imp
+                pp2_.reset('pp2_ translate reset')
+                p2_.write( ((sid,pid), msg), imp )
+        gevent.spawn(_translate)
+
+        _2pid[sid,pid] = _2pp
+        return (_2pp, pp2_) 
+
+
+    def newPID(self, sid, pid):
+        print('[Wrapped Party {}] Creating new party with pid: {}'.format(sid, pid))
+        _z2p,_p2z = self._newPID(sid, pid, self.z2pid, self.p2z, 'NA')
+        _f2p,_p2f = self._newPID(sid, pid, self.f2pid, self.p2f, 'NA')
+        _a2p,_p2a = self._newPID(sid, pid, self.a2pid, self.p2a, 'NA')
+        _w2p,_p2w = self._newPID(sid, pid, self.w2pid, self.p2w, 'NA')
+        
+        #itm = ITMPassthrough(sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f) 
+        itm = ITMWrappedPassthrough(sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f, _w2p, _p2w)
+        setParty(itm)
+        gevent.spawn(itm.run)
+
+    def getPID(self, _2pid, sid, pid):
+        if (sid,pid) in _2pid: return _2pid[sid,pid]
+        else:
+            self.newPID(sid, pid)
+            return _2pid[sid,pid]
+
+    def spawn(self,sid,pid):
+        print('Spawning sid={}, pid={}'.format(sid,pid))
+        self.newPID(sid,pid)
+
+    def run(self):
+        while True:
+            ready = gevent.wait(objects=[self.z2p, self.f2p, self.a2p], count=1)
+            r = ready[0]
+            m = r.read() 
+            if r == self.z2p:
+                (sid,pid),msg = m.msg
+                self.z2p.reset('z2p party reset')
+                print('z2p import', m.imp)
+                if not comm.ishonest(sid,pid):
+                    raise Exception
+                _pid = self.getPID(self.z2pid,sid,pid)
+                _pid.write( ((sid,self.tof), msg), m.imp)
+            elif r == self.f2p:
+                self.f2p.reset('f2p in party')
+                fro,(to,msg) = m.msg
+                _pid = self.getPID(self.f2pid,sid,pid)
+                _pid.write(msg, m.imp)
+            elif r == self.a2p:
+                if comm.ishonest(self.sid,pid):
+                    raise Exception
+                self.a2p.reset('a2p in party')
+                _pid = self.getPID(self.a2pid, sid, pid)
+                _pid.write( msg, m.imp )
+                r = gevent.wait(objects=[self.f2p], count=1, timeout=0.1)
+                if r:
+                    r = r[0]
+                    msg = r.read().msg
+                    self.p2a.write( msg, m.imp )
+            else:
+                dump.dump()
+
 class WrappedProtocolWrapper:
-    def __init__(self, z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, prot):
+    def __init__(self, z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, pump, prot):
         self.z2pid = {}
         self.f2pid = {}
         self.a2pid = {}
@@ -693,6 +831,7 @@ class WrappedProtocolWrapper:
         self.p2_ = GenChannel()
         self.prot = prot
         self.leaks = defaultdict(list)
+        self.pump = pump
 
     def _newPID(self, sid, pid, _2pid, p2_, tag):
         pp2_ = GenChannel(('write-translate',sid,pid)) 
@@ -708,7 +847,7 @@ class WrappedProtocolWrapper:
                 pp2_.reset('pp2_ translate reset')
                 #print('\n\t Translating: {} --> {}'.format(msg, ((sid,pid),msg)))
                 #print('\t\t\033[93m {} --> {}, msg={}\033[0m'.format((self.sid,pid), msg[0], msg[1]))
-                print('\ntranslate protocol, pid={}, msg={}, import={}\n'.format(pid, msg, imp))
+                #print('\ntranslate protocol, pid={}, msg={}, import={}\n'.format(pid, msg, imp))
                 self.leaks[sid,pid].append( msg )
                 p2_.write( ((sid,pid), msg), imp )
         gevent.spawn(_translate)
@@ -717,7 +856,7 @@ class WrappedProtocolWrapper:
         return (_2pp, pp2_) 
 
     def newPID(self, sid, pid):
-        print('\033[1m[{}]\033[0m Creating new party with pid: {}'.format('PWrapper', pid))
+        print('\033[1m[WrappedProtocol {}]\033[0m Creating new party with pid: {}'.format('PWrapper', pid))
         _z2p,_p2z = self._newPID(sid, pid, self.z2pid, self.p2z, 'NA')
         _f2p,_p2f = self._newPID(sid, pid, self.f2pid, self.p2f, 'NA')
         _a2p,_p2a = self._newPID(sid, pid, self.a2pid, self.p2a, 'NA')
@@ -729,7 +868,7 @@ class WrappedProtocolWrapper:
             print('\033[1m[{}]\033[0m Party is corrupt, so ITMSyncCruptProtocol')
             p = ITMSyncCruptProtocol(sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f)
         else:
-            p = self.prot(sid, pid, {'p2f':_p2f, 'f2p':_f2p, 'p2a':_p2a, 'a2p':_a2p, 'p2z':_p2z, 'z2p':_z2p, 'p2w':_p2w, 'w2p':_w2p})
+            p = self.prot(sid, pid, {'p2f':_p2f, 'f2p':_f2p, 'p2a':_p2a, 'a2p':_a2p, 'p2z':_p2z, 'z2p':_z2p, 'p2w':_p2w, 'w2p':_w2p}, self.pump)
         setParty(p)
         gevent.spawn(p.run)
 
@@ -787,7 +926,7 @@ class WrappedProtocolWrapper:
                 _pid = self.getPID(self.w2pid, _s, _p)
                 _pid.write( msg, d.imp )
             else:
-                dump.dump()
+                print('Its over'); dump.dump()
         print('Its over??')
 
 class ProtocolWrapper2:
@@ -1034,12 +1173,13 @@ class FunctionalityWrapper:
                 dump.dump()
 
 class WrappedFunctionalityWrapper:
-    def __init__(self, p2f, f2p, a2f, f2a, z2f, f2z, w2f, f2w):
+    def __init__(self, p2f, f2p, a2f, f2a, z2f, f2z, w2f, f2w, pump):
         self.z2fid = {}
         self.p2fid = {}
         self.a2fid = {}
         self.f2fid = {}
         self.w2fid = {}
+        self.pump = pump
         self.p2f = p2f; self.f2p = f2p
         self.a2f = a2f; self.f2a = f2a
         self.z2f = z2f; self.f2z = f2z
@@ -1080,7 +1220,7 @@ class WrappedFunctionalityWrapper:
         _2f,_f2_ = self._newFID(self.f2fid, self.f2_, sid, tag)
       
         #f = cls(sid, -1, _f2p, _p2f, _f2a, _a2f, _f2z, _z2f, _f2w, _w2f)
-        f = cls(sid, -1, {'f2p':_f2p, 'p2f':_p2f, 'f2a':_f2a, 'a2f':_a2f, 'f2z':_f2z, 'z2f':_z2f, 'f2w':_f2w, 'w2f':_w2f})
+        f = cls(sid, -1, {'f2p':_f2p, 'p2f':_p2f, 'f2a':_f2a, 'a2f':_a2f, 'f2z':_f2z, 'z2f':_z2f, 'f2w':_f2w, 'w2f':_w2f}, self.pump)
         setFunctionality2(sid,tag)
         gevent.spawn(f.run)
 

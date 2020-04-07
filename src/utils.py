@@ -88,6 +88,8 @@ def z_delay_tx(z2a, a2z, fro, nonce, rounds):
 
 def z_get_leaks(z2a, a2z, to):
     z2a.write( ('A2F', ( to, ('get-leaks',))) )
+    # TODO don't even try waiting for dump.dump
+    # you'll always get a response here
     return wait_for(a2z)
 
 def z_set_delays(z2a, a2z, delays):
@@ -119,16 +121,11 @@ def wait_for(_2_):
         return None
 
 def waits(c1, c2):
-    try:
-        r = gevent.wait(objects=[c1,c2],count=1)
-        r = r[0]
-        if r == c1: c1.reset()
-        if r == c2: c2.reset()
-        return r.read()
-    except gevent.exceptions.LoopExit:
-        dump.dump_wait()
-        print('DOESNT RETURN ANYTHING\n\n')
-        return None
+    r = gevent.wait(objects=[c1,c2],count=1)
+    r = r[0]
+    if r == c1: c1.reset()
+    if r == c2: c2.reset()
+    return r.read()
     
 def z_send_money(_z2p, _p2z, sid, pid, v, to):
     msg = ('transfer', (sid, to), v, (), 'does not matter')
