@@ -1,4 +1,4 @@
-from itm import ProtocolWrapper, FunctionalityWrapper, PartyWrapper, GenChannel, WrappedFunctionalityWrapper, WrappedProtocolWrapper
+from itm import ProtocolWrapper, FunctionalityWrapper, PartyWrapper, GenChannel, WrappedFunctionalityWrapper, WrappedProtocolWrapper, WrappedPartyWrapper
 from comm import setAdversary
 import gevent
 
@@ -86,8 +86,8 @@ def createWrappedUC(fs, ps, wrapper, prot, adv):
         for t,c in fs:
             f.newcls(t,c)
         gevent.spawn( f.run )
-        if ps == PartyWrapper:
-            p = PartyWrapper(z2p,p2z, f2p,p2f, a2p,p2a, prot)
+        if ps == WrappedPartyWrapper:
+            p = WrappedPartyWrapper(z2p,p2z, f2p,p2f, a2p,p2a, w2p,p2w, prot)
         else:
             p = WrappedProtocolWrapper(z2p,p2z, f2p,p2f, a2p,p2a, w2p,p2w, prot) 
         gevent.spawn(p.run)

@@ -4,6 +4,9 @@ from gevent.event import AsyncResult
 global _dump
 _dump = AsyncResult()
 
+global _channels
+_channels = []
+
 def dump_clear():
     global _dump
     #print('')
@@ -32,3 +35,4 @@ def dump_wait():
 def isset():
     global _dump
     return _dump.ready()
+
