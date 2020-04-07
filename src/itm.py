@@ -249,6 +249,16 @@ class UCWrapper(ITM):
     def leak(self, msg):
         Exception("leak needs to be defined")
 
+class UCAsyncWrappedFunctionality(UCWrappedFunctionality):
+    def __init__(self, sid, pid, channels):
+        UCWrappedFunctionality.__init__(self, sid, pid, channels)
+        
+    def leak(self, msg):
+        self.f2w(("leak", msg))
+        
+    def eventually(self, msg):
+        self.f2w(("eventually", msg))
+        
 class ITMFunctionality(object):
     #def __init__(self, sid, pid, a2f, f2a, z2f, f2z, p2f, f2p, _2f, f2_):
     def __init__(self, sid, pid, channels, handlers):
