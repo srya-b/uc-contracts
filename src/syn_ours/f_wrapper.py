@@ -72,7 +72,7 @@ class Syn_FWrapper(UCWrapper):
         for r in sorted(rounds):
             if r >= self.curr_round and len(self.todo[r])>0:
                 return r
-        raise self.curr_round
+        return self.curr_round
 
     def leak(self, sender, msg, imp):
         self.leaks.append( (sender, msg, imp) )

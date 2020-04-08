@@ -298,10 +298,10 @@ class RBC_Simulator(ITM):
 
                 #print('\033[1m\033[92m Are they the same? internal_delay={}, ideal_dela={}\033[0m'.format(len(l.msg), self.internal_delay))
 
-                self.internal_delay += 1
-                self.write( 'a2w', ('delay',1) )
-                m = waits(self.pump, self.channels['w2a'])
-                assert m.msg == 'OK', str(m.msg)
+                #self.internal_delay += 1
+                #self.write( 'a2w', ('delay',1) )
+                #m = waits(self.pump, self.channels['w2a'])
+                #assert m.msg == 'OK', str(m.msg)
             self.pump.write( 'dump' )
 
     def wrapper_msg(self, d):
