@@ -63,6 +63,11 @@ def env1(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     z2w.write( ('poll',) )
     print(waits(pump, a2z, p2z))
 
+    ## TODO adding this delay still lets real world commit
+    #print('\033[91m DELAYING \033[0m')
+    #z2a.write( ('delay',3) )
+    #print(waits(pump, a2z))
+
     print('\033[91m +0 READY +1 = 3 polls to send 3 -> 2 ECHO msg, +0 msgs \033[0m')
     z2w.write( ('poll',) )
     print(waits(pump, a2z, p2z))
