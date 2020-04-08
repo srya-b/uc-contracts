@@ -559,6 +559,7 @@ class ITMWrappedPassthrough(ITM):
     def func_msg(self, d):
         msg = d.msg
         imp = d.imp
+        print('Func message', d)
         if comm.ishonest(self.sid,self.pid):
             self.write('p2z', msg, imp )
         else:
@@ -566,6 +567,20 @@ class ITMWrappedPassthrough(ITM):
 
     def wrapper_msg(self, d):
         dump.dump()
+
+#class ITMCruptWrappedPassthrough(ITMWrappedPassthrough):
+#    def __init__(self, sid, pid, a2p, p2a, z2p, p2z, f2p, p2f, w2p, p2w):
+#            ITMWrappedPassthrough.__init__(self, sid, pid, a2p, p2a, z2p, p2z, f2p, p2f, w2p, p2w)
+#
+#    def env_msg(self, d):
+#        msg = d.msg
+#        imp = d.imp
+#        if comm.ishonest(self.sid, self.pid):
+#            if msg[0] == 'P2W':
+#                self.write( 'p2w', msg[1] )
+#            elif msg[0] == 'P2W':
+#                
+
 
 from comm import setFunctionality2, setParty
 class PartyWrapper:
@@ -724,7 +739,7 @@ class ProtocolWrapper:
                 _pid = self.getPID(self.f2pid, sid, pid)
                 _pid.write( (fro, msg) )
             elif r == self.a2p:
-                (pid, msg) = r.read() 
+                (sid,pid), msg = r.read() 
                 self.a2p.reset('a2p in party')
                 if comm.ishonest(sid,pid):
                     raise Exception
@@ -806,7 +821,7 @@ class WrappedPartyWrapper:
             if r == self.z2p:
                 (sid,pid),msg = m.msg
                 self.z2p.reset('z2p party reset')
-                print('z2p import', m.imp)
+                #print('z2p import', m.imp)
                 if not comm.ishonest(sid,pid):
                     raise Exception
                 _pid = self.getPID(self.z2pid,sid,pid)
@@ -817,7 +832,9 @@ class WrappedPartyWrapper:
                 _pid = self.getPID(self.f2pid,sid,pid)
                 _pid.write(msg, m.imp)
             elif r == self.a2p:
-                if comm.ishonest(self.sid,pid):
+                print('a2p msg', m)
+                (sid,pid),msg = m.msg
+                if comm.ishonest(sid,pid):
                     raise Exception
                 self.a2p.reset('a2p in party')
                 _pid = self.getPID(self.a2pid, sid, pid)
@@ -880,6 +897,7 @@ class WrappedProtocolWrapper:
         if comm.isdishonest(sid, pid):
             print('\033[1m[{}]\033[0m Party is corrupt, so ITMSyncCruptProtocol')
             p = ITMSyncCruptProtocol(sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f)
+            #p = ITMWrappedPassthrough(sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f, _w2p, _p2w)
         else:
             p = self.prot(sid, pid, {'p2f':_p2f, 'f2p':_f2p, 'p2a':_p2a, 'a2p':_a2p, 'p2z':_p2z, 'z2p':_z2p, 'p2w':_p2w, 'w2p':_w2p}, self.pump)
         setParty(p)
