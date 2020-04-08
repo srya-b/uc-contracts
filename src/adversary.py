@@ -112,18 +112,18 @@ class DummyWrappedAdversary(ITM):
         if msg[0] == 'A2F':
             t,msg = msg
             to,msg = msg
-            print('msg', msg)
+            #print('msg', msg)
             if msg[0] == 'get-leaks':
                 self.getLeaks(msg[1])
             else:
-                print('OKay so its getLeaks')
+                #print('OKay so its getLeaks')
                 self.channels['a2f'].write( msg )
         elif msg[0] == 'A2P':
             t,msg = msg
             self.channels['a2p'].write( msg )
         elif msg[0] == 'A2W':
             t,msg = msg
-            print('A2W msg', msg)
+            #print('A2W msg', msg)
             self.channels['a2w'].write( msg )
         elif msg[0] == 'corrupt':
             self.input_corrupt(msg[1])
@@ -132,7 +132,7 @@ class DummyWrappedAdversary(ITM):
     def party_msg(self, d):
         msg = d.msg
         imp = d.imp
-        print('Go back from party', msg)
+        #print('Go back from party', msg)
         self.channels['a2z'].write( msg )
 
     def func_msg(self, d):

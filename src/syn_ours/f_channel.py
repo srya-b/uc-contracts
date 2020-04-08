@@ -13,7 +13,7 @@ class Syn_Channel(UCWrappedFunctionality):
         self.leakbuffer = None
 
     def leak(self, msg):
-        print('\033[1m[FChannel from={}, to={}]\033[0m leaking'.format(self.sender[1],self.receiver[1]), msg, 'fro', self.sender, 'to', self.receiver)
+        #print('\033[1m[FChannel from={}, to={}]\033[0m leaking'.format(self.sender[1],self.receiver[1]), msg, 'fro', self.sender, 'to', self.receiver)
         self.write('f2w', ('leak', msg) )
         #self.leakbuffer = msg
 
@@ -21,7 +21,7 @@ class Syn_Channel(UCWrappedFunctionality):
         self.f2p.write( (self.receiver, msg), imp)
 
     def party_send(self, sender, msg, imp):
-        print('Party send')
+        #print('Party send')
         if sender == self.sender:
             self.f2w.write( ('schedule', self.send_message, (msg,imp), self.delta), 0 )
             assert wait_for(self.w2f).msg == ('OK',)

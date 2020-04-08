@@ -22,6 +22,7 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
         self.committed = False
         self.num_echos = defaultdict(int)
         self.num_readys = defaultdict(int)
+        self.halt = False
 
     def poly(self):
         return Polynomial([1])
@@ -46,7 +47,7 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
         # Only if you haven't already prepared a value should you accept a VAL
         if not self.prepared_value and sender[1] == 1:
             self.prepared_value = inp
-            print('sending ECHO')
+            #print('sending ECHO')
             msg = ('ECHO', self.prepared_value)
             for pid in self.except_me():
                 #self.send_msg( pid, ('ECHO', self.prepared_value), 3 )
@@ -58,6 +59,7 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
     def echo_msg(self, inp, imp):
         n = len(self.parties)
         self.num_echos[inp] += 1
+        #print('\033[92m \t num echos={}, required={}\033[0m'.format(self.num_echos[inp], ceil(n + (n/3))/2))
         if self.num_echos[inp] == ceil(n + (n/3))/2:
             #if not self.prepared_value:
             #    self.prepared_value = inp
@@ -65,6 +67,7 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
             #    for p in self.execpt_me():
             #        self.send_msg( p, ('ECHO', self.prepared_value), 0)
             if inp == self.prepared_value:
+                self.num_readys[inp] += 1
                 # send out READY
                 for p in self.except_me():
                     self.send_msg( p, ('READY', self.prepared_value), 0)
@@ -73,20 +76,18 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
 
     def ready_msg(self, inp, imp):
         self.num_readys[inp] += 1
+        #print('Num readys', self.num_readys[inp])
+        #print('required', 2*(self.n/3)+1)
         if self.prepared_value and self.prepared_value == inp:
-            if self.num_readys[inp] == floor(self.n/3) + 1 :
-                for p in self.except_me():
-                    self.send_msg( p, ('READY', self.prepared_value), 0 )
-        elif not self.prepared_value:
-            if self.num_readys[inp] == floor(self.n/3) + 1:
-                self.prepared_value = inp
-                for p in self.except_me():
-                    self.send_msg( p, ('ECHO', self.prepared_value), 0)
-        #dump.dump()
+            if self.num_readys[inp] == int(2*(self.n/3) + 1):
+                print('\033[92m Accepted input {}\033[0m'.format(self.prepared_value))
+                self.write( 'p2z', self.prepared_value )
+                self.halt = True
+                return
         self.pump.write("dump")
 
     def p2p_msg(self, sender, msg, imp):
-        print('p2p msg', msg)
+        #print('p2p msg', msg)
         _,msg = msg
         sid,pid = sender
         ssid,fro,to,r,d = sid
@@ -101,6 +102,7 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
         else: print('Msg not recognized: {}'.format(msg)); self.pump.write("dump")#dump.dump()
 
     def func_msg(self, d):
+        if self.halt: self.pump.write('dump'); return
         msg = d.msg
         imp = d.imp
         sender,msg = msg
@@ -118,6 +120,7 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
         self.pump.write("dump")
 
     def env_input(self, inp):
+        if self.halt: self.pump.write('dump'); return
         if self.pid == 1:
             #self.tick(self.n)
             for p in self.parties:
@@ -127,6 +130,7 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
         self.pump.write("dump")
 
     def env_msg(self, d):
+        if self.halt: self.pump.write('dump'); return
         msg = d.msg
         imp = d.imp
         if msg[0] == 'input':
@@ -138,8 +142,7 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
 from itm import ProtocolWrapper, WrappedProtocolWrapper
 from adversary import DummyWrappedAdversary
 from syn_ours import Syn_FWrapper, Syn_Channel
-#from execuc import execWrappedUC
-from exuc import execWrappedUC
+from execuc import execWrappedUC
 from utils import z_get_leaks
 
 def env1(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):

@@ -21,7 +21,7 @@ class Syn_FWrapper(UCWrapper):
         return Polynomial([1])
 
     def fschedule(self, sender, f, args, delta, imp):
-        print('\033[1mFschedule\033[0m', sender, delta)
+        #print('\033[1mFschedule\033[0m', sender, delta)
         # add to the runqueue
         if self.curr_round+delta not in self.todo:
             self.todo[self.curr_round + delta] = []
@@ -34,12 +34,12 @@ class Syn_FWrapper(UCWrapper):
 
         # add to the delay and return control to sender
         self.delay += 1
-        print('new delay', self.delay)
+        #print('new delay', self.delay)
         self.tick(0)
         self.w2f.write( (sender, ('OK',)) )
 
     def pschedule(self, sender, f, args, delta):
-        print('\033[1mPschedule\033[0m', sender, delta)
+        #print('\033[1mPschedule\033[0m', sender, delta)
         # add to runqueue
         if self.curr_round+delta not in self.todo:
             self.todo[self.curr_round + delta] = []
@@ -52,19 +52,19 @@ class Syn_FWrapper(UCWrapper):
     
         # add to delay and return control to sender
         self.delay += 1
-        print('new delay', self.delay)
+        #print('new delay', self.delay)
         self.tick(0)
         self.w2p.write( (sender, ('OK',)) )
 
     def adv_delay(self, t):
         self.delay += t
-        #dump.dump()
-        #self.pump.write("dump")
+        #print('ADV DELAY', self.delay)
         self.w2a.write( "OK" )
 
     def adv_execute(self, r, i):
-        print('Execing a codeblock')
         f,args = self.todo[r].pop(i)
+        #print('Execing a codeblock', f.__name__)
+        #print('Args', args)
         f(*args)
 
     def next_round(self):
@@ -80,13 +80,12 @@ class Syn_FWrapper(UCWrapper):
     def poll(self):
         if self.delay > 0:
             self.delay -= 1
-            print('delay', self.delay)
-            print('writing to w2a')
+            #print('delay', self.delay)
             self.tick(0)
             self.w2a.write( ('poll',) )
         else:
             self.curr_round = self.next_round()
-            print('New round', self.curr_round)
+            #print('New round', self.curr_round)
             r = self.curr_round
             if len(self.todo[r]): self.adv_execute(r, 0)
             else: self.pump.write("dump")#dump.dump()
@@ -100,7 +99,6 @@ class Syn_FWrapper(UCWrapper):
         if msg[0] == 'poll':
             self.poll()
         else:
-            #dump.dump()
             self.pump.write("dump")
 
     def func_msg(self, d):
@@ -150,11 +148,12 @@ class Syn_FWrapper(UCWrapper):
             total_import += imp
             output.append( (sender, msg, imp) )
         self.channels['w2a'].write( output )
+        self.leaks = []
 
     def adv_msg(self, d):
         msg = d.msg
         imp = d.imp
-        print('msg', msg)
+        #print('msg', msg)
         if msg[0] == 'delay':
             self.adv_delay(msg[1])
         elif msg[0] == 'exec':
