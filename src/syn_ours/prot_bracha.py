@@ -25,7 +25,7 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
         self.halt = False
 
     def poly(self):
-        return Polynomial([1])
+        return Polynomial([1, 1, 1, 1, 1])
 
     def except_me(self):
         return [p for p in self.parties if p != self.pid]
@@ -76,11 +76,11 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
 
     def ready_msg(self, inp, imp):
         self.num_readys[inp] += 1
-        #print('Num readys', self.num_readys[inp])
+        #print('[{}] Num readys'.format(self.pid), self.num_readys[inp])
         #print('required', 2*(self.n/3)+1)
         if self.prepared_value and self.prepared_value == inp:
             if self.num_readys[inp] == int(2*(self.n/3) + 1):
-                print('\033[92m Accepted input {}\033[0m'.format(self.prepared_value))
+                print('\033[92m [{}] Accepted input {}\033[0m'.format(self.pid, self.prepared_value))
                 self.write( 'p2z', self.prepared_value )
                 self.halt = True
                 return
