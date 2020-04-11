@@ -93,7 +93,7 @@ def createWrappedUC(fs, ps, wrapper, prot, adv):
             f.newcls(t,c)
         gevent.spawn( f.run )
         if ps == WrappedPartyWrapper:
-            p = WrappedPartyWrapper(z2p,p2z, f2p,p2f, a2p,p2a, w2p,p2w, prot)
+            p = WrappedPartyWrapper(z2p,p2z, f2p,p2f, a2p,p2a, w2p,p2w, pump, prot)
         else:
             p = WrappedProtocolWrapper(z2p,p2z, f2p,p2f, a2p,p2a, w2p,p2w, pump, prot) 
         gevent.spawn(p.run)

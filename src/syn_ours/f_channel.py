@@ -1,13 +1,16 @@
 import dump
 from itm import UCWrappedFunctionality
 from utils import wait_for
+import logging
+log = logging.getLogger(__name__)
 
 class Syn_Channel(UCWrappedFunctionality):
     def __init__(self, sid, pid, channels, pump):
         self.ssid = sid[0]
         self.sender = sid[1]
         self.receiver = sid[2]
-        self.delta = sid[3]
+        self.round = sid[3]
+        self.delta = sid[4]
         self.pump = pump
         UCWrappedFunctionality.__init__(self, sid, pid, channels)
         self.leakbuffer = None
@@ -18,11 +21,13 @@ class Syn_Channel(UCWrappedFunctionality):
         #self.leakbuffer = msg
 
     def send_message(self, msg, imp):
+        log.debug('\033[1m [F_channel to={}, from={}]\033[0m'.format(self.receiver[1], self.sender[1]), msg)
         self.f2p.write( (self.receiver, msg), imp)
 
     def party_send(self, sender, msg, imp):
         #print('Party send')
         if sender == self.sender:
+            log.debug('delta {}'.format(self.delta))
             self.f2w.write( ('schedule', self.send_message, (msg,imp), self.delta), 0 )
             assert wait_for(self.w2f).msg == ('OK',)
             self.leak( msg )
@@ -48,7 +53,6 @@ class Syn_Channel(UCWrappedFunctionality):
         elif msg[0] == 'fetch':
             self.party_fetch(sender, msg)
         else:
-            #dump.dump()
             self.pump.write("dump")
 
     def adv_get_leaks(self):
@@ -61,11 +65,8 @@ class Syn_Channel(UCWrappedFunctionality):
         if msg[0] == 'get-leaks':
             self.adv_get_leaks()
         else:
-            #dump.dump()
             self.pump.write("dump")
     def env_msg(self, msg):
-        #dump.dump()
         self.pump.write("dump")
     def wrapper_msg(self, msg):
-        #dump.dump()
         self.pump_write("dump")

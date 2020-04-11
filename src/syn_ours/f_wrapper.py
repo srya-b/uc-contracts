@@ -3,6 +3,9 @@ import gevent
 from itm import ITM, UCWrapper
 from collections import defaultdict
 from numpy.polynomial.polynomial import Polynomial
+import logging
+
+log = logging.getLogger(__name__)
 
 class Syn_FWrapper(UCWrapper):
     def __init__(self, channels, pump):
@@ -20,8 +23,18 @@ class Syn_FWrapper(UCWrapper):
     def poly(self):
         return Polynomial([1])
 
+    def print_todo(self):
+        p_dict = {}
+        for k in self.todo:
+            o = []
+            for f,args in self.todo[k]:
+                o.append((f.__name__, args))
+            p_dict[k] = o
+        print('\n\033[1m', str(p_dict), '\033[0m\n')
+
     def fschedule(self, sender, f, args, delta, imp):
-        #print('\033[1mFschedule\033[0m', sender, delta)
+        log.debug('\033[1mFschedule\033[0m {} {}'.format(sender, delta))
+        #print('\t\t f_name={}, args={}, delta={}'.format(f.__name__, args, delta))
         # add to the runqueue
         if self.curr_round+delta not in self.todo:
             self.todo[self.curr_round + delta] = []
@@ -34,12 +47,13 @@ class Syn_FWrapper(UCWrapper):
 
         # add to the delay and return control to sender
         self.delay += 1
-        #print('new delay', self.delay)
+        #print('\t\033[92m[fschdeule] new delay\033[0m', self.delay)
         self.tick(0)
         self.w2f.write( (sender, ('OK',)) )
+        #self.print_todo()
 
     def pschedule(self, sender, f, args, delta):
-        #print('\033[1mPschedule\033[0m', sender, delta)
+        log.debug('\033[1mPschedule\033[0m {} {}'.format(sender, delta))
         # add to runqueue
         if self.curr_round+delta not in self.todo:
             self.todo[self.curr_round + delta] = []
@@ -52,7 +66,7 @@ class Syn_FWrapper(UCWrapper):
     
         # add to delay and return control to sender
         self.delay += 1
-        #print('new delay', self.delay)
+        #print('\t\033[92m[pschedule] new delay\033[0m', self.delay)
         self.tick(0)
         self.w2p.write( (sender, ('OK',)) )
 
@@ -65,6 +79,7 @@ class Syn_FWrapper(UCWrapper):
         f,args = self.todo[r].pop(i)
         #print('Execing a codeblock', f.__name__)
         #print('Args', args)
+        #self.print_todo()
         f(*args)
 
     def next_round(self):
@@ -80,7 +95,7 @@ class Syn_FWrapper(UCWrapper):
     def poll(self):
         if self.delay > 0:
             self.delay -= 1
-            #print('delay', self.delay)
+            #print('\033[92m\tdelay\033[0m', self.delay)
             self.tick(0)
             self.w2a.write( ('poll',) )
         else:

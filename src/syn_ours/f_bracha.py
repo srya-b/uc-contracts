@@ -4,6 +4,9 @@ from utils import wait_for, waits
 from numpy.polynomial.polynomial import Polynomial
 from comm import ishonest, isdishonest
 import gevent
+import logging
+
+log = logging.getLogger(__name__)
 
 class Syn_Bracha_Functionality(UCWrappedFunctionality):
     def __init__(self, sid, pid, channels, pump):
@@ -16,7 +19,7 @@ class Syn_Bracha_Functionality(UCWrappedFunctionality):
         UCWrappedFunctionality.__init__(self, sid, pid, channels)
 
     def poly(self):
-        return Polynomial([1])
+        return Polynomial([1, 1, 1, 1, 1])
 
     def send_output(self, to, msg):
         #self.tick(0)
@@ -39,7 +42,7 @@ class Syn_Bracha_Functionality(UCWrappedFunctionality):
 
 
     def party_msg(self, d):
-        print('Party msg in bracha', d)
+        log.debug('Party msg in bracha {}'.format( d))
         msg = d.msg
         imp = d.imp
         sender,msg = msg
@@ -92,13 +95,13 @@ class RBC_Simulator(ITM):
         ITM.__init__(self, sid, pid, channels, handlers)
 
     def poly(self):
-        return Polynomial([1])
+        return Polynomial([1, 1, 1, 1, 1])
 
     def sim_party_msg(self, d):
         msg = d.msg
         imp = d.imp
         sender,m = msg
-        print('\033[91m Party pid={} sent output={}\033[0m'.format(sender,m))
+        log.debug('\033[91m Party pid={} sent output={}\033[0m'.format(sender,m))
         self.pump.write("dump")
 
     def sim_adv_msg(self, d):
@@ -112,12 +115,6 @@ class RBC_Simulator(ITM):
     def sim_wrapper_msg(self, d):
         #dump.dump()
         self.pump.write("dump")
-
-#    def sim_crupt_party_msg(self, d):
-#        msg = d.msg
-#        imp = d.imp
-#        print('Crupt parties output')
-#        self.p
 
     def party_msg(self, d):
         msg = d.msg
@@ -145,14 +142,14 @@ class RBC_Simulator(ITM):
                     n = len(self.parties)
                     #assert imp == n*(4*n+1), 'imp: ' + str(imp)
                     #self.tick(0)    # wrapper doesn't get anything because it's just writing back
-                    #print('\t\t\033[1m Simulation beginning\033[0m')
+                    log.debug('\t\t\033[94m Simulation beginning\033[0m')
 
                     # write ('input', x) to z2p in the locl emulation
                     m = self.sim_write_and_wait('z2p', ((self.sim_sid,1),('input',msg[2])), imp, 'a2z')
                     assert m.msg == 'dump'
-                    #print('\t\t\033[1m Simulation ending\033[0m')
+                    log.debug('\t\t\033[94m Simulation ending\033[0m')
                 elif msg[0] == 'schedule':          # new "schedules" in wrapper
-                    #print('just some schedules')
+                    log.debug('just some schedules')
                     self.add_new_schedule(msg)
                 else: raise Exception("new kind of leak " + str(msg))
 
@@ -175,26 +172,28 @@ class RBC_Simulator(ITM):
     '''Check simulated wrapper for new "schedules", add to the delay in the ideal wrapper'''
     def sim_get_leaks(self):
         # Ask for leaks
+        #print('ask for leaks')
         leaks = self.sim_write_and_wait('z2a', ('A2W', ('get-leaks',)), 0, 'a2z')
+        n = 0
         if len(leaks.msg):
-            n = 0
-
             # check new schedules in in simulated wrapper
             for x in leaks.msg:
                 fro,s,i = x
                 if s[0] == 'schedule': n += 1
-                else: print('COOKIES')
+                #else: print('COOKIES')
 
-            # add delay to ideal-world wrapper
-            #print('\t\tAdd n={} delay to ideal world wrapper'.format(n))
-            self.internal_delay += n
-            if self.internal_delay == n:
-                self.internal_delay += 1
-                # TODO having to add +1 if internal and ideal delays are the same
-                self.write('a2w', ('delay', n+1))
-            else:
-                self.write('a2w', ('delay', n))
-            m = waits(self.pump, self.channels['w2a']); assert m.msg == "OK", str(m.msg)
+        # add delay to ideal-world wrapper
+        log.debug('\t\tAdd n={} delay to ideal world wrapper'.format(n))
+        self.internal_delay += n
+        if self.internal_delay == n:
+            self.internal_delay += 1
+            # TODO having to add +1 if internal and ideal delays are the same
+            log.debug("\t\t the delays are the same")
+            self.write('a2w', ('delay', n+1))
+        else:
+            self.write('a2w', ('delay', n))
+        m = waits(self.pump, self.channels['w2a']); assert m.msg == "OK", str(m.msg)
+
         #print('Leaks', len(leaks.msg))
         return leaks
 
@@ -238,13 +237,12 @@ class RBC_Simulator(ITM):
                 self.sim_channels['a2p'].write( msg, imp )
         elif msg[0] == 'A2W':
             t,msg = msg
-            #print('A2W msg', msg)
             if msg[0] == 'get-leaks':
                 self.env_get_leaks()
             elif msg[0] == 'exec':
                 self.env_exec(self, r, idx)
             elif msg[0] == 'delay':
-                self.env_delay(self, d)
+                self.env_delay(msg[1])
             else:
                 #self.tick(1)
                 self.channels['a2w'].write( msg, imp )
@@ -258,50 +256,37 @@ class RBC_Simulator(ITM):
         self.internal_delay -= 1
          
         # simulate the 'poll' call
-        #print('\t\t\033[1m poll Simulation beginning\033[0m')
+        log.debug('\t\t\033[94m poll Simulation beginning\033[0m')
         self.sim_channels['z2w'].write( ('poll',), 0)
-        #r = gevent.wait(objects=[self.sim_pump, self.sim_channels['a2z'], self.sim_channels['p2z']], count=1)
         r = gevent.wait(objects=[self.sim_pump, self.sim_channels['a2z'], self.sim_channels['p2z'], self.sim_channels['p2a']], count=1)
         assert len(r) == 1
         r = r[0]
         m = r.read()
         r.reset()
+        
+        self.sim_get_leaks()
+
+        log.debug('\t\t\033[94m poll Simulation finished\033[0m')
         if r == self.sim_channels['p2z']:
             fro,msg = m.msg
             _sid,_pid = fro
-            #print('\033[91m Got some output from pid={}, msg={}\033[0m'.format(_pid,msg))
+            log.debug('\033[91m Got some output from pid={}, msg={}\033[0m'.format(_pid,msg))
 
             # TODO deliver the output in the ideal world
             rnd,idx = self.pid_to_queue[_pid]
-            #print('\t old internal_queue: {}'.format(self.internal_run_queue))
             self.internal_run_queue[rnd].pop(idx)
-            #print('\t internal_queue after exec pid={}: {}'.format(_pid, self.internal_run_queue))
-
-            #print('\t before exec: {}'.format(self.pid_to_queue))
+            
             for p in self.pid_to_queue:
                 if p > _pid:
                     r,i = self.pid_to_queue[p]
                     self.pid_to_queue[p] = (r, i-1)
-            #print('\t after exec: {}'.format(self.pid_to_queue))
+            log.debug('\t after exec: {}'.format(self.pid_to_queue))
             
             self.write('a2w', ('exec', rnd, idx))
             return
         elif r == self.sim_channels['p2a']:
             self.write( 'a2z', m.msg )
         else:
-            #print('\t\t\033[1m Simulation ending\033[0m')
-            if m.msg == ('poll',):
-                pass#print('still not delay=0')
-            else:
-                # have to get leaks and check for output from any of the parties
-                #print('something popped off and executed')
-                l = self.sim_get_leaks()
-
-                self.internal_delay += 1
-                self.write( 'a2w', ('delay',1) )
-                m = waits(self.pump, self.channels['w2a'])
-                assert m.msg == 'OK', str(m.msg)
-
             self.pump.write( 'dump' )
 
     def wrapper_msg(self, d):
