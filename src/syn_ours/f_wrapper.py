@@ -8,7 +8,7 @@ import logging
 log = logging.getLogger(__name__)
 
 class Syn_FWrapper(UCWrapper):
-    def __init__(self, channels, pump):
+    def __init__(self, channels, pump, poly):
         self.curr_round = 1
         self.delay = 0
         self.todo = { self.curr_round: [] }
@@ -18,10 +18,8 @@ class Syn_FWrapper(UCWrapper):
         # alternate theory: the round won't change unless something exists todo
         # in future rounds
         #self.adv_callme(self.curr_round)
-        UCWrapper.__init__(self, 'wrap', 'me', channels)
-
-    def poly(self):
-        return Polynomial([1])
+        self.total_queue_ever = 0
+        UCWrapper.__init__(self, 'wrap', 'me', channels, poly)
 
     def print_todo(self):
         p_dict = {}
@@ -33,12 +31,14 @@ class Syn_FWrapper(UCWrapper):
         print('\n\033[1m', str(p_dict), '\033[0m\n')
 
     def fschedule(self, sender, f, args, delta, imp):
-        log.debug('\033[1mFschedule\033[0m {} {}'.format(sender, delta))
+        log.debug('\033[1mFschedule\033[0m delta: {}, import: {}, sender: {}'.format(imp, delta, sender))
         #print('\t\t f_name={}, args={}, delta={}'.format(f.__name__, args, delta))
         # add to the runqueue
         if self.curr_round+delta not in self.todo:
             self.todo[self.curr_round + delta] = []
         self.todo[self.curr_round + delta].append( (f,args) )
+        self.total_queue_ever += 1
+        log.debug('total_queue_ever: {}'.format(self.total_queue_ever))
         
         # leaks the schedule
         idx = len(self.todo[self.curr_round + delta])-1
@@ -58,6 +58,8 @@ class Syn_FWrapper(UCWrapper):
         if self.curr_round+delta not in self.todo:
             self.todo[self.curr_round + delta] = []
         self.todo[self.curr_round + delta].append( (f,args) )
+        self.total_queue_ever += 1
+        log.debug('total_queue_ever: {}'.format(self.total_queue_ever))
 
         # leak the schedule
         idx = len(self.todo[self.curr_round + delta])-1
@@ -90,6 +92,7 @@ class Syn_FWrapper(UCWrapper):
         return self.curr_round
 
     def leak(self, sender, msg, imp):
+        log.debug("Leaking information, sender={}, msg={}".format(sender, msg))
         self.leaks.append( (sender, msg, imp) )
 
     def poll(self):
@@ -162,7 +165,7 @@ class Syn_FWrapper(UCWrapper):
             sender,msg,imp = leak
             total_import += imp
             output.append( (sender, msg, imp) )
-        self.channels['w2a'].write( output )
+        self.channels['w2a'].write( output, total_import )
         self.leaks = []
 
     def adv_msg(self, d):

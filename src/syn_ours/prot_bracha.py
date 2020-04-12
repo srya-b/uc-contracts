@@ -4,17 +4,20 @@ from math import ceil, floor
 from utils import wait_for, waits
 from collections import defaultdict
 from numpy.polynomial.polynomial import Polynomial
+import logging
+
+log = logging.getLogger(__name__)
 
 class Syn_Bracha_Protocol(UCWrappedProtocol):
     #def __init__(self, sid, pid, channels):
-    def __init__(self, sid, pid, channels, pump):
+    def __init__(self, sid, pid, channels, pump, poly):
         self.ssid = sid[0]
         self.parties = sid[1]
         self.delta = sid[2]
         self.n = len(self.parties)
         self.t = floor(self.n/3)
         self.pump = pump
-        UCWrappedProtocol.__init__(self, sid, pid, channels)
+        UCWrappedProtocol.__init__(self, sid, pid, channels, poly)
 
         self.prepared_value = None
         self.echoed = False
@@ -23,9 +26,6 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
         self.num_echos = defaultdict(int)
         self.num_readys = defaultdict(int)
         self.halt = False
-
-    def poly(self):
-        return Polynomial([1, 1, 1, 1, 1])
 
     def except_me(self):
         return [p for p in self.parties if p != self.pid]
@@ -39,45 +39,42 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
     def send_msg(self, to, msg, imp):
         r = self.clock_round()
         fchannelsid = (self.ssid, (self.sid,self.pid), (self.sid,to), r, self.delta)
+        log.debug("\nsending import: {}".format(imp))
         self.write('p2f', ((fchannelsid,'F_chan'), ('send',msg)), imp)
         m = wait_for(self.channels['f2p'])
         assert m.msg[1] == 'OK', str(m)
 
     def val_msg(self, sender, inp, imp):
         # Only if you haven't already prepared a value should you accept a VAL
+        assert imp == 4*self.n, "imp: {} != 3*{}".format(imp,self.n)
         if not self.prepared_value and sender[1] == 1:
             self.prepared_value = inp
-            #print('sending ECHO')
             msg = ('ECHO', self.prepared_value)
+            self.tick(self.n-1)
             for pid in self.except_me():
-                #self.send_msg( pid, ('ECHO', self.prepared_value), 3 )
-                self.send_msg( pid, ('ECHO', self.prepared_value), 0)
+                self.send_msg( pid, ('ECHO', self.prepared_value), 3 )
             self.num_echos[inp] += 1
-        #dump.dump()
         self.pump.write("dump")
    
     def echo_msg(self, inp, imp):
         n = len(self.parties)
         self.num_echos[inp] += 1
-        #print('\033[92m \t num echos={}, required={}\033[0m'.format(self.num_echos[inp], ceil(n + (n/3))/2))
+        assert imp == 3
+        log.debug('[{}] Num echos {}'.format(self.pid, self.num_echos[inp]))
         if self.num_echos[inp] == ceil(n + (n/3))/2:
-            #if not self.prepared_value:
-            #    self.prepared_value = inp
-            #    # send out ECHO
-            #    for p in self.execpt_me():
-            #        self.send_msg( p, ('ECHO', self.prepared_value), 0)
             if inp == self.prepared_value:
                 self.num_readys[inp] += 1
                 # send out READY
+                self.tick(self.n-1)
                 for p in self.except_me():
                     self.send_msg( p, ('READY', self.prepared_value), 0)
-        #dump.dump()
         self.pump.write("dump")
 
     def ready_msg(self, inp, imp):
         self.num_readys[inp] += 1
-        #print('[{}] Num readys'.format(self.pid), self.num_readys[inp])
-        #print('required', 2*(self.n/3)+1)
+        assert imp == 0
+        log.debug('[{}] Num readys {}'.format(self.pid, self.num_readys[inp]))
+        log.debug('required {}'.format(2*(self.n/3)+1))
         if self.prepared_value and self.prepared_value == inp:
             if self.num_readys[inp] == int(2*(self.n/3) + 1):
                 print('\033[92m [{}] Accepted input {}\033[0m'.format(self.pid, self.prepared_value))
@@ -113,20 +110,17 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
             self.pump.write("dump")
 
     def wrapper_msg(self, msg):
-        #dump.dump()
         self.pump.write("dump")
     def adv_msg(self, msg):
-        #dump.dump()
         self.pump.write("dump")
 
     def env_input(self, inp):
         if self.halt: self.pump.write('dump'); return
         if self.pid == 1:
-            #self.tick(self.n)
+            self.generate_pot(1)
+            self.tick(len(self.parties))
             for p in self.parties:
-                #self.send_msg( p, ('VAL', inp),  4*self.n)
-                self.send_msg( p, ('VAL', inp),  0)
-        #dump.dump()
+                self.send_msg( p, ('VAL', inp),  4*self.n)
         self.pump.write("dump")
 
     def env_msg(self, d):
@@ -136,7 +130,6 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
         if msg[0] == 'input':
             self.env_input(msg[1])
         else:
-            #dump.dump()
             self.pump.wite("done")
 
 from itm import ProtocolWrapper, WrappedProtocolWrapper
