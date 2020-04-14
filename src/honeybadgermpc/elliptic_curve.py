@@ -1,4 +1,4 @@
-from field import GF, GFElement
+from honeybadgermpc.field import GF, GFElement
 
 
 class Subgroup:

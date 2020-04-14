@@ -1,10 +1,10 @@
-import polynomial
-from polynomial import polynomials_over, EvalPoint
-from betterpairing import ZR
-from elliptic_curve import Subgroup
-from field import GF, GFElement
+import honeybadgermpc.polynomial as polynomial
+from honeybadgermpc.polynomial import polynomials_over, EvalPoint
+from honeybadgermpc.betterpairing import ZR
+from honeybadgermpc.elliptic_curve import Subgroup
+from honeybadgermpc.field import GF, GFElement
 import numpy as np
-from reed_solomon_wb import make_wb_encoder_decoder
+from honeybadgermpc.reed_solomon_wb import make_wb_encoder_decoder
 '''
 n = 10
 t = n // 3
@@ -39,16 +39,30 @@ class PolyWrapper:
     '''
     points - list of points where points[idx] contains f(w**idx)
     '''
+    def random_with_secret(self, secret):
+        return self.Poly.interpolate([(self.omega**self.n, secret) if i == 0 else (self.omega**i, self.field.random()) for i in range(self.t+1)])
     def random(self, points=None):
-        count = len(points)-points.count(None)
         if points is None:
             return self.Poly.random(degree=self.t)
-        elif count >= self.t+1:
+        points = points.copy()
+        count = len(points)-points.count(None)
+        if count >= self.t+1:
             print("Not random")
-            return self.reconstruct(points)
+            try:
+                return self.Poly.interpolate([(self.omega**i, p) for i, p in enumerate(points) if p is not None])
+            except:
+                coeffs = self.reconstruct(points)
+                return self.Poly(coeffs)
         else:
             elems = [x for x in range(len(points)) if points[x] is None][:self.t+1-count]
             for elem in elems: points[elem] = self.field.random()
-            return self.reconstruct(points)
+            return self.Poly.interpolate([(self.omega**i, p) for i, p in enumerate(points) if p is not None])
     def reconstruct(self, points):
-        return self.decode(points)
+        try:
+            return self.Poly(self.decode(points))
+        except:
+            return None
+    def share(self, f, i):
+        return f(self.omega**i)
+    def secret(self, f):
+        return self.share(f, self.n)
