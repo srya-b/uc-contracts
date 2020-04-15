@@ -105,6 +105,7 @@ Below is the updated version with the correct number of activations.
 	\label{fig:wrapper}
 \end{figure}
 
+\newpage
 
 \subsection{Broadcast with Synchronous Wrapper}
 This section descibres how the synchronous wrapper works.
@@ -143,9 +144,19 @@ The wrapper skips ahead to the first round $r' \geq r$ that contains a codeblock
 	\label{fig:wrapper:synchronous}
 \end{figure}
 
-\paragraph{Bracha}
 The Bracha broacast protcol is shown in Figure~\ref{fig:prot_bracha_ours}. 
 The protocol proceeds in a few rounds where VAL, ECHO, and READY messages exchanged until parties are ready to commit to a dealer input value $v$.
+The corresponding functionality in Figure~\ref{fig:functionality:broadcast_import_real} is $\F_{bcast}$.
+
+\paragraph{Bracha Simulator}
+The simulator runs a local simulation of the real world protocol with the same honest and corruptd parties as the real world. It also runs a local simulation of the synchronous wrapper in the real world.
+
+When the dealer in is honest, $\F_{bcast}$ leaks the input to the dealer as well as the import received and gives it to \Wsync.
+When the environment asks the simulator to get leaks from the wrapper, the simulator firsts obtains the honest dealer's input and passes it to the simulated real world dealer and simulates all following messages.
+It also gets leaks of new codeblocks scheduled to execute in \Wsync and internall tracks them with the $idealdelay$ parameter. 
+The simulator needs to track this value internall to ensure that the codeblocks delivering output in the real world are not executed until their counterparts in the simulation real-world also execute.
+After simulating the input, the simulator collets the leaks from the simuated wrapper \Wsync' and returns them to the environment.
+
 
 \begin{figure}
 \begin{subfigure}{\textwidth}
