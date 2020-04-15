@@ -1,46 +1,59 @@
-%\begin{bbox}[title={Wrapper $\mathcal{W} (\mathcal{F},\mathcal{C}_1,...,\mathcal{C}_k)$}]
-%
-%Initialize $\msf{outputs} := \emptyset$, $\msf{buffer} := \emptyset$
-%
-%\OnInput $\inmsg{buffer}{msg}{\delta}{P_i}$ from $\mathcal{F}$:
-%	
-%	\quad $\msf{buffer}[\Gledger.\msf{rnd}+\delta].\msf{append}(msg,P_i)$ 
-%
-%\OnInput \inmsg{read} from \Partyi:
-%
-%	\quad $\msf{out} := \msf{outputs}[P_i]$
-%
-%	\quad $\msf{outputs}[P_i] := \emptyset$
-%
-%	\quad $\Send \msf{out} \rightarrow P_i$
-%
-%\Allinputs m from \Partyi:
-%
-%	\quad \Send $m \rightarrow \F$
-%
-%\vspace{2mm} \hrule \vspace{2mm}
-%
-%When activated, do the following subroutine before processing the message:
-%
-%	\quad \For $(msg,P_i) \in \msf{buffer}[\Gledger.\msf{rnd}]$:
-%
-%		\qquad \Send $(\msf{deliver},msg,P_i) \rightarrow \F$
-%
-%		\qquad $\msf{outputs}[P_i].\msf{append}(msg)$
-%
-%\end{bbox}
-\begin{bbox}[title={\textbf{Wrapper} $\mathcal{W}_{\msf{synchronous}} (\mathcal{F})$}]
+\begin{bbox}[title={\textbf{Wrapper} $\mathcal{W}_{\msf{sync}}$}]
 
-Proceed in rounds starting in round $r=1$.
+Initialize $\msf{leakbuffer} := \emptyset, \msf{runqueue} := \emptyset, r := 0, delay := 0$
 
--- On first activation of $p_i$ in round $r$:
+\vspace{2mm} \hrule \vspace{2mm}
 
-	\qquad \For $p_j \in \mathcal{P}$:
+-- \OnInput \inmsg{schedule}{codeblock $e$, $\delta$} $1 \token$ from $\mathcal{F}_i$/$P_i$:
 
-		\qquad \quad Get message $m$ from $\Fsync{p_j}{p_i}$
+	\qquad $idx \leftarrow$ append $e$ to $\msf{runqueue}[r+ \delta]$
 
-		\qquad \quad Deliver message to \F
+	\qquad $delay = delay + 1$
 
-	\todo{needs to be finalized in code first}
+	\qquad Append (schedule, $r + \delta$, $idx$) to \msf{leakbuffer}
+
+	\qquad \Send (scheduled) $\rightarrow \mathcal{F}_i/P_i$
+
+-- \OnInput \inmsg{delay} $d \token$ from $\mathcal{A}$:
+
+	\qquad $delay = delay + d$
+
+-- \OnInput \inmsg{execute}{$rnd$}{$idx$} from $\mathcal{A}$:
+	
+	\qquad $e \leftarrow$ pop $\msf{runqueue}[r][idx]$
+
+	\qquad Execute $e$
+
+-- \OnInput \inmsg{leak}{msg} from $\mathcal{F}_i/P_i$:
+
+	\qquad Append $(msg, \mathcal{F}_i/P_i, d \token)$ to $\msf{leakbuffer}$
+
+-- \OnInput \inmsg{poll} $1 \token$ from $\mathcal{Z}$:
+
+	\qquad \If $delay > 0$:
+
+		\qqquad $delay = delay - 1$
+
+		\qqquad \Send (poll) to $\mathcal{A}$
+	
+	\qquad Else: 
+
+		\qqquad $rnd \leftarrow \msf{argmin}_{r}\{ \msf{runqueue}[r] \neq \emptyset \}$
+
+		\qqquad $e \leftarrow$ pop $\msf{runqueue}[rnd]$
+
+		\qqquad Execute $e$
+
+-- \OnInput \inmsg{round} from $\mathcal{F}_i/P_i$:
+
+	\qquad \Send $r \rightarrow \mathcal{F}_i/P_i$
+
+-- \OnInput \inmsg{getleaks} from $\mathcal{A}$:
+
+	\qquad $d \leftarrow$ total import in $\msf{leakbuffer}$
+
+	\qquad \Send $(\msf{leakbuffer}, d \token) \rightarrow \mathcal{A}$
+
+	\qquad $\msf{leakbuffer} = \emptyset$
 
 \end{bbox}

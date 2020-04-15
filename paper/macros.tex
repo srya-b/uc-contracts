@@ -5,6 +5,7 @@
 \newcommand{\con}[1]{\msf{Contract_{#1}}}
 %\newcommand{\Fsync}[2]{\ensuremath{\F_{\msf{sync},#1,#2}}}
 \newcommand{\Fsync}[2]{\ensuremath{\F_{\msf{BD-SEC}}(#1,#2)}}
+\newcommand{\Fchan}[2]{\ensuremath{\F_{\msf{sync-chan}}(#1,#2)}}
 \newcommand{\Fbdsec}{\ensuremath{\F_{\msf{BD-SEC}}^{\delta,\ell}}}
 \newcommand{\Fbc}{\ensuremath{\F_{\msf{broadcast}}}}
 \newcommand{\Fsfe}{\ensuremath{\F_{\msf{SFE}}}}
@@ -53,3 +54,9 @@
 \newcommand{\qqquad}{\qquad \quad}
 \newcommand{\qqqquad}{\qqquad \quad}
 \newcommand{\qqqqquad}{\qqqquad \quad}
+
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+            \node[shape=circle,draw,inner sep=1pt] (char) {#1};}}
+
+\newcommand*\token{~\circled{t}}
+

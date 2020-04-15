@@ -1,0 +1,23 @@
+\begin{bbox}[title={Algorithm $\msf{Poll}$}]
+
+Simulate (\texttt{poll}) $\rightarrow \mathcal{W}'$
+
+Store $leaks \leftarrow \msf{SimGetLeaks}$ for $\mathcal{Z}$
+
+Check for input:
+
+-- \OnInput (m) from $P_i'$:
+
+	\qquad \If no input from $\mathcal{D}$ from $\F_{bcast}$:
+
+		\qqquad Add \{\Send (m) to $P_i$\} to $\mathcal{W}$.
+
+		\qqquad $idealdelay = idealdelay + 1$
+
+	\qquad Execute output for $p_i$ in $\mathcal{W}$.
+
+-- \OnInput (m) from $\mathcal{A}'$:
+
+	\qquad \Send $(m) \rightarrow \mathcal{Z}$
+
+\end{bbox}

@@ -1,3 +1,5 @@
+\subsection{Broadcast in Katz et al.}
+
 In this section we describe the ideal functionality and protocol for a simple byzantine broadcast in the synchronous model.
 The function is modelled after the secure function evaluation functionality, $\F_{\msf{SFE}}^{f,Rnd}$, described in ~\cite{katz-clock}.
 Secure function evaluation computes the output of a single function from the inputs of the parties.
@@ -49,14 +51,6 @@ We modify the protocol in the following ways:
 	\item First, the protocol has to be updates to reflect the interace offered by the ideal functionality. In the ideal world, the environment gives $|\mathcal{P}|$ activations to each party in each round. In the real world protocol, on the first activation of a party in a round $r$, the party $p_i$ fetches incoming messages from previous rounds, computes the messages to be sent in this round, $\{m_{i,j,r}\}_{j}$, and uses the next $|\mathcal{P}|$ rounds to send those messages to the other parties.
 	\item Second, the protocol is modified to only accept certain messages in certain rounds. For example, the hones dealer will only accept $(input,v)$ from the environment in the first round, all parties will only accept $(VAL,v)$ messages in the second tound, and so on.
 \end{itemize}
-
-These changes take the form of a wrapper $\mathcal{W}_{\msf{synchronous}}$ shown in Figure \ref{fig:wrapper:synchronous}.
-
-\begin{figure}
-	\input{figures/wrapper}
-	\label{fig:wrapper:synchronous}
-	\caption{This wrapper implements the enhancements made to the protocol to conform to the interace of the ideal functionality \Fbc. It reads in incoming messages in the first activation of a round and uses the next $|\mathcal{P}|$ activations to send messages to others.}
-\end{figure}
 
 \begin{figure}[!h]
 	\input{figures/prot_bracha}
@@ -112,3 +106,81 @@ Below is the updated version with the correct number of activations.
 \end{figure}
 
 
+\subsection{Broadcast with Synchronous Wrapper}
+This section descibres how the synchronous wrapper works.
+The example is bracha broadcast with the functionalities, protocols, simulator and wrapper listed below.
+
+\paragraph{Synchronous Wrapper}
+The synchronous wrapper handles delaying execution of codeblocks within a upper bound $\Delta$ that is fixed by the calling protocol. 
+The synchronous wrapper provides a simple interface to the parties and functionalities, defined in Figure~\ref{fig:wrapper:synchronous}.
+The simplest example to demonstrate how the wrapper works is with a simple synchronous, point-to-point channel, $\F_{sync-chan}$ (Figure~\ref{fig:functionality:channel}).
+
+In order to deliver an output, send a message, or execute an arbitrary code block with in a certain number of clock rounds, an ITM can ``schedule'' a piece of code to execute within a number of rounds.
+In the definition of $\F_{sync-chan}$ in Fig~\ref{fig:functionality:channel}, a message needs to be delivered to the recipient in a synchrous manner so the functionality schdules the code block with the wrapper (for simplicty, we show two version of the same p2p channel: (a) one where the intuitive notion of synchronous code execution is captures and (b) where we show the actual messages passed from the functionality and the wrapper). 
+
+\begin{figure}
+	\input{figures/f_channel}
+	\caption{A basic point-to-point channel functionality that delivers the message in a synchronous way.}
+	\label{fig:functionality:channel}
+\end{figure}
+
+When a codeblock is schedule in the wrapper, it is immediately assigned the maximum possibe delay and added to the queue of schedule codeblocks.
+The adversary is made aware of the round and the index into the queue for this new codeblock.
+Additionally, a delay of 1 is added to the internal delay of the wrapper.
+Once schedule, there are two ways for the code block to eventually be executed.
+The first way is the adversary can decide to send the (\texttt{exec},$rnd$,$idx$) message to the wrapper to force the execution of a code block whenever it wants.
+The second, method is through the environment polling the wrapper.
+The purpose of allowing the environmen to force the wrapper to execute codeblocks is to prevent the adversary from having complete control over the wrapper and stop rounds from progressing.
+
+\paragraph{Polling}
+When the environment polls the wrapper, it decrements a delay counter (recall the delay is incremented when a new codeblock is schedule and can be further delayed by the adversary).
+After sufficient polling, the delay reaches 0 in round $r$ and the next available code-block is popped from the queue and executed. 
+The wrapper skips ahead to the first round $r' \geq r$ that contains a codeblock to execute.
+
+\begin{figure}
+	\input{figures/wrapper}
+	\caption{This wrapper implements the enhancements made to the protocol to conform to the interace of the ideal functionality \Fbc. It reads in incoming messages in the first activation of a round and uses the next $|\mathcal{P}|$ activations to send messages to others.}
+	\label{fig:wrapper:synchronous}
+\end{figure}
+
+\paragraph{Bracha}
+The Bracha broacast protcol is shown in Figure~\ref{fig:prot_bracha_ours}. 
+The protocol proceeds in a few rounds where VAL, ECHO, and READY messages exchanged until parties are ready to commit to a dealer input value $v$.
+
+\begin{figure}
+\begin{subfigure}{\textwidth}
+	\input{figures/f_broadcast_import}
+	\label{fig:functionality:broadcast_import}
+	\caption{A simple broadcast functionality that delivers the output to all the other parties within $O(\Delta)$ rounds. The functionality is described at a high level, with more specific messages and wrapper interaction shown below.}
+\end{subfigure}
+\newline
+\begin{subfigure}{\textwidth}
+	\input{figures/f_broadcast_import_real}
+	\label{fig:functionality:broadcast_import_real}
+	\caption{This broacsat functionality illustrates the actual messages being passed between the functionality above and the wrapper. The wrapper handles synchronous delivery of messages {\em and} leaks.}
+\end{subfigure}
+\end{figure}
+
+\begin{figure}
+	\input{figures/prot_bracha_ours}
+	\label{fig:prot:bracha_ours}
+\end{figure}
+
+\begin{figure}
+	\input{figures/sim_bracha_ours/sim.tex}
+	\label{fig:sim:bracha_ours}
+\end{figure}
+
+\begin{figure}
+	\begin{subfigure}{\textwidth}
+	\input{figures/sim_bracha_ours/algo_simgetleaks}
+	\label{fig:algo:simgetleaks}
+	\caption{Function to get leaks from the simulated real world and update the delay of the ideal world if new codebloks have been schedules in the simulated wrapper, $\mathcal{W}_{sync}'$.}
+	\end{subfigure}
+	\newline
+	\begin{subfigure}{\textwidth}
+	\input{figures/sim_bracha_ours/algo_poll}
+	\label{fig:algo:poll}
+	\caption{Function that forwards a (\texttt{poll}) message to the simulated wrapper and waits for a message back from a simulated party or the adversary. If an output is given from a party and the fnuctionality, $\F_{bcast}$ functionality did not leak an input, the dealer is corrupt. Therefore, the simulator gives input to $\F_{bcast}$ and delivers that party's output.}
+	\end{subfigure}
+\end{figure}

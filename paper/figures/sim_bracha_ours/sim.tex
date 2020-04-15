@@ -1,0 +1,52 @@
+\begin{bbox}[title={Simulator $\mathcal{S}_{bracha} (\mathcal{D}, \mathcal{P}, \Delta)$}]
+
+Simulate real world parties $p_1',...,p_n'$ and the simulated dealer $\mathcal{D}'$.
+
+Initialize $\msf{idealqueue} := \emptyset, idealdelay := 0$
+
+\vspace{2mm} \hrule \vspace{2mm}
+
+-- \OnInput \inmsg{\texttt{get-leaks}} from $\mathcal{Z}$:
+
+	\qquad $leaks \leftarrow$ \{ \Send (\texttt{get-leaks}) $\rightarrow \mathcal{W}_{sync}$\}
+
+	\qquad \For $l \in leaks$:
+
+		\qqquad \If $l$ is (input, v), $n(4n+1) \token$ from $\F_{bcast}$:
+
+			\qqqquad Simulate (input, $v$, $n(4n+1) \token$) $\rightarrow \mathcal{D}'$ 
+
+		\qqquad \Else \If $l$ is (schedule, $rnd$, $idx$) from $\F_{bcast}$:
+
+			\qqqquad Map $p_i$ to $(rnd,idx)$ for the $i$th such leak.
+
+			\qqqquad $idealdelay = idealdelay + 1$
+
+		\qqquad \Else:
+
+			\qqqquad $idealdelay = idealdelay + 1$
+
+	%\qquad $leaks \leftarrow$ \{ \Send (\texttt{get-leaks}) $\rightarrow \mathcal{W}_{sync}'$\}
+	\qquad $leaks \leftarrow \msf{SimGetLeaks}$
+
+	\qquad \Send $leaks \rightarrow \mathcal{Z}$
+
+-- \OnInput \inmsg{poll} from $\mathcal{Z}$:
+
+	\qquad execute \msf{Poll}
+
+-- \OnInput \inmsg{delay}{$d \token$} from $\mathcal{Z}$:
+
+	\qquad Simulate $(delay, d \token) \rightarrow \mathcal{W}_{sync}'$
+
+	\qquad \Send $(\texttt{delay}, d \token) \rightarrow \mathcal{W}_{sync}$
+
+	\qquad $idealdelay = idealdelay + d$
+
+-- \OnInput \inmsg{exec}{$rnd$}{$idx$} from $\mathcal{W}_{sync}$:
+
+	\qquad Simulate $(\texttt{exec}, rnd, idx) \rightarrow \mathcal{W}_{sync}'$
+
+	\qquad Forward any messages from a simulated part $p_i'$ or $\mathcal{A}'$
+
+\end{bbox}
