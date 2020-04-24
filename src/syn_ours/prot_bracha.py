@@ -31,7 +31,6 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
         return [p for p in self.parties if p != self.pid]
 
     def clock_round(self):
-        #self.tick( 1 ) # tick
         self.write('p2w', ('clock-round',), 0)
         rnd = wait_for(self.w2p).msg[1]
         return rnd
@@ -46,26 +45,22 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
 
     def val_msg(self, sender, inp, imp):
         # Only if you haven't already prepared a value should you accept a VAL
-        assert imp == 4*self.n, "imp: {} != 3*{}".format(imp,self.n)
         if not self.prepared_value and sender[1] == 1:
             self.prepared_value = inp
             msg = ('ECHO', self.prepared_value)
-            self.tick(self.n-1)
             for pid in self.except_me():
-                self.send_msg( pid, ('ECHO', self.prepared_value), 3 )
+                self.send_msg( pid, ('ECHO', self.prepared_value), 0)
             self.num_echos[inp] += 1
         self.pump.write("dump")
    
     def echo_msg(self, inp, imp):
         n = len(self.parties)
         self.num_echos[inp] += 1
-        assert imp == 3
         log.debug('[{}] Num echos {}'.format(self.pid, self.num_echos[inp]))
         if self.num_echos[inp] == ceil(n + (n/3))/2:
             if inp == self.prepared_value:
                 self.num_readys[inp] += 1
                 # send out READY
-                self.tick(self.n-1)
                 for p in self.except_me():
                     self.send_msg( p, ('READY', self.prepared_value), 0)
         self.pump.write("dump")
@@ -117,10 +112,8 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
     def env_input(self, inp):
         if self.halt: self.pump.write('dump'); return
         if self.pid == 1:
-            self.generate_pot(1)
-            self.tick(len(self.parties))
             for p in self.parties:
-                self.send_msg( p, ('VAL', inp),  4*self.n)
+                self.send_msg( p, ('VAL', inp), 0)
         self.pump.write("dump")
 
     def env_msg(self, d):

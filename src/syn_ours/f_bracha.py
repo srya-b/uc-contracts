@@ -26,13 +26,12 @@ class Syn_Bracha_Functionality(UCWrappedFunctionality):
     of the parties in O(1) time.'''
     def party_input(self, pid, inp):
         if pid == 1:
-            self.tick(self.n)
             for p in self.parties:
                 self.f2w.write( ('schedule', self.send_output, (p, inp), self.delta), 0)
                 m = wait_for(self.w2f).msg
                 assert m == ('OK',)
             n = len(self.parties)
-            self.leak( ('input', pid, inp), n*(4*n+1) )
+            self.leak( ('input', pid, inp), 0)
         self.write('f2p', 'OK')
 
 
@@ -230,10 +229,10 @@ class RBC_Simulator(ITM):
             self.total_extra_delay_added += 1
             self.log.debug('total_extra_delay_added: {}'.format(self.total_extra_delay_added))
             self.log.debug("the delays are the same")
-            self.write('a2w', ('delay', n+1), n+1)
+            self.write('a2w', ('delay', n+1))
         else:
             # else just add the number of new "schedules" in simulated wrapper
-            self.write('a2w', ('delay', n), n)
+            self.write('a2w', ('delay', n))
         m = waits(self.pump, self.channels['w2a']); assert m.msg == "OK", str(m.msg)
 
         return leaks

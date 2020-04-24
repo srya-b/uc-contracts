@@ -87,7 +87,7 @@ class ITM:
         if self.imp_in - self.imp_out + self.marked >= imp:
             self.imp_out += imp
             self.channels[ch].write(msg, imp)
-            self.log.warning("[{}] import remaining: {}".format(self.pid, self.imp_in - self.imp_out))
+            self.log.debug("[{}] import remaining: {}".format(self.pid, self.imp_in - self.imp_out))
         else:
             raise Exception("out of import")
 

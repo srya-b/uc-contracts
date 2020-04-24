@@ -48,7 +48,6 @@ class Syn_FWrapper(UCWrapper):
         # add to the delay and return control to sender
         self.delay += 1
         #print('\t\033[92m[fschdeule] new delay\033[0m', self.delay)
-        self.tick(0)
         self.w2f.write( (sender, ('OK',)) )
         #self.print_todo()
 
@@ -69,7 +68,6 @@ class Syn_FWrapper(UCWrapper):
         # add to delay and return control to sender
         self.delay += 1
         #print('\t\033[92m[pschedule] new delay\033[0m', self.delay)
-        self.tick(0)
         self.w2p.write( (sender, ('OK',)) )
 
     def adv_delay(self, t):
@@ -79,8 +77,6 @@ class Syn_FWrapper(UCWrapper):
 
     def adv_execute(self, r, i):
         f,args = self.todo[r].pop(i)
-        #print('Execing a codeblock', f.__name__)
-        #print('Args', args)
         #self.print_todo()
         f(*args)
 
@@ -98,8 +94,6 @@ class Syn_FWrapper(UCWrapper):
     def poll(self):
         if self.delay > 0:
             self.delay -= 1
-            #print('\033[92m\tdelay\033[0m', self.delay)
-            self.tick(0)
             self.w2a.write( ('poll',) )
         else:
             self.curr_round = self.next_round()

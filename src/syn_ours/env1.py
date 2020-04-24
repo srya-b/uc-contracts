@@ -8,7 +8,7 @@ import logging
 from numpy.polynomial.polynomial import Polynomial
 
 log = logging.getLogger(__name__)
-logging.basicConfig( level="DEBUG")
+logging.basicConfig( level="INFO")
 
 def env1(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     delta = 3
@@ -17,7 +17,7 @@ def env1(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     sid = ('one', tuple(range(1,n+1)), delta)
     static.write( (('sid', sid), ('crupt',)) )
 
-    z2p.write( ((sid,1), ('input', 2)), n*(4*n + 1) )
+    z2p.write( ((sid,1), ('input', 2)))
     #wait_for(p2z)
     waits(pump, a2z, p2z)
 
@@ -362,6 +362,6 @@ def env2(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
 
 if __name__=='__main__':
     print('\n\t\t\033[93m [IDEAL WORLD] \033[0m\n')
-    execWrappedUC(env1, [('F_bracha',Syn_Bracha_Functionality)], WrappedPartyWrapper, Syn_FWrapper, 'F_bracha', RBC_Simulator)
+    execWrappedUC(env3, [('F_bracha',Syn_Bracha_Functionality)], WrappedPartyWrapper, Syn_FWrapper, 'F_bracha', RBC_Simulator)
     print('\n\t\t\033[93m [REAL WORLD] \033[0m\n')
-    #execWrappedUC(env1, [('F_chan',Syn_Channel)], WrappedProtocolWrapper, Syn_FWrapper, Syn_Bracha_Protocol, DummyWrappedAdversary, poly=Polynomial([100,2,3,4,5,6,7]))
+    execWrappedUC(env3, [('F_chan',Syn_Channel)], WrappedProtocolWrapper, Syn_FWrapper, Syn_Bracha_Protocol, DummyWrappedAdversary, poly=Polynomial([100,2,3,4,5,6,7]))
