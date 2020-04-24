@@ -1,11 +1,13 @@
 \begin{bbox}[title={$\F_{\msf{bcast}} (\mathcal{D}, \mathcal{P}=p_1,...,p_n)$}]
 
--- \OnInput \inmsg{input}{v}, $n(4n+1) \token$ from $\mathcal{D}$:
+\OnInput \inmsg{input}{v}, $n(4n+1) \token$ from $\mathcal{D}$:
+	\begin{renumerate}
+	\item For $p_i \in \mathcal{P}$:
+		\begin{ritemize}	
+		\item \Send (schedule, $\{\Send v \rightarrow p_i\}$, $4 \Delta$) $\rightarrow \mathcal{W}_{sync}$
+		\end{ritemize}
 
-	\qquad For $p_i \in \mathcal{P}$:
-		
-		\qqquad \Send (schedule, $\{\Send v \rightarrow p_i\}$, $4 \Delta$) $\rightarrow \mathcal{W}_{sync}$
-
-	\qquad \Send (leak, (input, $v$), $n(4n+1) \token$) $\rightarrow \mathcal{W}_{sync}$
+	\item \Send (leak, (input, $v$), $n(4n+1) \token$) $\rightarrow \mathcal{W}_{sync}$
+	\end{renumerate}
 
 \end{bbox}

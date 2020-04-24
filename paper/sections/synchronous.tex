@@ -36,11 +36,11 @@ In our case we simplify the SFE functionality instead of just parmeterizing it w
 The only simplification made to SFE is that the functionality only waits for the dealer's input (in SFE this equates to assuming all other parties' inputs are already set).
 Furthermore, the function $f_{\msf{BC}}$ is put in place in the functionality.
 
-\begin{figure}
-	\input{figures/async_bracha}
-	\label{fig:protocol:asyncbracha}
-	\caption{The original asynchronous broadcast protocol proposed by Bracha~\cite{bracha-broadcast}. The protocol proceeds in three rounds and terminates if enough messages are delivered.}
-\end{figure}
+%\begin{figure}
+%	\input{figures/async_bracha}
+%	\label{fig:protocol:asyncbracha}
+%	\caption{The original asynchronous broadcast protocol proposed by Bracha~\cite{bracha-broadcast}. The protocol proceeds in three rounds and terminates if enough messages are delivered.}
+%\end{figure}
 
 Next we introduce a real world protocol that realized the ideal functionality.
 We use the asynchronous broadcast primitive introduced by Bracha~\cite{bracha-broadcast} that tolerates $\frac{n}{3}$ byzantine failures.
@@ -112,12 +112,30 @@ This section descibres how the synchronous wrapper works.
 The example is bracha broadcast with the functionalities, protocols, simulator and wrapper listed below.
 
 \paragraph{Synchronous Wrapper}
-The synchronous wrapper handles delaying execution of codeblocks within a upper bound $\Delta$ that is fixed by the calling protocol. 
-The synchronous wrapper provides a simple interface to the parties and functionalities, defined in Figure~\ref{fig:wrapper:synchronous}.
-The simplest example to demonstrate how the wrapper works is with a simple synchronous, point-to-point channel, $\F_{sync-chan}$ (Figure~\ref{fig:functionality:channel}).
+The synchronous wrapper provide synchrhonous communication functionality to all ITMs in both the real and ideal worlds.
+At a high level the wrapper allows arbitrary code blocks to be executed in a synchronous way.
+It allows for functionality and protocol code to be simpler and easier to understand with intuitive abstractions. 
+We demonstrates this aspect of the wrapper through the a synchronous broadcast protocol that we provide a full UC construction for.
+First, we describe the wrapper in Figure~\ref{fig:wrapper:synchronous}.
 
-In order to deliver an output, send a message, or execute an arbitrary code block with in a certain number of clock rounds, an ITM can ``schedule'' a piece of code to execute within a number of rounds.
-In the definition of $\F_{sync-chan}$ in Fig~\ref{fig:functionality:channel}, a message needs to be delivered to the recipient in a synchrous manner so the functionality schdules the code block with the wrapper (for simplicty, we show two version of the same p2p channel: (a) one where the intuitive notion of synchronous code execution is captures and (b) where we show the actual messages passed from the functionality and the wrapper). 
+%The synchronous wrapper handles delaying execution of codeblocks within a upper bound $\Delta$ that is fixed by the calling protocol. 
+%The synchronous wrapper provides a simple interface to the parties and functionalities, defined in Figure~\ref{fig:wrapper:synchronous}.
+%The simplest example to demonstrate how the wrapper works is with a simple synchronous, point-to-point channel, $\F_{sync-chan}$ (Figure~\ref{fig:functionality:channel}).
+
+An ITM wishing to execute a codeblock within $O(\Delta)$ round, sends the codeblock to the wrapper and the maximum delay $\Delta$ to be imposed on its execution.
+The wrapper assigns the maximum, $\Delta$, delay and adds it to its internal queue.
+It then leaks the round and the index in the run queue to the adversary and increments an internal $delay$ counter.
+The $delay$ variable is incremented whenever a new codeblock is scheduled to run and is decremented when the environment sends \texttt{poll} to the wrapper.
+
+Schedule blocks can be forced to execute by the environment \emph{and} and the adversary.
+It's necessary for the environment to be able to force the wrapper to make progress in order to ensure \emph{guaranteed termination}.
+The adversary can choose when to execute a code block by sending it and \texttt{exec} message and the location in the runqueue to execute.
+The environment can continuously call \texttt{poll} to force the next codeblock to execute.
+If there are no remaining code blocks in round $r$ on \texttt{poll}, the wrapper jumps ahead to the next round $r' > r$ in which there exists a scheduled code block.
+When \texttt{poll} is sent to the wrapper, the adversary is also activated so that it can simulate \texttt{poll} in its simulated real-world wrapper.
+
+In Figure~\ref{fig:functionality:channel}, we should a simple channel functionality that uses the wrapper to schedule messages in a synchronous fashion.
+In a protocol execution with pair-wise channels, $\F_{\msf{sync-chan},s,r}$, the adversary only needs to communicate with the wrapper~\footnote{In other adversarial models and un-authenticated channels, the adversary would still need to use the channels to modify messages.}.
 
 \begin{figure}
 	\input{figures/f_channel}
@@ -125,57 +143,88 @@ In the definition of $\F_{sync-chan}$ in Fig~\ref{fig:functionality:channel}, a 
 	\label{fig:functionality:channel}
 \end{figure}
 
-When a codeblock is schedule in the wrapper, it is immediately assigned the maximum possibe delay and added to the queue of schedule codeblocks.
-The adversary is made aware of the round and the index into the queue for this new codeblock.
-Additionally, a delay of 1 is added to the internal delay of the wrapper.
-Once schedule, there are two ways for the code block to eventually be executed.
-The first way is the adversary can decide to send the (\texttt{exec},$rnd$,$idx$) message to the wrapper to force the execution of a code block whenever it wants.
-The second, method is through the environment polling the wrapper.
-The purpose of allowing the environmen to force the wrapper to execute codeblocks is to prevent the adversary from having complete control over the wrapper and stop rounds from progressing.
-
-\paragraph{Polling}
-When the environment polls the wrapper, it decrements a delay counter (recall the delay is incremented when a new codeblock is schedule and can be further delayed by the adversary).
-After sufficient polling, the delay reaches 0 in round $r$ and the next available code-block is popped from the queue and executed. 
-The wrapper skips ahead to the first round $r' \geq r$ that contains a codeblock to execute.
-
 \begin{figure}
 	\input{figures/wrapper}
 	\caption{This wrapper implements the enhancements made to the protocol to conform to the interace of the ideal functionality \Fbc. It reads in incoming messages in the first activation of a round and uses the next $|\mathcal{P}|$ activations to send messages to others.}
 	\label{fig:wrapper:synchronous}
 \end{figure}
 
-The Bracha broacast protcol is shown in Figure~\ref{fig:prot_bracha_ours}. 
-The protocol proceeds in a few rounds where VAL, ECHO, and READY messages exchanged until parties are ready to commit to a dealer input value $v$.
-The corresponding functionality in Figure~\ref{fig:functionality:broadcast_import_real} is $\F_{bcast}$.
-
-\paragraph{Bracha Simulator}
-The simulator runs a local simulation of the real world protocol with the same honest and corruptd parties as the real world. It also runs a local simulation of the synchronous wrapper in the real world.
-
-When the dealer in is honest, $\F_{bcast}$ leaks the input to the dealer as well as the import received and gives it to \Wsync.
-When the environment asks the simulator to get leaks from the wrapper, the simulator firsts obtains the honest dealer's input and passes it to the simulated real world dealer and simulates all following messages.
-It also gets leaks of new codeblocks scheduled to execute in \Wsync and internall tracks them with the $idealdelay$ parameter. 
-The simulator needs to track this value internall to ensure that the codeblocks delivering output in the real world are not executed until their counterparts in the simulation real-world also execute.
-After simulating the input, the simulator collets the leaks from the simuated wrapper \Wsync' and returns them to the environment.
-
+\paragraph{A Simple Broadcast Protocol}
+We present another example of the synchronous wrapper with a simple synchronous broadcast protocol.
+The ideal functionality for a synchronous broadcast protocol is shown in Figure \ref{fig:functionality:broadcast_import}
+The functionality just accepts input from the dealer (fixed to be pid = 1) and tells the wrapper to deliver the outputs of each of the parties \emph{within} $O(\Delta)$.
+This functionality, though, abstracts away the details of sending a message to the wrapper with the statement ``in $O(4\Delta)$''.
+Figure~\ref{fig:functionality:broadcast_import_real} shows the exact message being exchanged with the wrapper.
 
 \begin{figure}
 \begin{subfigure}{\textwidth}
 	\input{figures/f_broadcast_import}
-	\label{fig:functionality:broadcast_import}
 	\caption{A simple broadcast functionality that delivers the output to all the other parties within $O(\Delta)$ rounds. The functionality is described at a high level, with more specific messages and wrapper interaction shown below.}
+	\label{fig:functionality:broadcast_import}
 \end{subfigure}
 \newline
 \begin{subfigure}{\textwidth}
 	\input{figures/f_broadcast_import_real}
-	\label{fig:functionality:broadcast_import_real}
 	\caption{This broacsat functionality illustrates the actual messages being passed between the functionality above and the wrapper. The wrapper handles synchronous delivery of messages {\em and} leaks.}
+	\label{fig:functionality:broadcast_import_real}
 \end{subfigure}
 \end{figure}
 
+
+A protocol realizing this functionality was proposed by Bracha~\cite{bracha} in the asynchronous setting.
+The pseudocode of the original protocol without any UC-specific details is shown in Figure \ref{fig:protocol:asyncbracha}.
+
+\begin{figure}
+	\input{figures/async_bracha}
+	\caption{The original asynchronous broadcast protocol proposed by Bracha~\cite{bracha-broadcast}. The protocol proceeds in three rounds and terminates if enough messages are delivered.}
+	\label{fig:protocol:asyncbracha}
+\end{figure}
+
+The protocol is simple and designed to handle $t < \frac{n}{3}$ Byzantine failures.
+The parties stage an input for commit if they witness a Byzantine qourum ($\frac{n+t}{2}$) of \texttt{ECHO} messages and send out \texttt{READY} messages to all of the other parties.
+Finally, each party waits for $2t + 1$ \texttt{READY} messages (at least 1 \texttt{READY} message from an honest party) and commits to the value.
+
+We use this protocol in our synchronous model in Figure~\ref{fig:prot:bracha_ours}.
+The real world execution of this protocol includes some set of honest parties running the protocol and pairwise authenticated synchronous channels $\F_{\msf{sync-chan},s,r}$ that are unique to each round (i.e. each such functionality is one-shot).
+The channels are described above in Figure~\ref{fig:functionality:channel}.
+
 \begin{figure}
 	\input{figures/prot_bracha_ours}
+	\caption{The Bracha broadcast protocol written in the UC framework with access to pairwise authenticated channel functionalities $\F_{\msf{sync-chan},s,r}$.}
 	\label{fig:prot:bracha_ours}
 \end{figure}
+
+\paragraph{Bracha Simulator}
+Realizing the broadcast functionality with the Bracha's broadcast protocol requires a simulator that can satisfies
+\[ \text{EXEC}_{\mathcal{F_{\msf{bcast}}},\mathcal{S},\mathcal{Z}} \approx \text{EXEC}_{\Pi_{\msf{Bracha}},\mathcal{D},\mathcal{Z}} \]
+for all $\mathcal{Z}$.
+
+First, we describe the simulator at a high level.
+The simulator internally runs a copy of the real world environment with its own synchronous wrapper $\mathcal{W}_{sync}'$.
+For every ideal party $\phi_i$ in the ideal world the simulator creates a party $\pi_i$ in its simulation.
+Finally it simulates the pairwise channels that are used throughout the execution.
+
+As expected, the simulator forwards all messages from $\mathcal{Z}$ to any corrupted parties $p_i$ and vice versa.
+On every activation, the simulator requests leaks from the ideal world wrapper.
+It checks for newly schedules code blocks and maintain and internal copy of the run queue and $delay$ variable from the ideal world wrapper $\mathcal{W}_{sync}$
+If the dealer is honest, the eventually fetch the dealer's leaked input from the wrapper. 
+It replays the honest dealer's input and emulates any subsequent activations and state changes.
+
+Finally, the simulator asks $\mathcal{W}_{sync}'$ for new leaks and does the following:
+\begin{enumerate}
+	\item It stores the leaks and returns them to the environment when asked for it.
+	\item If $n$ new codeblocks have been scheduled in the simulation, it adds $n$ delay to the ideal world wrapper. The purpose of adding $delay$ to the ideal world is to ensure that the environment can't force output being delivered to a party in the ideal world before output is delivered in the simulation.
+\end{enumerate}
+
+When $\mathcal{Z}$ sends \texttt{poll} to $\mathcal{W}_{sync}$ the simulator is also activated with a \texttt{poll} message.
+The simulator forwards this message to its internal wrapper and emulates any further activations of state changes.
+It requests leaks from $\mathcal{W}_{sync}'$ and repeats the steps outlines above.
+Finally, if any simulated party $\pi_i$ outputs a value, the simulator executes the corresponding codeblock for the ideal party $\phi_i$.
+
+One case to handle is if the dealer is corrupt and never gives input to the ideal functionality.
+Instead, the environment sends parties on behalf of the corrupt dealers through the simulator.
+In this case, the simulator will never receive any leaked input from $\F_{bcast}$ but may still receive output from simulated honest parties.
+If an output is received, the simulator acts on behalf of the corrupt dealer, sends the input to $\F_{bcast}$, gets leaks from $\mathcal{W}_{sync}$, and executes the corresponding codeblock.
 
 \begin{figure}
 	\input{figures/sim_bracha_ours/sim.tex}

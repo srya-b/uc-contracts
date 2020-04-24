@@ -1,12 +1,13 @@
 
 \begin{bbox}[title={$\F_{\msf{bcast}} (\mathcal{D}, \mathcal{P}=p_1,...,p_n)$}]
 
--- \OnInput \inmsg{input}{v}, $n(4n+1) \token$ from $\mathcal{D}$:
-
-	\qquad For $p_i \in \mathcal{P}$:
-		
-		\qqquad In $O(4 \Delta)$: $\{\Send v \rightarrow p_i\}$
-
-	\qquad \Leak (input, $v$), $n(4n+1) \token$ $\rightarrow \mathcal{A}$
+\OnInput \inmsg{input}{v}, $n(4n+1) \token$ from $\mathcal{D}$:
+	\begin{renumerate}
+	\item For $p_i \in \mathcal{P}$:
+		\begin{ritemize}
+		\item In $O(4 \Delta)$: $\{\Send v \rightarrow p_i\}$
+		\end{ritemize}
+	\item \Leak (input, $v$), $n(4n+1) \token$ $\rightarrow \mathcal{A}$
+	\end{renumerate}
 
 \end{bbox}

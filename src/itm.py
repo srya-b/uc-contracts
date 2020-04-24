@@ -91,9 +91,6 @@ class ITM:
         else:
             raise Exception("out of import")
 
-    def poly(self):
-        raise("polynomial is not defined")
-   
     def tick(self, n):
         if self.poly(self.marked) < self.spent + n:
             self.log.critical("Out of potential, generating more")
@@ -181,7 +178,7 @@ class UCWrappedFunctionality(ITM):
             self.a2f : self.adv_msg,
             self.w2f : self.wrapper_msg,
         }
-        ITM.__init__(self, sid, pid, channels, self.handlers, self.poly)
+        ITM.__init__(self, sid, pid, channels, self.handlers, poly)
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")

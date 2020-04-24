@@ -1,3 +1,22 @@
+\subsection{Communication Models}
+The basic UC framework operates in the asynchronous communication model.
+Every pair of parties, $p_i,p_j$, has analogous channels, $\mu_{[i,j]},\mu_{[j,i]}$.
+Each channel accepts messages from the sender and leaks its contents to the adversary.
+The message is then only delivered when the adversary writes \texttt{ok} to the channel.
+Unlike other models of asynchrnouous communication where \emph{eventual delivery} is guaranteed, in this model the messages may never be delivered by the adversary.
+The functionality is shown in Figure~\ref{fig:uc_channel}.
+
+\begin{figure}[h]
+	\input{figures/uc_channel}
+	\caption{The asynchronous channel defined in UC framework~\cite{uc}}
+	\label{fig:uc_channel}
+\end{figure}
+
+In this work we demonstrate wrapper for both asynchronous and synchronous communication.
+The most notable other synchronoud UC model is the one presented by Katz et al.~\cite{katz-clock}.
+
+\clearpage
+
 Nodes on \cite{kiayias2016fair}:
 
 \begin{itemize}
