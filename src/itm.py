@@ -859,6 +859,7 @@ class WrappedPartyWrapper:
                 if r:
                     r = r[0]
                     msg = r.read().msg
+                    self.f2p.reset()
                     self.p2a.write( msg, m.imp )
             else:
                 dump.dump()
