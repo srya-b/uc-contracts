@@ -113,7 +113,6 @@ class DummyWrappedAdversary(ITM):
             if msg[0] == 'get-leaks':
                 self.getLeaks(msg[1])
             else:
-                print('OKay so its getLeaks')
                 self.channels['a2f'].write( msg, imp )
         elif msg[0] == 'A2P':
             t,msg = msg

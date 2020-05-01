@@ -42,7 +42,8 @@ def execUC(env, fs, pwrapper, prot, adv):
     f2p,p2f,f2a,a2f,f2z,z2f,p2a,a2p,p2z,z2p,z2a,a2z,static = createUC(fs, pwrapper, prot, adv)
     env(static, z2p, z2f, z2a, a2z, p2z, f2z)
 
-def createWrappedUC(fs, ps, wrapper, prot, adv, poly):
+#def createWrappedUC(fs, ps, wrapper, prot, adv, poly):
+def createWrappedUC(fs, ps, wrapper, adv, poly):
     f2p,p2f = GenChannel('f2p'),GenChannel('p2f')
     f2a,a2f = GenChannel('f2a'),GenChannel('a2f')
     f2z,z2f = GenChannel('f2z'),GenChannel('z2f')
@@ -92,10 +93,13 @@ def createWrappedUC(fs, ps, wrapper, prot, adv, poly):
         for t,c in fs:
             f.newcls(t,c)
         gevent.spawn( f.run )
-        if ps == WrappedPartyWrapper:
-            p = WrappedPartyWrapper(z2p,p2z, f2p,p2f, a2p,p2a, w2p,p2w, pump, prot, poly)
-        else:
-            p = WrappedProtocolWrapper(z2p,p2z, f2p,p2f, a2p,p2a, w2p,p2w, pump, prot, poly)
+        #if ps == WrappedPartyWrapper:
+        #    #p = WrappedPartyWrapper(z2p,p2z, f2p,p2f, a2p,p2a, w2p,p2w, pump, prot, poly)
+        #    p = WrappedPartyWrapper(z2p,p2z, f2p,p2f, a2p,p2a, w2p,p2w, pump, poly)
+        #else:
+        #    #p = WrappedProtocolWrapper(z2p,p2z, f2p,p2f, a2p,p2a, w2p,p2w, pump, prot, poly)
+        #    p = WrappedProtocolWrapper(z2p,p2z, f2p,p2f, a2p,p2a, w2p,p2w, pump, poly)
+        p = ps(z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, pump, poly)
         gevent.spawn(p.run)
         # TODO change to wrapped adversray
         advitm = adv(sid, -1, adv_channels, pump, poly)
@@ -105,7 +109,8 @@ def createWrappedUC(fs, ps, wrapper, prot, adv, poly):
     gevent.spawn(_exec)
     return channels,static,pump
 
-def execWrappedUC(env, fs, ps, wrapper, prot, adv, poly=Polynomial([1])):
-    c,static,pump = createWrappedUC(fs, ps, wrapper, prot, adv, poly)
-    env(static, c['z2p'], c['z2f'], c['z2a'], c['z2w'], c['a2z'], c['p2z'], c['f2z'], c['w2z'], pump)
+#def execWrappedUC(env, fs, ps, wrapper, prot, adv, poly=Polynomial([1])):
+def execWrappedUC(env, fs, ps, wrapper, adv, poly=Polynomial([1])):
+    c,static,pump = createWrappedUC(fs, ps, wrapper, adv, poly)
+    return env(static, c['z2p'], c['z2f'], c['z2a'], c['z2w'], c['a2z'], c['p2z'], c['f2z'], c['w2z'], pump)
 

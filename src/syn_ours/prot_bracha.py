@@ -56,7 +56,7 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
     def echo_msg(self, inp, imp):
         n = len(self.parties)
         self.num_echos[inp] += 1
-        log.debug('[{}] Num echos {}'.format(self.pid, self.num_echos[inp]))
+        log.debug('[{}] Num echos {}, required: {}'.format(self.pid, self.num_echos[inp], ceil(n+(n/3))/2))
         if self.num_echos[inp] == ceil(n + (n/3))/2:
             if inp == self.prepared_value:
                 self.num_readys[inp] += 1
@@ -114,7 +114,8 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
         if self.pid == 1:
             for p in self.parties:
                 self.send_msg( p, ('VAL', inp), 0)
-        self.pump.write("dump")
+        #self.pump.write("dump")
+        self.write('p2z', 'OK')
 
     def env_msg(self, d):
         if self.halt: self.pump.write('dump'); return

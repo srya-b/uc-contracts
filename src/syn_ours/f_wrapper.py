@@ -21,6 +21,9 @@ class Syn_FWrapper(UCWrapper):
         self.total_queue_ever = 0
         UCWrapper.__init__(self, 'wrap', 'me', channels, poly)
 
+    def party_clock_round(self, sender):
+        self.write( 'w2p', (sender, self.curr_round))
+
     def print_todo(self):
         p_dict = {}
         for k in self.todo:
@@ -49,7 +52,6 @@ class Syn_FWrapper(UCWrapper):
         self.delay += 1
         #print('\t\033[92m[fschdeule] new delay\033[0m', self.delay)
         self.w2f.write( (sender, ('OK',)) )
-        #self.print_todo()
 
     def pschedule(self, sender, f, args, delta):
         log.debug('\033[1mPschedule\033[0m {} {}'.format(sender, delta))
@@ -67,17 +69,14 @@ class Syn_FWrapper(UCWrapper):
     
         # add to delay and return control to sender
         self.delay += 1
-        #print('\t\033[92m[pschedule] new delay\033[0m', self.delay)
         self.w2p.write( (sender, ('OK',)) )
 
     def adv_delay(self, t):
         self.delay += t
-        #print('ADV DELAY', self.delay)
         self.w2a.write( "OK" )
 
     def adv_execute(self, r, i):
         f,args = self.todo[r].pop(i)
-        #self.print_todo()
         f(*args)
 
     def next_round(self):
@@ -96,9 +95,12 @@ class Syn_FWrapper(UCWrapper):
             self.delay -= 1
             self.w2a.write( ('poll',) )
         else:
+            print('\n\nPoll executing a codeblock')
+            print('round={}'.format(self.curr_round))
+            self.print_todo()
             self.curr_round = self.next_round()
-            #print('New round', self.curr_round)
             r = self.curr_round
+            print('new round={}'.format(r))
             if len(self.todo[r]): self.adv_execute(r, 0)
             else: self.pump.write("dump")#dump.dump()
 
