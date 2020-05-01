@@ -4,6 +4,7 @@ import dump
 import gevent 
 import comm
 from collections import defaultdict
+from enum import Enum
 
 global pouts
 pouts = defaultdict(list)
@@ -266,6 +267,28 @@ def execUC(psid, nump, cpwrapper, pargs, cfwrapper, adv):
     _z2f = GenChannel('z2f')
     _f2z = GenChannel('f2z')
 
-    
-
-    
+class MessageTag(Enum):
+    INPUT_VAL = 1
+    CREATE_CONTRACT = 2
+    CONTRACT = 3
+    VAR = 4
+    RAND = 5
+    LABEL = 6
+    TRIPLE = 7
+    TX = 8
+    LEAK = 9
+    EVENTUALLY = 10
+    ADVANCE = 11
+    EXECUTE = 12
+    DELAY = 13
+    SEND_LEAKS = 14
+    OK = 15
+    REJECT = 16
+    OUTPUT = 17
+    DEFINED_CONTRACT = 18
+    DEFINED_VAR = 19
+    A2F = 20
+    A2W = 21
+    A2P = 22
+    GEN_OUTPUTS = 23
+    DELIVER = 24
