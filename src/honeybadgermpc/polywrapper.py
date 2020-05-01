@@ -39,6 +39,12 @@ class PolyWrapper:
     '''
     points - list of points where points[idx] contains f(w**idx)
     '''
+    def random_with_pairs(self, pairs):
+        pairs = [(self.omega**i, share) for (i, share) in pairs]
+        assert len(pairs) <= self.t + 1
+        pairs.extend([(self.omega**(self.n+1+i), self.field.random()) for i in range(len(pairs)-(self.t+1))])
+        return self.Poly.interpolate(pairs)
+        
     def random_with_secret(self, secret):
         return self.Poly.interpolate([(self.omega**self.n, secret) if i == 0 else (self.omega**i, self.field.random()) for i in range(self.t+1)])
     def random(self, points=None):
