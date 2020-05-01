@@ -19,7 +19,7 @@ class Syn_Channel(UCWrappedFunctionality):
         self.write('f2w', ('leak', msg) )
 
     def send_message(self, msg, imp):
-        log.debug('\033[1m [F_channel to={}, from={}] {}\033[0m'.format(self.receiver[1], self.sender[1], msg))
+        log.debug('\033[91m [F_channel to={}, from={}] {}\033[0m'.format(self.receiver[1], self.sender[1], msg))
         self.write('f2p', (self.receiver, msg), imp)
 
     def party_send(self, sender, msg, imp):

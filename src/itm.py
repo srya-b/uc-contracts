@@ -87,13 +87,13 @@ class ITM:
         if self.imp_in - self.imp_out + self.marked >= imp:
             self.imp_out += imp
             self.channels[ch].write(msg, imp)
-            self.log.debug("[{}] import remaining: {}".format(self.pid, self.imp_in - self.imp_out))
+            #self.log.debug("[{}] import remaining: {}".format(self.pid, self.imp_in - self.imp_out))
         else:
             raise Exception("out of import")
 
     def tick(self, n):
         if self.poly(self.marked) < self.spent + n:
-            self.log.critical("Out of potential, generating more")
+            #self.log.critical("Out of potential, generating more")
             self.generate_pot(1)
         self.spent += 1
 
@@ -773,6 +773,11 @@ class ProtocolWrapper:
                 dump.dump()
         print('Its over??')
 
+def wrappedPartyWrapper(tof):
+    def f(z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, pump, poly):
+        return WrappedPartyWrapper(z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, pump, tof, poly)        
+    return f
+
 class WrappedPartyWrapper:
     def __init__(self, z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, pump, tof, poly):
         self.z2pid = {}
@@ -815,7 +820,10 @@ class WrappedPartyWrapper:
         _w2p,_p2w = self._newPID(sid, pid, self.w2pid, self.p2w, 'NA')
         
         #itm = ITMPassthrough(sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f) 
-        itm = ITMWrappedPassthrough(sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f, _w2p, _p2w, self.pump, self.poly)
+        if comm.isdishonest(sid,pid):
+            itm = ITMCruptWrappedPassthrough(sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f, _w2p, _p2w, self.pump, self.poly)
+        else:
+            itm = ITMWrappedPassthrough(sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f, _w2p, _p2w, self.pump, self.poly)
         setParty(itm)
         gevent.spawn(itm.run)
 
@@ -828,7 +836,7 @@ class WrappedPartyWrapper:
     def spawn(self,sid,pid):
         print('Spawning sid={}, pid={}'.format(sid,pid))
         self.newPID(sid,pid)
-
+    
     def run(self):
         while True:
             ready = gevent.wait(objects=[self.z2p, self.f2p, self.a2p], count=1)
@@ -845,10 +853,11 @@ class WrappedPartyWrapper:
             elif r == self.f2p:
                 self.f2p.reset('f2p in party')
                 fro,(to,msg) = m.msg
+                print('m', m.msg)
+                sid,pid = to
                 _pid = self.getPID(self.f2pid,sid,pid)
                 _pid.write(msg, m.imp)
             elif r == self.a2p:
-                print('a2p', m.msg)
                 (sid,pid),msg = m.msg
                 if comm.ishonest(sid,pid):
                     raise Exception
@@ -863,6 +872,11 @@ class WrappedPartyWrapper:
                     self.p2a.write( msg, m.imp )
             else:
                 dump.dump()
+
+def wrappedProtocolWrapper(prot):
+    def f(z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, pump, poly):
+        return WrappedProtocolWrapper(z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, pump, prot, poly)
+    return f
 
 class WrappedProtocolWrapper:
     def __init__(self, z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, pump, prot, poly):
@@ -914,7 +928,7 @@ class WrappedProtocolWrapper:
        
         # TODO add wrapped passthrough party
         if comm.isdishonest(sid, pid):
-            print('\033[1m[{}]\033[0m Party is corrupt, so ITMCruptWrappedPassthrough'.format(pid))
+            self.log.debug('\033[1m[{}]\033[0m Party is corrupt, so ITMCruptWrappedPassthrough'.format(pid))
             #p = ITMSyncCruptProtocol(sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f)
             #p = ITMWrappedPassthrough(sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f, _w2p, _p2w)
             p = ITMCruptWrappedPassthrough(sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f, _w2p, _p2w, self.pump, self.poly)
