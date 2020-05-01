@@ -5,10 +5,10 @@ from itm import UCAsyncWrappedFunctionality
 from utils import MessageTag
 
 class AsyncBroadcastFunctionality(UCAsyncWrappedFunctionality):
-    def __init__(self, sid, pid, channels, pump):
+    def __init__(self, sid, pid, channels, pump, poly):
         self.ssid, self.sender, self.receiver, self.msg_id = sid
         self.used = False
-        UCAsyncWrappedFunctionality.__init__(self, sid, pid, channels)
+        UCAsyncWrappedFunctionality.__init__(self, sid, pid, channels, poly)
     def adv_msg(self, msg):
         pass # ignore any adversarial messages
 
@@ -19,11 +19,10 @@ class AsyncBroadcastFunctionality(UCAsyncWrappedFunctionality):
         if sender == self.sender and not self.used:
             self.eventually(self.send_msg, [msg])
             self.used = True
-            self.leak(('sent',))
             self.write('f2p', (self.sender, (MessageTag.OK,)))
 
     def env_msg(self, msg):
-        dump.dump() # environment should not attempt to contact functionality
+        self.pump.write("pump") # environment should not attempt to contact functionality
         
     def send_msg(self, msg):
         self.write('f2p', (self.receiver, ('sent', self.sender[1], msg)) )
