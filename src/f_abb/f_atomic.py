@@ -7,12 +7,12 @@ from itm import UCAsyncWrappedFunctionality
 from utils import wait_for, MessageTag
 
 class AtomicBroadcastFunctionality(UCAsyncWrappedFunctionality):
-    def __init__(self, sid, pid, channels, pump):
+    def __init__(self, sid, pid, channels, pump, poly):
         self.ssid, self.parties = sid
         self.pid = pid
         self.BC = []
         self.pump = pump
-        UCAsyncWrappedFunctionality.__init__(self, sid, pid, channels)
+        UCAsyncWrappedFunctionality.__init__(self, sid, pid, channels, poly)
         
     def adv_msg(self, msg):
         self.pump.write("pump") # ignore any adversarial messages
@@ -24,7 +24,7 @@ class AtomicBroadcastFunctionality(UCAsyncWrappedFunctionality):
         # need to convert sender to [0, n-1]
         if msg[0] == MessageTag.TX:
             tx = msg[1]
-            self.eventually(self.append_tx, [tx, dealer])
+            self.eventually(self.append_tx, [tx, dealer], (MessageTag.TX, dealer, tx))
         self.write('f2p', (dealer, (MessageTag.OK,)))
 
     def env_msg(self, msg):
