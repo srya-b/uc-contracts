@@ -268,17 +268,6 @@ class RBC_Simulator(ITM):
         self.log.debug('Add n={} delay to ideal world wrapper'.format(n))
         self.internal_delay += n
         self.write('a2w', ('delay',n))
-        # the ideal delay will eventually reach 0 and execute
-        #if self.internal_delay == n:
-        #    # Add one delay to prevent (above) if ideal and simulated are equal
-        #    self.internal_delay += 1
-        #    self.total_extra_delay_added += 1
-        #    self.log.debug('total_extra_delay_added: {}'.format(self.total_extra_delay_added))
-        #    self.log.debug("the delays are the same")
-        #    self.write('a2w', ('delay', n+1))
-        #else:
-        #    # else just add the number of new "schedules" in simulated wrapper
-        #    self.write('a2w', ('delay', n))
         m = waits(self.pump, self.channels['w2a']); assert m.msg == "OK", str(m.msg)
         self.sim_leaks.extend(leaks.msg)
         #return leaks
@@ -335,10 +324,8 @@ class RBC_Simulator(ITM):
             assert len(self.internal_run_queue) == 0
             # If output and not dealer input, dealer is crupt. Call input on functonality
             assert isdishonest(self.sid,1)
-            #self.sim_channels['a2p'].write( ('P2F', ((self.sid, 'F_bracha'), ((self.sid,1), ('input',msg)))) )
             self.write( 'a2p', ((self.sid, 1), ('P2F', ((self.sid, 'F_bracha'), ('input',msg)) )))
-            m = waits(self.pump, self.channels['p2a'])
-            fro,m = m.msg
+            fro,m = waits(self.pump, self.channels['p2a']).msg
             self.dealer_input = True
             assert m == 'OK', str(m)
             # Now get leaks, and populate self.pid_to_queue
@@ -400,7 +387,8 @@ class RBC_Simulator(ITM):
     def party_msg(self, d):
         msg = d.msg
         imp = d.imp
-        self.channels['a2z'].write( msg, imp)
+        #self.channels['a2z'].write( msg, imp)
+        self.pump.write('dump')
 
     def sim_write_and_wait(self, ch, msg, imp, *waiters):
         self.sim_channels[ch].write( msg, imp )        
