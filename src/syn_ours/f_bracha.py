@@ -74,14 +74,19 @@ class RBC_Simulator(ITM):
         # Maintain a copy of the ideal world wrapper queue
         self.internal_run_queue = {}
         self.internal_delay = 0
+
+        self.sim_run_queue = {}
+        
         # Track idx in queue for each party's output
         self.pid_to_queue = {}
         # whether input was provided to the functionality
-        self.dealer_input = False
+        self.dealer_input = None
         self.total_extra_delay_added = 0
         self.log = logging.getLogger("\033[1mRBC_Simulator\033[0m")
    
         self.sim_leaks = []
+        self.party_output_value = None
+        self.expect_output = False
 
         # Spawn UC experiment of real world (local to the simulator)
         #self.sim_channels,static,_pump = createWrappedUC([('F_chan',Syn_Channel)], ProtocolWrapper, Syn_FWrapper, self.prot, DummyWrappedAdversary, poly)
@@ -120,6 +125,15 @@ class RBC_Simulator(ITM):
         - env_delay: environment tells the adversary to add delay to the codeblock
         - env_get_leaks: environment asks the adverasry for latest leaks
     '''
+
+
+    #def no_consensus(self):
+    #    # if some party gave output, check if no other party is going to give 
+    #    # output. The only real way to judge this is to return an error when the
+    #    # simulated wrapper is empty and either: 1). the ideal wrapper is not empty
+    #    # (barring corrupted party outputs).
+
+
 
     '''
     Wrapper poll:
@@ -168,7 +182,7 @@ class RBC_Simulator(ITM):
         self.sim_get_leaks()
         if r == self.sim_channels['p2z']:
             self.sim_party_output(m)
-        elif m == self.sim_channels['p2a']:
+        elif r == self.sim_channels['a2z']:
             self.write( 'a2z', m.msg )
         else:
             self.pump.write("dump")
@@ -211,25 +225,42 @@ class RBC_Simulator(ITM):
         msg = m.msg
 
         n = 0
+        pid_idx = None
         for leak in msg:
             sender,msg,imp = leak
-            if sender == (self.sid, 'F_bracha'):
-                if msg[0] == 'input':               
-                    self.dealer_input = True
-                    # F_bracha leaks the dealer input, simulated it
-                    n = len(self.parties)
-                    self.log.debug('\033[94m Simulation beginning\033[0m')
-                    m = self.sim_write_and_wait('z2p', ((self.sim_sid,1),('input',msg[2])), imp, 'a2z', 'p2z')
-                    assert m.msg[1] == 'OK', str(m.msg)
-                    self.log.debug('\033[94m Simulation ending\033[0m')
-                elif msg[0] == 'schedule':  
-                    # some new codeblocks scheduled in simulated wrapper
+            #if sender == (self.sid, 'F_bracha'):
+            if msg[0] == 'input' and sender == (self.sid, 'F_bracha'):               
+                self.dealer_input = msg[2]; assert type(msg[2]) == int
+                # F_bracha leaks the dealer input, simulated it
+                n = len(self.parties)
+                self.log.debug('\033[94m Simulation beginning\033[0m')
+                m = self.sim_write_and_wait('z2p', ((self.sim_sid,1),('input',msg[2])), imp, 'a2z', 'p2z')
+                assert m.msg[1] == 'OK', str(m.msg)
+                self.log.debug('\033[94m Simulation ending\033[0m')
+            elif msg[0] == 'schedule':  
+                # some new codeblocks scheduled in simulated wrapper
+                if sender == (self.sid, 'F_bracha'):
+                    if not pid_idx:
+                        pid_idx = 1
+                    self.add_output_schedule(msg, pid_idx)
+                    pid_idx += 1
+                else:
                     self.add_new_schedule(msg)
-                else: raise Exception("new kind of leak " + str(msg))
+            else: raise Exception("new kind of leak " + str(msg))
+        if pid_idx: assert pid_idx-1 == len(self.parties), "n={}, pid_idx={}".format(len(self.parties), pid_idx)
 
     '''
     Helper functions
     '''
+
+    def add_output_schedule(self, leak, pid_idx):
+        _,rnd,idx,fname = leak
+        if rnd not in self.internal_run_queue:
+            self.internal_run_queue[rnd] = []
+        self.internal_run_queue[rnd].insert(idx,leak)
+        self.pid_to_queue[pid_idx] = (rnd, idx)
+        self.internal_delay += 1
+
 
     '''New "schedule" in ideal wrapper, add to local copy of it'''
     def add_new_schedule(self, leak):
@@ -238,7 +269,7 @@ class RBC_Simulator(ITM):
             self.internal_run_queue[rnd] = []
         # Add ideal world codeblocks to our copy of the wrapper
         self.internal_run_queue[rnd].insert(idx, leak)
-        self.pid_to_queue[len(self.internal_run_queue[rnd])] = (rnd, idx)
+        #self.pid_to_queue[len(self.internal_run_queue[rnd])] = (rnd, idx)
         # TODO do we also give delay to the simulated wrapper?
         self.internal_delay += 1
 
@@ -262,7 +293,8 @@ class RBC_Simulator(ITM):
             # check and count new "schedules" in in simulated wrapper
             for x in leaks.msg:
                 fro,s,i = x
-                if s[0] == 'schedule': n += 1
+                if s[0] == 'schedule': 
+                    n += 1
     
         # add delay from new "schedules" in simulated wrapper to ideal-world wrapper
         self.log.debug('Add n={} delay to ideal world wrapper'.format(n))
@@ -320,24 +352,38 @@ class RBC_Simulator(ITM):
         _sid,_pid = fro
         self.log.debug('\033[91m Got some output from pid={}, msg={}\033[0m'.format(_pid,msg))
 
-        if not self.dealer_input:
+        if isdishonest(_sid,_pid):
+            # forward this output to the environment
+            self.write('a2z', msg )
+            # don't do anything else since corrupt output in the ideal world doesn't 
+            #     get delivered
+            return
+        elif not self.dealer_input:
             assert len(self.internal_run_queue) == 0
             # If output and not dealer input, dealer is crupt. Call input on functonality
             assert isdishonest(self.sid,1)
             self.write( 'a2p', ((self.sid, 1), ('P2F', ((self.sid, 'F_bracha'), ('input',msg)) )))
             fro,m = waits(self.pump, self.channels['p2a']).msg
-            self.dealer_input = True
+            self.dealer_input = msg; assert type(msg) == int
             assert m == 'OK', str(m)
             # Now get leaks, and populate self.pid_to_queue
             #leaks = self.get_ideal_wrapper_leaks()
             self.write( 'a2w', ('get-leaks',))
             m = wait_for(self.channels['w2a'])
             msg = m.msg
+            pid_idx = None
             for leak in msg:
                 sender,msg,imp = leak
                 if sender == (self.sid, 'F_bracha'):
                     if msg[0] == 'schedule':
-                        self.add_new_schedule(msg)
+                        if not pid_idx: pid_idx = 1
+                        self.add_output_schedule(msg, 1)
+                        pid_idx += 1
+            if pid_idx: assert pid_idx-1 == len(self.parties)
+        else:
+            if self.dealer_input != msg:
+                raise Exception("Committing different values")
+        self.expect_output = True
 
         # If dealer gave input to the functionality 
         rnd,idx = self.pid_to_queue[_pid]
@@ -393,9 +439,6 @@ class RBC_Simulator(ITM):
     def sim_write_and_wait(self, ch, msg, imp, *waiters):
         self.sim_channels[ch].write( msg, imp )        
         return waits(self.sim_pump, *[self.sim_channels[w] for w in waiters])
- 
-
-
 
 
 from itm import WrappedPartyWrapper, PartyWrapper
