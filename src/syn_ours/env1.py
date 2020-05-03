@@ -273,13 +273,13 @@ def env2(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     def _a2z():
         while True:
             m = waits(a2z)
-            transcript.append(m.msg)
+            transcript.append('a2z:{}'.format(m.msg))
             pump.write('dump')
 
     def _p2z():
         while True:
             m = waits(p2z)
-            transcript.append(m.msg)
+            transcript.append('p2z:{}'.format(m.msg))
             pump.write('dump')
 
     g1 = gevent.spawn(_a2z)
@@ -322,7 +322,7 @@ def env2(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
         #waits(pump, a2z, p2z)
         waits(pump)
 
-    for _ in range(3):
+    for _ in range(1):
         # execute ECHO messages from 2->1, 2->3, 2->4
         z2a.write( ('A2W', ('exec', 4, 0)))
         #waits(pump, a2z, p2z)
@@ -504,7 +504,7 @@ def distinguisher(t_ideal, t_real):
 if __name__=='__main__':
     print('\n\t\t\033[93m [IDEAL WORLD] \033[0m\n')
     t1 = execWrappedUC(
-        env1, 
+        env2, 
         [('F_bracha',Syn_Bracha_Functionality)], 
         wrappedPartyWrapper('F_bracha'),
         Syn_FWrapper, 
@@ -514,7 +514,7 @@ if __name__=='__main__':
     
     print('\n\t\t\033[93m [REAL WORLD] \033[0m\n')
     t2 = execWrappedUC(
-        env1, 
+        env2, 
         [('F_chan',Syn_Channel)], 
         wrappedProtocolWrapper(Syn_Bracha_Protocol),
         Syn_FWrapper, 

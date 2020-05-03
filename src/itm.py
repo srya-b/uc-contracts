@@ -66,8 +66,29 @@ class GenChannel(Event):
     def reset(self, s=''): 
         self.clear()
 
+
+class ITMContext:
+    def __init__(self, poly):
+        self.poly = poly
+        self.imp_int = 0
+        self.imp_out = 0
+        self.spent = 0
+        self.marked = 0
+    
+    def tick(self, n):
+        if self.poly(self.marked) < self.spent + n:
+            #self.log.critical("Out of potential, generating more")
+            self.generate_pot(1)
+        self.spent += 1
+
+    def generate_pot(self, n):
+        if self.imp_in - self.imp_out - self.marked >= n:
+            self.marked += n
+        else:
+            raise Exception("Can't mark any more tokens, you're out!")
+
 class ITM:
-    def __init__(self, sid, pid, channels, handlers, poly):
+    def __init__(self, sid, pid, channels, handlers, poly, ):
         self.sid = sid
         self.pid = pid
         self.poly = poly

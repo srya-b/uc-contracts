@@ -76,6 +76,7 @@ class Syn_FWrapper(UCWrapper):
         self.w2a.write( "OK" )
 
     def adv_execute(self, r, i):
+        self.print_todo()
         f,args = self.todo[r].pop(i)
         f(*args)
 
