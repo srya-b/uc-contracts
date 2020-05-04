@@ -55,5 +55,4 @@ class ExampleContract(Contract):
         if 'mult1' in self.inner_vars and self.mult2 is not None and 'out' not in self.inner_vars:
             return (TransitionType.MULT, (self.inner_vars['mult1'], self.mult2, 'out'))
         if 'out' in self.inner_vars and 'out' not in self.outputs:
-            print("DO out")
             return (TransitionType.OUT, ('out', self.inner_vars['out']))

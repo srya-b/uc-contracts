@@ -220,7 +220,6 @@ class ABBSimulator(ITM):
             c_party, msg = d.msg
             c_sid, c_pid = c_party
             func, msg = msg
-            print(func)
             if func[1] == F.F_ASYNC:
                 tag, senderpid, msg = msg
                 contract_id = msg[0]
@@ -443,7 +442,6 @@ class ABBSimulator(ITM):
             point = (self.c_pid, msg[2])
             var = (id, msg[1])
             self.corruptoutputs[var].add(point)
-            print(self.corruptoutputs[var], point)
     
     def write_to_functionality(self, func, d):
         """

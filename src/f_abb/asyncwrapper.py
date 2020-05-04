@@ -48,7 +48,6 @@ class AsyncWrapper(UCWrapper):
     def adv_msg(self, msg):
         imp = msg.imp
         msg = msg.msg
-        print(msg)
         if msg[0] == MessageTag.EXECUTE and msg[1] < len(self.runqueue) and msg[1] >= 0:
             sender, funcargs = self.runqueue[msg[1]]
             del self.runqueue[msg[1]]
@@ -66,5 +65,4 @@ class AsyncWrapper(UCWrapper):
             self.leaks.clear()
             self.write('w2a', (MessageTag.SEND_LEAKS, leaks))
         else:
-            print(msg)
             self.pump.write("pump")

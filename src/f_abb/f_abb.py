@@ -130,7 +130,6 @@ class AsyncABBFunctionality(UCAsyncWrappedFunctionality):
             msgs = self.messages[party].copy()
             self.messages[party].clear()
             self.write('f2p', ((self.sid, party), (MessageTag.OUTPUT, msgs)))
-            print("writing to party: ", (self.sid, party))
         else:
             self.pump.write("pump")
         

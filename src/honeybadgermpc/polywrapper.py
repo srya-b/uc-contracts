@@ -5,26 +5,7 @@ from honeybadgermpc.elliptic_curve import Subgroup
 from honeybadgermpc.field import GF, GFElement
 import numpy as np
 from honeybadgermpc.reed_solomon_wb import make_wb_encoder_decoder
-'''
-n = 10
-t = n // 3
-omega_n = int(np.log2(n)) + 1
 
-field = GF(Subgroup.BLS12_381)
-Poly = polynomials_over(field)
-rand_poly = Poly.random(degree=t)
-print(rand_poly)
-
-omega = polynomial.get_omega(field, 2**omega_n, seed=0)
-x = rand_poly.evaluate_fft(omega, 2**omega_n)
-print(x)
-for i in range(0, 2**omega_n):
-    print(rand_poly(omega**i))
-    
-encode, decode, solve_system = make_wb_encoder_decoder(n, t+1, Subgroup.BLS12_381, point=EvalPoint(field, n, True))
-coeffs = decode(x[:t+1] + [None] * (n-2*t-1) + x[n-t:n])
-print(coeffs)
-'''
 class PolyWrapper:
     def __init__(self, n):
         self.n = n
@@ -53,7 +34,6 @@ class PolyWrapper:
         points = points.copy()
         count = len(points)-points.count(None)
         if count >= self.t+1:
-            print("Not random")
             try:
                 return self.Poly.interpolate([(self.omega**i, p) for i, p in enumerate(points) if p is not None])
             except:
