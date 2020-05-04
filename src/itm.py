@@ -1,6 +1,6 @@
 import os
 import sys
-from utils import gwrite, z_write, wait_for
+from utils import gwrite, z_write, wait_for, MessageTag
 from gevent.queue import Queue, Channel, Empty
 from gevent.event import AsyncResult, Event
 from numpy.polynomial.polynomial import Polynomial
@@ -8,6 +8,7 @@ import dump
 import gevent
 import comm
 import logging
+from collections import defaultdict
 
 '''
 There are 2 options with channels:
@@ -119,10 +120,11 @@ class ITM:
             #print('\033[92m[ITM READ] sid={}, pid={}] msg={}, imp={}\033[0m\n'.format(self.sid, self.pid, msg, imp))
             r.reset()
             #self.handlers[r](msg)
+            #print("Calling: ", self.sid, self.__class__, self.handlers[r].__name__)
             self.handlers[r](d)
 
 class UCProtocol(ITM):
-    def __init__(self, sid, pid, channels):
+    def __init__(self, sid, pid, channels, poly):
         self.sid = sid
         self.pid = pid
         self.p2a = channels['p2a']; self.a2p = channels['a2p']
@@ -133,7 +135,7 @@ class UCProtocol(ITM):
             self.f2p : self.func_msg,
             self.a2p : self.adv_msg,
         }
-        ITM.__init__(self, sid, pid, channels, self.handlers)
+        ITM.__init__(self, sid, pid, channels, self.handlers, poly)
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
@@ -145,7 +147,7 @@ class UCProtocol(ITM):
         Exception("env_msg needs to be defined")
 
 class UCFunctionality(ITM):
-    def __init__(self, sid, pid, channels):
+    def __init__(self, sid, pid, channels, poly):
         self.f2a = channels['f2a']; self.a2f = channels['a2f']
         self.f2z = channels['f2z']; self.z2f = channels['z2f']
         self.f2p = channels['f2p']; self.p2f = channels['p2f']
@@ -155,7 +157,7 @@ class UCFunctionality(ITM):
             self.p2f : self.party_msg,
             self.a2f : self.adv_msg,
         }
-        ITM.__init__(self, sid, pid, channels, self.handlers)
+        ITM.__init__(self, sid, pid, channels, self.handlers, poly)
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
@@ -255,18 +257,28 @@ class UCWrapper(ITM):
         Exception("leak needs to be defined")
 
 class UCAsyncWrappedFunctionality(UCWrappedFunctionality):
-    def __init__(self, sid, pid, channels):
-        UCWrappedFunctionality.__init__(self, sid, pid, channels)
+        
+    def __init__(self, sid, pid, channels, poly):
+        UCWrappedFunctionality.__init__(self, sid, pid, channels, poly)
+        
+    def wrapper_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        if msg[0] == MessageTag.EXECUTE:
+            func, args = msg[1]
+            func(*args)
         
     def leak(self, msg):
-        self.write('f2w', (("leak", msg)))
+        self.write('f2w', (MessageTag.LEAK, msg) )
+        return wait_for(self.w2f)
         
-    def eventually(self, msg):
-        self.write('f2w', (("eventually", msg)))
+    def eventually(self, func, args, leak_msg = None):
+        self.write('f2w', (MessageTag.EVENTUALLY, (func, args), leak_msg) )
+        return wait_for(self.w2f)
         
 class UCAsyncWrappedProtocol(UCWrappedProtocol):
-    def __init__(self, sid, pid, channels):
-        UCWrappedProtocol.__init__(self, sid, pid, channels)
+    def __init__(self, sid, pid, channels, poly):
+        UCWrappedProtocol.__init__(self, sid, pid, channels, poly)
         
     def leak(self, msg):
         dump.dump() # should not generally happen
@@ -845,10 +857,10 @@ class WrappedPartyWrapper:
             elif r == self.f2p:
                 self.f2p.reset('f2p in party')
                 fro,(to,msg) = m.msg
+                sid,pid = to
                 _pid = self.getPID(self.f2pid,sid,pid)
                 _pid.write(msg, m.imp)
             elif r == self.a2p:
-                print('a2p', m.msg)
                 (sid,pid),msg = m.msg
                 if comm.ishonest(sid,pid):
                     raise Exception
