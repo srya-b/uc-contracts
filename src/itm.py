@@ -1119,7 +1119,7 @@ class WrappedFunctionalityWrapper:
       
         #f = cls(sid, -1, _f2p, _p2f, _f2a, _a2f, _f2z, _z2f, _f2w, _w2f)
         f = cls(sid, -1, {'f2p':_f2p, 'p2f':_p2f, 'f2a':_f2a, 'a2f':_a2f, 'f2z':_f2z, 'z2f':_z2f, 'f2w':_f2w, 'w2f':_w2f}, self.pump, self.poly)
-        setFunctionality2(sid,tag)
+        setFunctionality2(sid,tag,f)
         gevent.spawn(f.run)
 
     '''Get the relevant channel for the functionality with (sid,tag)

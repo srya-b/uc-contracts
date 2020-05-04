@@ -10,6 +10,8 @@ itmmap = {}
 adversary = None
 corrupted = defaultdict(bool)
 
+wrapmap = {}
+
 
 FUNCTIONALITY = 0
 PARTY = 1
@@ -64,8 +66,11 @@ def setFunctionality(itm):
     sid,pid = itm.sid,itm.pid
     cset(sid,pid,FUNCTIONALITY,itm)
 
-def setFunctionality2(sid,pid):
-    cset2(sid,pid,FUNCTIONALITY)
+def setFunctionality2(sid,pid,itm=None):
+    if itm is None:
+        cset2(sid,pid,FUNCTIONALITY)
+    else:
+        cset(sid, pid, FUNCTIONALITY, itm)
 
 def setParty(p):
     sid,pid = p.sid,p.pid
@@ -86,3 +91,6 @@ def isdishonest(sid,pid):
 def ishonest(sid,pid):
     global corrupted
     return not corrupted[sid,pid]
+    
+def addwrapper(sid,wrapper):
+    wrapmap[sid] = wrapper 

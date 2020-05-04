@@ -1,5 +1,5 @@
 from itm import ProtocolWrapper, FunctionalityWrapper, PartyWrapper, GenChannel, WrappedFunctionalityWrapper, WrappedProtocolWrapper, WrappedPartyWrapper
-from comm import setAdversary
+from comm import setAdversary, addwrapper
 from utils import z_crupt
 import gevent
 from numpy.polynomial.polynomial import Polynomial
@@ -87,6 +87,7 @@ def createWrappedUC(fs, ps, wrapper, prot, adv, poly):
 
         w = wrapper({'f2w':f2w, 'w2f':w2f, 'p2w':p2w, 'w2p':w2p, 'a2w':a2w, 'w2a':w2a, 'z2w':z2w, 'w2z':w2z}, pump, poly)
         gevent.spawn(w.run)
+        addwrapper(sid, w)
 
         f = WrappedFunctionalityWrapper(p2f, f2p, a2f, f2a, z2f, f2z, w2f, f2w, pump, poly)
         for t,c in fs:
@@ -101,6 +102,7 @@ def createWrappedUC(fs, ps, wrapper, prot, adv, poly):
         advitm = adv(sid, -1, adv_channels, pump, poly)
         setAdversary(advitm)
         gevent.spawn(advitm.run)
+        pump.write("pump")
 
     gevent.spawn(_exec)
     return channels,static,pump
