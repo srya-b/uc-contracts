@@ -171,6 +171,7 @@ class RBC_Simulator(ITM):
     '''
     def env_exec(self, rnd, idx):
         # pass the exec onto the internel wrapper and check for output by some party
+        self.tick(1)
         self.sim_channels['z2a'].write( ('A2W', ('exec', rnd, idx)) )
         r = gevent.wait(objects=[self.sim_pump, self.sim_channels['a2z'], self.sim_channels['p2z']],count=1)[0]
         m = r.read()
@@ -223,6 +224,7 @@ class RBC_Simulator(ITM):
         n = 0
         pid_idx = None
         for leak in msg:
+            self.tick(1)
             sender,msg,imp = leak
             if msg[0] == 'input' and sender == (self.sid, 'F_bracha'):               
                 self.dealer_input = msg[2]; assert type(msg[2]) == int
@@ -249,6 +251,7 @@ class RBC_Simulator(ITM):
     '''
 
     def add_output_schedule(self, leak, pid_idx):
+        self.tick(1)
         _,rnd,idx,fname = leak
         if rnd not in self.internal_run_queue:
             self.internal_run_queue[rnd] = []
@@ -259,6 +262,7 @@ class RBC_Simulator(ITM):
 
     '''New "schedule" in ideal wrapper, add to local copy of it'''
     def add_new_schedule(self, leak):
+        self.tick(1)
         _,rnd,idx,fname = leak
         if rnd not in self.internal_run_queue:
             self.internal_run_queue[rnd] = []
@@ -280,6 +284,7 @@ class RBC_Simulator(ITM):
     def sim_get_leaks(self):
         # Ask for leaks from the simulated wrapper
         self.log.debug('sin_get_leaks asking for leaks')
+        self.tick(1)
         leaks = self.sim_write_and_wait('z2a', ('A2W', ('get-leaks',)), 0, 'a2z')
         n = 0
         self.log.debug('\n\t leaks = {} \n'.format(leaks))
@@ -290,7 +295,8 @@ class RBC_Simulator(ITM):
                 fro,s,i = x
                 if s[0] == 'schedule': 
                     n += 1
-    
+   
+        self.tick(1)
         # add delay from new "schedules" in simulated wrapper to ideal-world wrapper
         self.log.debug('Add n={} delay to ideal world wrapper'.format(n))
         self.internal_delay += n
@@ -332,6 +338,7 @@ class RBC_Simulator(ITM):
 
     def sim_poll(self):
         # simulate the 'poll' call
+        self.tick(1)
         self.log.debug('\t\t\033[94m wrapper_poll Simulation beginning\033[0m')
         self.sim_channels['z2w'].write( ('poll',), 0)
         r = gevent.wait(objects=[self.sim_pump, self.sim_channels['a2z'], self.sim_channels['p2z']], count=1)[0]
@@ -348,6 +355,7 @@ class RBC_Simulator(ITM):
         self.log.debug('\033[91m Got some output from pid={}, msg={}\033[0m'.format(_pid,msg))
 
         if isdishonest(_sid,_pid):
+            self.tick(1)
             # forward this output to the environment
             self.write('a2z', msg )
             # don't do anything else since corrupt output in the ideal world doesn't 
@@ -356,6 +364,7 @@ class RBC_Simulator(ITM):
         elif not self.dealer_input:
             assert len(self.internal_run_queue) == 0
             # If output and not dealer input, dealer is crupt. Call input on functonality
+            self.tick(1)
             assert isdishonest(self.sid,1)
             n = len(self.parties)
             self.write( 'a2p', ((self.sid, 1), ('P2F', ((self.sid, 'F_bracha'), ('input',msg)) )), n*(4*n + 1))
@@ -365,11 +374,13 @@ class RBC_Simulator(ITM):
             assert _msg == 'OK', str('fro={}, msg={}'.format(_fro,_msg))
             # Now get leaks, and populate self.pid_to_queue
             #leaks = self.get_ideal_wrapper_leaks()
+            self.tick(1)
             self.write( 'a2w', ('get-leaks',))
             m = wait_for(self.channels['w2a'])
             msg = m.msg
             pid_idx = None
             for leak in msg:
+                self.tick(1)
                 sender,msg,imp = leak
                 if sender == (self.sid, 'F_bracha'):
                     if msg[0] == 'schedule':
@@ -384,6 +395,7 @@ class RBC_Simulator(ITM):
         self.internal_run_queue[rnd].pop(idx)
         
         for p in self.pid_to_queue:
+            self.tick(1)
             if p > _pid:
                 r,i = self.pid_to_queue[p]
                 self.pid_to_queue[p] = (r, i-1)
