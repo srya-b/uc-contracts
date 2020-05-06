@@ -38,7 +38,7 @@ def env1(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     def t(s):
         transcript.append('cmd: ' + str(s))
 
-    z2p.write( ((sid,1), ('input', 2)))
+    z2p.write( ((sid,1), ('input', 2)), n*(4*n + 1))
     #wait_for(p2z)
     #waits(pump, a2z, p2z)
     waits(pump)
@@ -47,97 +47,81 @@ def env1(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
         s = ('one', (sid,fro), (sid,to), r, delta)
         return (s,'F_chan')
 
-    z2a.write( ('A2W', ('get-leaks',)) )
+    z2a.write( ('A2W', ('get-leaks',)), n*(4*n+1))
     #msgs = waits(pump, a2z, p2z)
     #log.debug('\033[91m [Leaks] \033[0m {}'.format( '\n'.join(str(m) for m in msgs.msg)))
     waits(pump)
 
     #log.debug('\033[91m send first VAL, get +2 ECHO messages \033[0m')
     for _ in range(4):
-        z2w.write( ('poll',) )
+        z2w.write( ('poll',), 1 )
         waits(pump)
-        #log.info(waits(pump, a2z, p2z))
 
     #log.debug('\033[91m +2 ECHO + 1 = 3 polls to send next VAL message +2 ECHO msgs \033[0m')
     for _ in range(3):
-        z2w.write( ('poll',) )
-        #log.info(waits(pump, a2z, p2z))
+        z2w.write( ('poll',), 1)
         waits(pump)
 
     #log.debug('\033[91m +2 ECHO + 1 = 3 polls to send last VAL message +2 ECHO msgs \033[0m')
     for _ in range(3):
-        z2w.write( ('poll',) )
-        #log.info(waits(pump, a2z, p2z))
+        z2w.write( ('poll',), 1)
         waits(pump)
 
     #log.debug('\033[91m +2 ECHO +1 = 3 polls to send 1 -> 2 ECHO msg, +2 READY msgs \033[0m')
-    for _ in range(3):
-        z2w.write( ('poll',) )
-        #log.info(waits(pump, a2z, p2z))
+    for _ in range(1):
+        z2w.write( ('poll',), 1)
         waits(pump)
 
     #log.debug('\033[91m +2 READY +1 = 3 polls to send 1 -> 3 ECHO msg, +2 READY msgs \033[0m')
     for _ in range(3):
-        z2w.write( ('poll',) )
-        #log.info(waits(pump, a2z, p2z))
+        z2w.write( ('poll',), 1)
         waits(pump)
 
 #    log.debug('\033[91m +2 READY +1 = 3 polls to send 2 -> 1 ECHO msg, +2 READY msgs \033[0m')
     for _ in range(3):
-        z2w.write( ('poll',) )
-        #log.info(waits(pump, a2z, p2z))
+        z2w.write( ('poll',), 1)
         waits(pump)
 
 #    log.debug('\033[91m +2 READY +1 = 3 polls to send 2 -> 3 ECHO msg, +0 READY msgs \033[0m')
     for _ in range(3):
-        z2w.write( ('poll',) )
-        #log.info(waits(pump, a2z, p2z))
+        z2w.write( ('poll',), 1)
         waits(pump)
 
 #    log.debug('\033[91m DELAYING \033[0m')
-    z2a.write( ('A2W', ('delay', 3)) )
-    #log.info(waits(pump, a2z))
+    z2a.write( ('A2W', ('delay', 3)), 3)
     waits(pump)
 
 #    log.debug('\033[91m +0 READY +1 = 3 polls to send 3 -> 1 ECHO msg, +0 msgs \033[0m')
     for _ in range(4):
-        z2w.write( ('poll',) )
-        #log.info(waits(pump, a2z, p2z))
+        z2w.write( ('poll',), 1)
         waits(pump)
 
 #    log.debug('\033[91m +0 READY +1 = 3 polls to send 3 -> 2 ECHO msg, +0 msgs \033[0m')
-    z2w.write( ('poll',) )
-    #log.info(waits(pump, a2z, p2z))
+    z2w.write( ('poll',), 1)
     waits(pump)
 
 #    log.debug('\033[91m +0 READY +1 = 3 polls to send 2 -> 1 READY msg, +0 msgs \033[0m')
-    z2w.write( ('poll',) )
-    #log.info(waits(pump, a2z, p2z))
+    z2w.write( ('poll',), 1)
     waits(pump)
 
 #    log.debug('\033[91m +0 READY +1 = 3 polls to send 2 -> 3 READY msg, +0 msgs \033[0m')
-    z2w.write( ('poll',) )
-    #log.info(waits(pump, a2z, p2z))
+    z2w.write( ('poll',), 1)
     waits(pump)
 
 #    log.debug('\033[91m +0 READY +1 = 3 polls to send 3 -> 1 READY msg, 1 ACCEPTS\033[0m')
-    z2w.write( ('poll',) )
-    #log.info('\033[1mp1 output\033[0m {}'.format(waits(pump, a2z, p2z)))
+    z2w.write( ('poll',), 1)
     waits(pump)
 
 #    log.debug('\033[91m +0 READY +1 = 3 polls to send 3 -> 2 READY msg, 2 Doesnt accept \033[0m')
-    z2w.write( ('poll',) )
-    #log.info(waits(pump, a2z, p2z))
+    z2w.write( ('poll',), 1)
     waits(pump)
 
 #    log.debug('\033[91m +0 READY +1 = 3 polls to send 1 -> 2 READY msg, 2 ACCEPTS\033[0m')
-    z2w.write( ('poll',) )
-    #log.info('\033[1mp2 output\033[0m {}'.format( waits(pump, a2z, p2z)))
+    z2w.write( ('poll',), 1)
     waits(pump)
 
 #    log.debug('\033[91m +0 READY +1 = 3 polls to send 1 -> 3 READY msg, 3 ACCEPTS\033[0m')
-    z2w.write( ('poll',) )
-    #log.info('\033[1mp3 output\033[0m {}'.format(waits(pump, a2z, p2z)))
+    z2w.write( ('poll',), 1)
     waits(pump)
 
     gevent.kill(g1)
@@ -289,15 +273,15 @@ def env2(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
         s = ('one', (sid,fro), (sid,to), r, delta)
         return (s,'F_chan')
 
-    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,2,1)), ('send', ('VAL', 3)))))))
+    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,2,1)), ('send', ('VAL', 3)))))), 4*n)
     #waits(pump, a2z)
     waits(pump)
 
-    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,4,1)), ('send', ('VAL', 3)))))))
+    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,4,1)), ('send', ('VAL', 3)))))), 4*n)
     #waits(pump, a2z)
     waits(pump)
     
-    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,3,1)), ('send', ('VAL', 3)))))))
+    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,3,1)), ('send', ('VAL', 3)))))), 4*n)
     #waits(pump, a2z)
     waits(pump)
 
@@ -318,7 +302,7 @@ def env2(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
 
     # force execute the first ECHO
     for _ in range(10):
-        z2w.write( ('poll',) )
+        z2w.write( ('poll',), 1)
         #waits(pump, a2z, p2z)
         waits(pump)
 
@@ -360,134 +344,6 @@ def env2(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     print('Transcript', transcript)
     return transcript
 
-#    log.debug('\033[91m send first 1 -> 1 VAL, get +3 ECHO messages \033[0m')
-#    for _ in range(5):
-#        z2w.write( ('poll',) )
-#        log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +3 ECHO + 1 = 4 polls to send next 1 -> 2 VAL message +3 ECHO msgs \033[0m')
-#    for _ in range(4):
-#        z2w.write( ('poll',) )
-#        log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +3 ECHO + 1 = 4 polls to send last 1 -> 3 VAL message +3 ECHO msgs \033[0m')
-#    for _ in range(4):
-#        z2w.write( ('poll',) )
-#        log.info(waits(pump, a2z, p2z))
-#    
-#    log.debug('\033[91m +3 ECHO + 1 = 3 polls to send last 1 -> 4 VAL message +3 ECHO msgs \033[0m')
-#    for _ in range(4):
-#        z2w.write( ('poll',) )
-#        log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +3 ECHO +1 = 4 polls to send 1 -> 2 ECHO msg, +0 READY msgs \033[0m')
-#    for _ in range(4):
-#        z2w.write( ('poll',) )
-#        log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 1 polls to send 1 -> 3 ECHO msg, +0 READY msgs \033[0m')
-#    for _ in range(1):
-#        z2w.write( ('poll',) )
-#        log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 1 polls to send 1 -> 4 ECHO msg, +0 READY msgs \033[0m')
-#    for _ in range(1):
-#        z2w.write( ('poll',) )
-#        log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 1 polls to send 2 -> 1 ECHO msg, +0 READY msgs \033[0m')
-#    for _ in range(1):
-#        z2w.write( ('poll',) )
-#        log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 1 polls to send 2 -> 3 ECHO msg, +3 READY msgs \033[0m')
-#    for _ in range(1):
-#        z2w.write( ('poll',) )
-#        log.info(waits(pump, a2z, p2z))
-#    
-#    log.debug('\033[91m +3 READY +1 = 4 polls to send 2 -> 4 ECHO msg, +3 READY msgs \033[0m')
-#    for _ in range(4):
-#        z2w.write( ('poll',) )
-#        log.info(waits(pump, a2z, p2z))
-#    
-###    log.debug('\033[91m DELAYING \033[0m')
-###    z2a.write( ('A2W', ('delay', 3)) )
-###    log.info(waits(pump, a2z))
-###
-#    log.debug('\033[91m +3 READY +1 = 4 polls to send 3 -> 1 ECHO msg, +3 READY msgs \033[0m')
-#    for _ in range(4):
-#        z2w.write( ('poll',) )
-#        log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +3 READY +1 = 4 polls to send 3 -> 2 ECHO msg, +3 READY msgs \033[0m')
-#    for _ in range(4):
-#        z2w.write( ('poll',) )
-#        log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +3 READY +1 = 4 polls to send 3 -> 4 ECHO msg, +0 READY msgs \033[0m')
-#    for _ in range(4):
-#        z2w.write( ('poll',) )
-#        log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 1 polls to send 4 -> 1 ECHO msg, +0 msgs \033[0m')
-#    z2w.write( ('poll',) )
-#    log.info(waits(pump, a2z, p2z))
-#    
-#    log.debug('\033[91m +0 READY +1 = 1 polls to send 4 -> 2 ECHO msg, +0 msgs \033[0m')
-#    z2w.write( ('poll',) )
-#    log.info(waits(pump, a2z, p2z))
-#    
-#    log.debug('\033[91m +0 READY +1 = 1 polls to send 4 -> 3 ECHO msg, +0 msgs \033[0m')
-#    z2w.write( ('poll',) )
-#    log.info(waits(pump, a2z, p2z))
-#    
-#    log.debug('\033[91m +0 READY +1 = 3 polls to send 3 -> 1 READY msg, +0 msgs \033[0m')
-#    z2w.write( ('poll',) )
-#    log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 3 polls to send 3 -> 2 READY msg, +0 msgs \033[0m')
-#    z2w.write( ('poll',) )
-#    log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 3 polls to send 3 -> 4 READY msg, +0 msgs \033[0m')
-#    z2w.write( ('poll',) )
-#    log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 3 polls to send 4 -> 1 READY msg, +0 msgs \033[0m')
-#    z2w.write( ('poll',) )
-#    log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 3 polls to send 4 -> 2 READY msg, +0 msgs \033[0m')
-#    z2w.write( ('poll',) )
-#    log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 3 polls to send 4 -> 3 READY msg, +0 msgs \033[0m')
-#    z2w.write( ('poll',) )
-#    log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 3 polls to send 1 -> 2 READY msg, +0 msgs \033[0m')
-#    z2w.write( ('poll',) )
-#    log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 3 polls to send 1 -> 3 READY msg, +0 msgs \033[0m')
-#    z2w.write( ('poll',) )
-#    log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 3 polls to send 1 -> 4 READY msg, +0 msgs \033[0m')
-#    z2w.write( ('poll',) )
-#    log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 3 polls to send 2 -> 1 READY msg, +0 msgs \033[0m')
-#    z2w.write( ('poll',) )
-#    log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 3 polls to send 2 -> 3 READY msg, +0 msgs \033[0m')
-#    z2w.write( ('poll',) )
-#    log.info(waits(pump, a2z, p2z))
-#
-#    log.debug('\033[91m +0 READY +1 = 3 polls to send 2 -> 4 READY msg, +0 msgs \033[0m')
-#    z2w.write( ('poll',) )
-#    log.info(waits(pump, a2z, p2z))
 
 def distinguisher(t_ideal, t_real):
     print('\n\t\033[93m Ideal transcript\033[0m')
@@ -504,7 +360,7 @@ def distinguisher(t_ideal, t_real):
 if __name__=='__main__':
     print('\n\t\t\033[93m [IDEAL WORLD] \033[0m\n')
     t1 = execWrappedUC(
-        env2, 
+        env1, 
         [('F_bracha',Syn_Bracha_Functionality)], 
         wrappedPartyWrapper('F_bracha'),
         Syn_FWrapper, 
@@ -514,7 +370,7 @@ if __name__=='__main__':
     
     print('\n\t\t\033[93m [REAL WORLD] \033[0m\n')
     t2 = execWrappedUC(
-        env2, 
+        env1,  
         [('F_chan',Syn_Channel)], 
         wrappedProtocolWrapper(Syn_Bracha_Protocol),
         Syn_FWrapper, 

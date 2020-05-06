@@ -43,7 +43,7 @@ def execUC(env, fs, pwrapper, prot, adv):
     env(static, z2p, z2f, z2a, a2z, p2z, f2z)
 
 #def createWrappedUC(fs, ps, wrapper, prot, adv, poly):
-def createWrappedUC(fs, ps, wrapper, adv, poly):
+def createWrappedUC(fs, ps, wrapper, adv, poly, importargs={}):
     f2p,p2f = GenChannel('f2p'),GenChannel('p2f')
     f2a,a2f = GenChannel('f2a'),GenChannel('a2f')
     f2z,z2f = GenChannel('f2z'),GenChannel('z2f')
@@ -58,7 +58,7 @@ def createWrappedUC(fs, ps, wrapper, adv, poly):
 
     env_channels = {'f2z':f2z, 'z2f':z2f, 'p2z':p2z, 'z2p':z2p, 'a2z':a2z, 'z2a':z2a, 'w2z':w2z, 'z2w':z2w}
     func_channels = {'f2z':f2z, 'z2f':z2f, 'f2p':f2p, 'p2f':p2f, 'f2a':f2a, 'a2f':a2f, 'f2w':f2w, 'w2f':w2f}
-    party_channels = {'p2z':p2z, z2p:'z2p', 'p2a':p2a, 'a2p':a2p, 'p2f':p2f, 'f2p':f2p, 'p2w':p2w, 'w2p':w2p}
+    party_channels = {'p2z':p2z, 'z2p':z2p, 'p2a':p2a, 'a2p':a2p, 'p2f':p2f, 'f2p':f2p, 'p2w':p2w, 'w2p':w2p}
     adv_channels = {'a2z':a2z, 'z2a':z2a, 'a2f':a2f, 'f2a':f2a, 'a2w':a2w, 'w2a':w2a, 'a2p':a2p, 'p2a':p2a}
     wrapper_channels = {'w2a':w2a, 'a2w':a2w, 'w2f':w2f, 'f2w':f2w, 'w2p':w2p, 'p2w':p2w, 'w2z':w2z, 'z2w':z2w}
 
@@ -73,8 +73,7 @@ def createWrappedUC(fs, ps, wrapper, adv, poly):
     
     def _exec():
         r = gevent.wait( objects=[static], count=1)[0]
-        d = r.read()
-        m = d.msg
+        m = r.read().msg
         static.reset()
         sid_msg,crupt_msg = m
         assert sid_msg[0] == 'sid'
@@ -86,10 +85,10 @@ def createWrappedUC(fs, ps, wrapper, adv, poly):
         for _s,_p in crupt_msg[1:]:
             z_crupt(_s,_p)
 
-        w = wrapper({'f2w':f2w, 'w2f':w2f, 'p2w':p2w, 'w2p':w2p, 'a2w':a2w, 'w2a':w2a, 'z2w':z2w, 'w2z':w2z}, pump, poly)
+        w = wrapper({'f2w':f2w, 'w2f':w2f, 'p2w':p2w, 'w2p':w2p, 'a2w':a2w, 'w2a':w2a, 'z2w':z2w, 'w2z':w2z}, pump, poly, importargs)
         gevent.spawn(w.run)
 
-        f = WrappedFunctionalityWrapper(p2f, f2p, a2f, f2a, z2f, f2z, w2f, f2w, pump, poly)
+        f = WrappedFunctionalityWrapper(p2f, f2p, a2f, f2a, z2f, f2z, w2f, f2w, pump, poly, importargs)
         for t,c in fs:
             f.newcls(t,c)
         gevent.spawn( f.run )
@@ -99,10 +98,10 @@ def createWrappedUC(fs, ps, wrapper, adv, poly):
         #else:
         #    #p = WrappedProtocolWrapper(z2p,p2z, f2p,p2f, a2p,p2a, w2p,p2w, pump, prot, poly)
         #    p = WrappedProtocolWrapper(z2p,p2z, f2p,p2f, a2p,p2a, w2p,p2w, pump, poly)
-        p = ps(z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, pump, poly)
+        p = ps(z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, pump, poly, importargs)
         gevent.spawn(p.run)
         # TODO change to wrapped adversray
-        advitm = adv(sid, -1, adv_channels, pump, poly)
+        advitm = adv(sid, -1, adv_channels, pump, poly, importargs)
         setAdversary(advitm)
         gevent.spawn(advitm.run)
 

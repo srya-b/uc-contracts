@@ -75,7 +75,7 @@ class DummyWrappedAdversary(ITM):
     '''Implementation of the dummy adversary. Doesn't do anything locally,
      just forwards all messages to the intended party. Z communicates with
      corrupt parties through dummy adversary'''
-    def __init__(self, sid, pid, channels, pump, poly):
+    def __init__(self, sid, pid, channels, pump, poly, importargs):
         self.sid = sid
         self.pid = pid
         self.pump = pump
@@ -88,7 +88,7 @@ class DummyWrappedAdversary(ITM):
             channels['w2a']: self.wrapper_msg,
         }
         
-        ITM.__init__(self, sid, pid, channels, handlers, poly)
+        ITM.__init__(self, sid, pid, channels, handlers, poly, importargs)
 
         self.input = AsyncResult()
         self.leak = AsyncResult()
@@ -113,13 +113,16 @@ class DummyWrappedAdversary(ITM):
             if msg[0] == 'get-leaks':
                 self.getLeaks(msg[1])
             else:
-                self.channels['a2f'].write( msg, imp )
+                #self.channels['a2f'].write( msg, imp )
+                self.write('a2f', msg, imp )
         elif msg[0] == 'A2P':
             t,msg = msg
-            self.channels['a2p'].write( msg, imp )
+            #self.channels['a2p'].write( msg, imp )
+            self.write('a2p', msg, imp )
         elif msg[0] == 'A2W':
             t,msg = msg
-            self.channels['a2w'].write( msg, imp )
+            #self.channels['a2w'].write( msg, imp )
+            self.write('a2w', msg, imp)
         elif msg[0] == 'corrupt':
             self.input_corrupt(msg[1])
         else: self.pump.write("dump")#dump.dump()

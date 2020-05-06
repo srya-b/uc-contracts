@@ -10,14 +10,14 @@ log = logging.getLogger(__name__)
 
 class Syn_Bracha_Protocol(UCWrappedProtocol):
     #def __init__(self, sid, pid, channels):
-    def __init__(self, sid, pid, channels, pump, poly):
+    def __init__(self, sid, pid, channels, pump, poly, importargs):
         self.ssid = sid[0]
         self.parties = sid[1]
         self.delta = sid[2]
         self.n = len(self.parties)
         self.t = floor(self.n/3)
         self.pump = pump
-        UCWrappedProtocol.__init__(self, sid, pid, channels, poly)
+        UCWrappedProtocol.__init__(self, sid, pid, channels, poly, importargs)
 
         self.prepared_value = None
         self.echoed = False
@@ -49,7 +49,8 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
             self.prepared_value = inp
             msg = ('ECHO', self.prepared_value)
             for pid in self.except_me():
-                self.send_msg( pid, ('ECHO', self.prepared_value), 0)
+                self.tick(1)
+                self.send_msg( pid, ('ECHO', self.prepared_value), 3)
             self.num_echos[inp] += 1
         self.pump.write("dump")
    
@@ -62,12 +63,12 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
                 self.num_readys[inp] += 1
                 # send out READY
                 for p in self.except_me():
+                    self.tick(1)
                     self.send_msg( p, ('READY', self.prepared_value), 0)
         self.pump.write("dump")
 
     def ready_msg(self, inp, imp):
         self.num_readys[inp] += 1
-        assert imp == 0
         log.debug('[{}] Num readys {}'.format(self.pid, self.num_readys[inp]))
         log.debug('required {}'.format(2*(self.n/3)+1))
         if self.prepared_value and self.prepared_value == inp:
@@ -79,7 +80,6 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
         self.pump.write("dump")
 
     def p2p_msg(self, sender, msg, imp):
-        #print('p2p msg', msg)
         _,msg = msg
         sid,pid = sender
         ssid,fro,to,r,d = sid
@@ -113,7 +113,7 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
         if self.halt: self.pump.write('dump'); return
         if self.pid == 1:
             for p in self.parties:
-                self.send_msg( p, ('VAL', inp), 0)
+                self.send_msg( p, ('VAL', inp), 4*len(self.parties))
         #self.pump.write("dump")
         self.write('p2z', 'OK')
 
