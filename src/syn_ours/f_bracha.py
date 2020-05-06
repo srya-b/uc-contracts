@@ -9,17 +9,18 @@ import logging
 log = logging.getLogger(__name__)
 
 class Syn_Bracha_Functionality(UCWrappedFunctionality):
-    def __init__(self, sid, pid, channels, pump, poly):
+    def __init__(self, sid, pid, channels, pump, poly, importargs):
         self.ssid = sid[0]
         self.parties = sid[1]
         self.n = len(self.parties)
         self.pump = pump
         self.round_upper_bound = 5
         self.delta = sid[2] * self.round_upper_bound
-        UCWrappedFunctionality.__init__(self, sid, pid, channels, poly)
+        UCWrappedFunctionality.__init__(self, sid, pid, channels, poly, importargs)
 
     def send_output(self, to, msg):
-        self.f2p.write( (to, msg) )
+        #self.f2p.write( (to, msg) )
+        self.write('f2p', (to, msg) )
 
     '''Dealer, assumed to be pid=1 gives some input and invokes
     the synchronous wrapper around it to deliver the output to all
@@ -27,11 +28,14 @@ class Syn_Bracha_Functionality(UCWrappedFunctionality):
     def party_input(self, pid, inp):
         if pid == 1:
             for p in self.parties:
-                self.f2w.write( ('schedule', self.send_output, ((self.sid,p), inp), self.delta), 0)
+                #self.f2w.write( ('schedule', self.send_output, ((self.sid,p), inp), self.delta), 0)
+                print('scheduling input')
+                self.write('f2w', ('schedule', self.send_output, ((self.sid,p), inp), self.delta), 0)
                 m = wait_for(self.w2f).msg
                 assert m == ('OK',)
             n = len(self.parties)
-            self.leak( ('input', pid, inp), 0)
+            self.leak( ('input', pid, inp), n*(4*n + 1))
+        print('f2p channel', self.channels['f2p'])
         self.write('f2p', ((self.sid,pid), 'OK'))
 
 
@@ -59,12 +63,12 @@ from execuc import createWrappedUC
 from syn_ours import Syn_Channel, Syn_Bracha_Protocol
 
 def brachaSimulator(prot):
-    def f(sid, pid, channels, pump, poly):
-        return RBC_Simulator(sid, pid, channels, pump, prot, poly)
+    def f(sid, pid, channels, pump, poly, importargs):
+        return RBC_Simulator(sid, pid, channels, pump, prot, poly, importargs)
     return f
 
 class RBC_Simulator(ITM):
-    def __init__(self, sid, pid, channels, pump, prot, poly):
+    def __init__(self, sid, pid, channels, pump, prot, poly, importargs):
         self.ssid = sid[0]
         self.parties = sid[1]
         self.delta = sid[2]
@@ -87,10 +91,18 @@ class RBC_Simulator(ITM):
         self.sim_leaks = []
         self.party_output_value = None
         self.expect_output = False
+        
+        handlers = {
+            channels['p2a']: self.party_msg,
+            channels['z2a']: self.env_msg,
+            channels['w2a']: self.wrapper_msg,
+            channels['f2a']: self.func_msg,
+        }
+
+        ITM.__init__(self, sid, pid, channels, handlers, poly, importargs)
 
         # Spawn UC experiment of real world (local to the simulator)
-        #self.sim_channels,static,_pump = createWrappedUC([('F_chan',Syn_Channel)], ProtocolWrapper, Syn_FWrapper, self.prot, DummyWrappedAdversary, poly)
-        self.sim_channels,static,_pump = createWrappedUC([('F_chan',Syn_Channel)], wrappedProtocolWrapper(prot), Syn_FWrapper, DummyWrappedAdversary, poly)
+        self.sim_channels,static,_pump = createWrappedUC([('F_chan',Syn_Channel)], wrappedProtocolWrapper(prot), Syn_FWrapper, DummyWrappedAdversary, poly, importargs={'ctx': self.ctx, 'impflag':False})
 
         # Forward the same 'sid' to the simulation 
         # TODO forward crupt parties as well
@@ -100,23 +112,16 @@ class RBC_Simulator(ITM):
         self.sim_sid = (sid[0], sid[1], sid[2])
         self.sim_pump = _pump
         static.write( (('sid', self.sim_sid), ('crupt',)) )
-        
-        handlers = {
-            channels['p2a']: self.party_msg,
-            channels['z2a']: self.env_msg,
-            channels['w2a']: self.wrapper_msg,
-            channels['f2a']: self.func_msg,
+    
+        self.handlers.update(
+        {
             self.sim_channels['p2z']: self.sim_party_msg,
             self.sim_channels['a2z']: self.sim_adv_msg,
             self.sim_channels['f2z']: self.sim_func_msg,
             self.sim_channels['w2z']: self.sim_wrapper_msg,
-        }
+        })
+   
 
-        ITM.__init__(self, sid, pid, channels, handlers, poly)
-    
-    # TODO get this the hell out of here
-    def poly(self):
-        return Polynomial([1, 1, 1, 1, 1])
 
     '''
         Entrypoints:
@@ -125,15 +130,6 @@ class RBC_Simulator(ITM):
         - env_delay: environment tells the adversary to add delay to the codeblock
         - env_get_leaks: environment asks the adverasry for latest leaks
     '''
-
-
-    #def no_consensus(self):
-    #    # if some party gave output, check if no other party is going to give 
-    #    # output. The only real way to judge this is to return an error when the
-    #    # simulated wrapper is empty and either: 1). the ideal wrapper is not empty
-    #    # (barring corrupted party outputs).
-
-
 
     '''
     Wrapper poll:
@@ -145,7 +141,7 @@ class RBC_Simulator(ITM):
         # The ideal wrapper decreased its delay, so we do the same
         self.internal_delay -= 1
         if self.internal_delay == 0:
-            self.write('a2w', ('delay',1))
+            self.write('a2w', ('delay',1), 1)
             m = waits(self.channels['w2a']); assert m.msg == 'OK', str(m)
             self.internal_delay += 1
             self.total_extra_delay_added += 1
@@ -187,13 +183,13 @@ class RBC_Simulator(ITM):
         else:
             self.pump.write("dump")
 
-    def env_delay(self, d):
+    def env_delay(self, d, imp):
         # first send this to the emulated wrapper
-        self.sim_channels['z2a'].write( ('A2W', ('delay', d)) )
+        self.sim_channels['z2a'].write( ('A2W', ('delay', d)))
         assert waits(self.sim_pump, self.sim_channels['a2z']).msg == 'OK'
 
         # now send it to the ideal world wrapper
-        self.write( 'a2w', ('delay',d) )
+        self.write( 'a2w', ('delay',d), imp)
         assert waits(self.pump, self.channels['w2a']).msg == 'OK'
         # update our copy of the ideal delay
         self.internal_delay += d
@@ -228,7 +224,6 @@ class RBC_Simulator(ITM):
         pid_idx = None
         for leak in msg:
             sender,msg,imp = leak
-            #if sender == (self.sid, 'F_bracha'):
             if msg[0] == 'input' and sender == (self.sid, 'F_bracha'):               
                 self.dealer_input = msg[2]; assert type(msg[2]) == int
                 # F_bracha leaks the dealer input, simulated it
@@ -299,7 +294,7 @@ class RBC_Simulator(ITM):
         # add delay from new "schedules" in simulated wrapper to ideal-world wrapper
         self.log.debug('Add n={} delay to ideal world wrapper'.format(n))
         self.internal_delay += n
-        self.write('a2w', ('delay',n))
+        self.write('a2w', ('delay',n), n)
         m = waits(self.pump, self.channels['w2a']); assert m.msg == "OK", str(m.msg)
         self.sim_leaks.extend(leaks.msg)
         #return leaks
@@ -329,7 +324,7 @@ class RBC_Simulator(ITM):
             elif msg[0] == 'exec':
                 self.env_exec(msg[1], msg[2])
             elif msg[0] == 'delay':
-                self.env_delay(msg[1])
+                self.env_delay(msg[1], imp)
             else:
                 self.channels['a2w'].write( msg, imp )
         else:
@@ -362,10 +357,12 @@ class RBC_Simulator(ITM):
             assert len(self.internal_run_queue) == 0
             # If output and not dealer input, dealer is crupt. Call input on functonality
             assert isdishonest(self.sid,1)
-            self.write( 'a2p', ((self.sid, 1), ('P2F', ((self.sid, 'F_bracha'), ('input',msg)) )))
-            fro,m = waits(self.pump, self.channels['p2a']).msg
-            self.dealer_input = msg; assert type(msg) == int
-            assert m == 'OK', str(m)
+            n = len(self.parties)
+            self.write( 'a2p', ((self.sid, 1), ('P2F', ((self.sid, 'F_bracha'), ('input',msg)) )), n*(4*n + 1))
+            m = waits(self.pump, self.channels['p2a'])
+            _fro,_msg = m.msg
+            self.dealer_input = msg; assert type(msg) == int, str(msg)
+            assert _msg == 'OK', str('fro={}, msg={}'.format(_fro,_msg))
             # Now get leaks, and populate self.pid_to_queue
             #leaks = self.get_ideal_wrapper_leaks()
             self.write( 'a2w', ('get-leaks',))
@@ -377,12 +374,9 @@ class RBC_Simulator(ITM):
                 if sender == (self.sid, 'F_bracha'):
                     if msg[0] == 'schedule':
                         if not pid_idx: pid_idx = 1
-                        self.add_output_schedule(msg, 1)
+                        self.add_output_schedule(msg, pid_idx)
                         pid_idx += 1
             if pid_idx: assert pid_idx-1 == len(self.parties)
-        else:
-            if self.dealer_input != msg:
-                raise Exception("Committing different values")
         self.expect_output = True
 
         # If dealer gave input to the functionality 
@@ -398,7 +392,7 @@ class RBC_Simulator(ITM):
     def wrapper_msg(self, d):
         msg = d.msg
         imp = d.imp
-
+        
         self.get_ideal_wrapper_leaks()
         if msg[0] == 'poll':
             self.wrapper_poll()
