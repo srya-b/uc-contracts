@@ -1,0 +1,13 @@
+One of the main contributions of this paper is our formulation of asynchronous and synchronous communication/computation through the use of wrappers.
+The wrappers are designed to make the design of functionalities and protocols simpler and easier to analyze.
+For example, in traditional some prominent models of asynchronous or synchronous communication, environments are constrained by providing sufficient activation to honest parties and functionalities require more verbose code to work with activations.
+For asynchonrous models, these approaches can generally be described as enforcing ``eventual deliver'' through parties fetching messages from functionalities.
+Such behavior is also used in synchronous UC models~\cite{katz-clock}.
+
+The wrappers presented in this section provide a convenient interface and implementation to allow parties to not only send messages in a(n) sync/async model but also schedule arbitrary code execution.
+The introduction of sync/async code execution yields significantly simpler code as we demonstrate through examples in Sections \ref{sec:sync_broadcast} and \ref{sec:async_examples}.
+
+\subsection{Leakage}
+The first important wrapper we introduce is the leakage wrapper $\mathcal{W}_{leak}$.
+
+

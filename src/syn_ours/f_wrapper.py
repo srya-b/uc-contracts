@@ -31,6 +31,7 @@ class Syn_FWrapper(UCWrapper):
             for f,args in self.todo[k]:
                 o.append((f.__name__, args))
             p_dict[k] = o
+        print('\n\033[1m', str(p_dict), '\033[0m\n')
 
     def fschedule(self, sender, f, args, delta, imp):
         log.debug('\033[1mFschedule\033[0m delta: {}, import: {}, sender: {}'.format(imp, delta, sender))

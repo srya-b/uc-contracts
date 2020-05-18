@@ -141,8 +141,9 @@ class RBC_Simulator(ITM):
         # The ideal wrapper decreased its delay, so we do the same
         self.internal_delay -= 1
         if self.internal_delay == 0:
-            self.write('a2w', ('delay',1), 1)
-            m = waits(self.channels['w2a']); assert m.msg == 'OK', str(m)
+            #self.write('a2w', ('delay',1), 1)
+            #m = waits(self.channels['w2a']); assert m.msg == 'OK', str(m)
+            self.writewait('a2w', ('delay',1), 'w2a', 1)
             self.internal_delay += 1
             self.total_extra_delay_added += 1
 
@@ -178,8 +179,10 @@ class RBC_Simulator(ITM):
         r.reset()
         self.sim_get_leaks()
         if r == self.sim_channels['p2z']:
+            print('p2z output')
             self.sim_party_output(m)
         elif r == self.sim_channels['a2z']:
+            print('a2z output')
             self.write( 'a2z', m.msg )
         else:
             self.pump.write("dump")
@@ -220,7 +223,7 @@ class RBC_Simulator(ITM):
         self.channels['a2w'].write( ('get-leaks',) )
         m = wait_for( self.channels['w2a'] )
         msg = m.msg
-
+        
         n = 0
         pid_idx = None
         for leak in msg:
@@ -404,7 +407,6 @@ class RBC_Simulator(ITM):
     def wrapper_msg(self, d):
         msg = d.msg
         imp = d.imp
-        
         self.get_ideal_wrapper_leaks()
         if msg[0] == 'poll':
             self.wrapper_poll()

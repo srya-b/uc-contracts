@@ -26,7 +26,7 @@
     fonttitle=\bfseries, 
     enhanced,
     attach boxed title to top left={yshift=-2mm, xshift=0.5cm},%
-    #1% For possible options
+    #1,% For possible options
 }
 \topmargin=-5mm
 \evensidemargin=0cm
@@ -81,59 +81,56 @@ We work our way up from a simple broadcast primitive~\cite{bracha-broadcast} to 
 
 \section{Preliminaries}
 \input{sections/prelim}
-%\begin{figure}[!ht]
-%	\input{figures/exec_tx}
-%	\label{fig:functionality:exectx}
-%\end{figure}
 
-\section{Wrappers} \label{sec:wrappers}
-\input{sections/wrappers}
+\section{Asynchronous Communication} \label{sec:async}
+\input{sections/async}
 
-\section{Synchronous Broadcast} \label{sec:sync_broadcast}
+\section{Synchronous Communication} \label{sec:sync}
 \input{sections/synchronous}
 
-\section{Ledger Functionality}
-\input{sections/ledger}
-
-\section{Payment Channel}
-\input{sections/paychannels}
+%\section{Ledger Functionality}
+%\input{sections/ledger}
+%
+%\section{Payment Channel}
+%\input{sections/paychannels}
 
 %\begin{figure}[h]
 %	\input{figures/wrapper}
 %	\caption{The wrapper $\mathcal{W}$ that provides common function for all functionalities. In $\Fstate$ for example, the wrapper enables functionalities to buffer sending output to the parties in the protocol. When the wrapper sends a message to its functionality $\F$, it does not constitute an \msf{ITM} to \msf{ITM} write as they are both running on the same \msf{ITM}.}
 %\end{figure}
 
-\begin{figure}
-	\input{figures/f_broadcast}
-\end{figure}
+%\begin{figure}
+%	\input{figures/f_broadcast}
+%\end{figure}
+%
+%\begin{figure}
+%	\input{figures/g_clock}
+%\end{figure}
+%
+%\begin{figure}
+%	\input{figures/state_prot}
+%\end{figure}
+%
+%\subsection{Extra}
+%
+%\begin{figure}
+%	\input{figures/f_clock}
+%\end{figure}
+%
+%\begin{figure}
+%	\input{figures/f_3pc}
+%\end{figure}
+%
+%\newpage
+%
+%\begin{figure}
+%	\input{figures/f_rps1}
+%\end{figure}
+%
+%\begin{figure}
+%	\input{figures/f_rps2}
+%\end{figure}
 
-\begin{figure}
-	\input{figures/g_clock}
-\end{figure}
-
-\begin{figure}
-	\input{figures/state_prot}
-\end{figure}
-
-\subsection{Extra}
-
-\begin{figure}
-	\input{figures/f_clock}
-\end{figure}
-
-\begin{figure}
-	\input{figures/f_3pc}
-\end{figure}
-
-\newpage
-
-\begin{figure}
-	\input{figures/f_rps1}
-\end{figure}
-
-\begin{figure}
-	\input{figures/f_rps2}
-\end{figure}
 
 %\begin{bbox}[title=asd]
 %hello

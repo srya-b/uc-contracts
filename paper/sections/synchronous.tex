@@ -1,3 +1,7 @@
+Like the asynchronous communcation model in Section~\ref{sec:async} our synchronous communication model relies on a wrapper $\mathcal{W}_{\msf{sync}}$ which enforces execution of scheduled codeblocks within a maximum number of rounds.
+x
+
+
 \subsection{Broadcast in Katz et al.}
 
 In this section we describe the ideal functionality and protocol for a simple byzantine broadcast in the synchronous model.
@@ -144,7 +148,7 @@ In a protocol execution with pair-wise channels, $\F_{\msf{sync-chan},s,r}$, the
 \end{figure}
 
 \begin{figure}
-	\input{figures/wrapper}
+	\input{figures/wrapper_sync}
 	\caption{This wrapper implements the enhancements made to the protocol to conform to the interace of the ideal functionality \Fbc. It reads in incoming messages in the first activation of a round and uses the next $|\mathcal{P}|$ activations to send messages to others.}
 	\label{fig:wrapper:synchronous}
 \end{figure}
@@ -170,14 +174,28 @@ Figure~\ref{fig:functionality:broadcast_import_real} shows the exact message bei
 \end{subfigure}
 \end{figure}
 
-
+\begin{figure}
+\begin{subfigure}{\textwidth}
+	\input{figures/f_bcast_async}
+	\caption{A simple broadcast functionality that delivers the output to all the other parties {\em eventually}. The functionality is described at a high level, with more specific messages and wrapper interaction shown below.}
+	\label{fig:functionality:broadcast_import}
+\end{subfigure}
+\newline
+\begin{subfigure}{\textwidth}
+	\input{figures/f_bcast_async_real}
+	\caption{This broacsat functionality illustrates the actual messages being passed between the functionality above and the wrapper. The wrapper handles asynchronous delivery of messages {\em and} leaks.}
+	\label{fig:functionality:broadcast_import_real}
+\end{subfigure}
+\end{figure}
 A protocol realizing this functionality was proposed by Bracha~\cite{bracha} in the asynchronous setting.
 The pseudocode of the original protocol without any UC-specific details is shown in Figure \ref{fig:protocol:asyncbracha}.
 
 \begin{figure}
+\begin{minipage}[t]{0.55\textwidth}
 	\input{figures/async_bracha}
 	\caption{The original asynchronous broadcast protocol proposed by Bracha~\cite{bracha-broadcast}. The protocol proceeds in three rounds and terminates if enough messages are delivered.}
 	\label{fig:protocol:asyncbracha}
+\end{minipage}
 \end{figure}
 
 The protocol is simple and designed to handle $t < \frac{n}{3}$ Byzantine failures.
@@ -190,7 +208,7 @@ The channels are described above in Figure~\ref{fig:functionality:channel}.
 
 \begin{figure}
 	\input{figures/prot_bracha_ours}
-	\caption{The Bracha broadcast protocol written in the UC framework with access to pairwise authenticated channel functionalities $\F_{\msf{sync-chan},s,r}$.}
+	\caption{The Bracha broadcast protocol written in the UC framework with access to pairwise authenticated channel functionalities $\Fchan{s,r}$.}
 	\label{fig:prot:bracha_ours}
 \end{figure}
 

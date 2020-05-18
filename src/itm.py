@@ -135,6 +135,20 @@ class ITM:
     def printstate(self):
         print('[sid={}, pid={}, imp_in={}, imp_out={}, spend={}, marked={}]'.format(self.sid, self.pid, self.imp_in, self.imp_out, self.spent, self.marked))
 
+
+    def writewait(self, ch, msg, waitch, imp=0):
+        if self.impflag:
+            if self.imp_in - self.imp_out + self.marked >= imp:
+                self.imp_out += imp
+                self.channels[ch].write(msg, imp)
+                return waits(self.channels[waitch])
+            else:
+                #self.pump.write('dump')
+                return 0
+        else:
+            self.channels[ch].write(msg, 0)
+            return waits(self.channels[waitch])
+
     def write(self, ch, msg, imp=0):
         if self.impflag:
             if self.imp_in - self.imp_out + self.marked >= imp:

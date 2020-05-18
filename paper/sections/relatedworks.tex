@@ -1,88 +1,105 @@
 \subsection{Communication Models}
-The basic UC framework operates in the asynchronous communication model.
-Every pair of parties, $p_i,p_j$, has analogous channels, $\mu_{[i,j]},\mu_{[j,i]}$.
-Each channel accepts messages from the sender and leaks its contents to the adversary.
-The message is then only delivered when the adversary writes \texttt{ok} to the channel.
-Unlike other models of asynchrnouous communication where \emph{eventual delivery} is guaranteed, in this model the messages may never be delivered by the adversary.
-The functionality is shown in Figure~\ref{fig:uc_channel}.
 
-\begin{figure}[h]
-	\input{figures/uc_channel}
-	\caption{The asynchronous channel defined in UC framework~\cite{uc}}
-	\label{fig:uc_channel}
-\end{figure}
+\paragraph{Asynchronous Communication}
+\begin{itemize}
+\item pitfalls of appraoches like the original UC paper where the adversary can choose to never deliver any messages. Such an approach belies the ``eventual deliver'' guarantees that are expected in in an asynchronous computation.
+\item Further such a specification is vacuously satisfiable for an adversary that does nothing.
+\end{itemize}
 
-In this work we demonstrate wrapper for both asynchronous and synchronous communication.
-The most notable other synchronoud UC model is the one presented by Katz et al.~\cite{katz-clock}.
+\paragraph{Synchronous Communication} As the original Universal Composability (UC) framework defines an completely asynchronous communication model.
+Inter-party communication occurrs through pair-wise channels between all the parties.
+When a party sends a message, the adversary is notified and decides when to deliver the message.
+A critical outcome of this model is that protocols can hang indefinitely if the adversary choose so.
+As we will discuss lated in this work, such a communication definition where the adversary can effectively halt the protocol is vacuously satisfiable \todo{check out andrew converstion}.
 
+The original work, does however, propose a modelling of synchonrous communication.
+This model has change over time since the original work, here we present the latest and discuss the other relevant works within this context.
+The synchronous model by Canetti et al.~\cite{uc} provides all parties access to a round variable and gaurantees delivery of messages, sent in round $r$, in round $r+1$.
+The adverasry is no longer involved in the delivery of messages and can not prevent the protocol making progress, as expected.
+
+The above modl from the UC paper is generalizd by Katz et al.~\ref{katz-clock}.
+The model proposed in this work aims to achieve \emph{input completeness} and \emph{guaranteed termination}.
+In fact the model is a more genrealized version of \ref{uc}, where message now have an upper bound on the number of rounds tha they can be delayed.
+The guaranteed delivery of messages and the round structure is divided into two functionalities, $\F_{\msf{clock}}$ and $\F_{\msf{BD-SEC}}$.
+Together they ensure all honest parties are activates at least once by the environment.
+Our synchronous model, through the use of wrappers, greatly simplifies protocols while achieving the same guarantees of synchrony.
+We show later in this work an example broadcast protocol and how both the ideal world functionality and real world protocol are written generically and without any communication model-specific code.
+Furthermore, functionalties and protocols don't have to be written with a specific communication model in mind.
+
+
+
+%In this work we demonstrate wrapper for both asynchronous and synchronous communication.
+%The most notable other synchronoud UC model is the one presented by Katz et al.~\cite{katz-clock}.
+%In their work, Katz presents two functionalities, a secure bounded delay channel, $\F_{\msf{bd-sec}}$ and a clock functionality, $\F_{\msf{clock}}$. 
+%
 \clearpage
 
-Nodes on \cite{kiayias2016fair}:
-
-\begin{itemize}
-    \item This model starts with describing how to model execution of \emph{synchronous} protocols that can access a global setup clock.
-    \item In a previous treatment, the clock in UC was local to each party and it would have to receive update messages from the other parties (everyone is doing this operation). Hence, with GUC the environment can control the clock speed and define when clock updates happen (as other protocol sessions might also be accessing it).
-\end{itemize}
-
-There are several works from the past few years that try to model a blockchain within the Universal Composability framework---some attempting to model it in its extendion, (G)UC \cite{uc, guc}.
-
-% Modelling blockchain for reward/penalty in a fair MPC setting, downfalls reported in next paragraph
-Kiayias et al.~\cite{kiayias2016fair} models a Bitcoin-like blockchain for fair and robust multi-party computation.
-It is motivated by the impossibility result for fairness in secure MPC \footnote{Fairness in MPC is defined as: either all parties learn the output or none of them do.} and circumeventing it by imposing monetary penalties on participants.
-The model consists of two global functionalities, $\globalf{G}_{\msf{clock}}$ and $\globalf{G}_{\msf{blockchain}}$.
-The blockchain functionality enables the expected functionality like submitting tranasctions, validating them, batching them into blocks, and allowing an adversary to reorder transcations.
-Because of the GUC framework, the state of the blockchain is available to all parties including the environment and any other protocol sessions (or dummy parties).
-This work however, fails to prove that their model of the blockchain is GUC-realized in any currently existing blockchain system.
-Such a security proof is essential as it provide credibility to the possibility of implementing protocols in the $\globalf{G}_\msf{blockchain}$-hybrid world.
-Furthermore, the assumptions that are made for the blockchain and what the adversary can do severly limit the scope of adversaries in the rearl-world.
-The first failure of this model is to consider an adversary which can change the view some parties have of the blockchain state.
-For example, if the adversary mines a new block and keeps it a secret, or if some nodes have not received new blocks because of communication delays.
-Another failure is that all transactions in the buffer between blocks are always included in the next block.
-This, again, prevents a miner-like adversary which can censor transactions and delay their entry into the chain.
-Finally, the state of the blockchain is updated at fixed time intervals which does not accurately convey the consensus model of Bitcoin or Ethereum.
-
-% Bitcoin composable treatment in GUC
-Badertscher et al.~\cite{badertscher2017bitcoin} attempt to solve these problems by allowing a more unrestricted in the GUC framework.
-The shared functionality in this case is a global clock functionality, $\globalf{G}_\msf{clock}$, which enables modelling a synchronous system in the UC framework by proceeding in rounds.
-Because it is a shared functionality, the clock allows any other protocol session in the environment to be synchronized with the challenge protocol. 
-The blockchain functionality is a local functionality (only available to the parties within the protocol session) that allows the adversary to have more power in what it can do.
-The adversary can inject transactions and modify the state of the chain that all parties that query it can see.
-This is accomplished by allowing a maximum distance, $d$, that the adversary can specify and return a prefix of the chain which is at most a distance $d$ from the head of the chain.
-Furthermore, the adversary can choose exactly which transactions are allowed to be in the next block.
-The blockchain functionality is modularized by allowing the definition of subroutines that capture extending the blockchain state (specifically for Bitcoin in this paper).
-The authors of this work admit that the paper's only intent is to model the Bitcoin blockchain hence the choice to use the ledger as only a local functionality. 
-This prevents other protocol sessions from using the same blockchain (definitely a limitation of modelling the reality of a blockchain environment).
-Furthermore, this paper makes the argument that it is dangerous to have a global ledger functionality as such replacement does not ``in general, preserve a realization proof of some ideal functionality $\F{}$ that is conducted in a ledger-hybrid world, because the simulator in that proof might rely on specific capabilities that are not available any more after the replacement (as the global setup is also replaced in the real world)''.
-It claims that~\cite{canetti2016universally} provides a sufficient condition for such a replacement, but that the condition is too strong to be satisfied by any ledger implementation.
-
-% UC with a global PKI
-Canneti et al.~\cite{uc-pki} addresses the global PKI and an ideal authentication within the UC with global setup.
-The specific problem presented in this paper is that the ideal authentication functionality, $\F_\msf{auth}$,is usually formulated with the desirable property of non-transferrability of authentication.
-This means that when I send an authenticated message to another person, they are unable to use that proof to convince anyone else of the authentication.
-The paper realized that the real world PKI model is global \emph{and} that, within it, signatures are globally verifiable.
-Once a key has signed a message for authentication, that proof is verifiable by and transferrable to anyone else in the system.
-Therefore, this work models a new relaxed global PKI, relaxes the UC authentication protocol to not require deniability, and formulates new functionalities for authentication and key exchange without deniability.
-Finally, they propose a new composition theorem allowing substitution of global functionalitites, $\f{F} \textit{ EUC-realizes } \f{G}$.
-The problem being solved relates back to a claim made by Badertscher et al.~\cite{badertscher2017bitcoin} that replacement of global functionalities with real implementations generally invalidates a realization proof of some functionality that shares state with it. 
-In this paper, this arises as replacement of the UC PKI system with a real one where transferrability is possible invalidates the realization proof of the ideal authentication functionality in the plain-PKI model.
-
-They formulate a new authentication functionality that does not impose non-transferrability and a long lasting global functionality handling certificates.
-Finally they prove that the certificate functionality guarantees are precisely captured by EU-CMA signatures and a globally-available PKI .
-This paper however imposes some restrictions on what can be done.
-For example, there is a limitation that a particular ITI may only register a single key with the Cert and Bulletin Board functionalities.
-They claim however, that it is possible to realize $\F_\msf{cert\_auth}$, but a certificate-based approach is not it.
-
-One of the main takeaways in this paper is that you can define a functionality and analyze it for it's properties then prove that it is equivalent to another functionality that realizes this protocol. 
-In this paper that is done by defining
-
-\paragraph{Differentiating $\f{G}_\msf{cert}^\msf{pid}$ and $\f{G}_\msf{swk}^\msf{pid}$.}
-
-
-
-
-Questions to answer:
-\begin{itemize}
-\item What is the precise difference between $\f{G}_\msf{cert}^\msf{pid}$ and $\f{G}_\msf{cwk}^\msf{pid}$ and why is the substitution necessary?
-\end{itemize}
+%Nodes on \cite{kiayias2016fair}:
+%
+%\begin{itemize}
+%    \item This model starts with describing how to model execution of \emph{synchronous} protocols that can access a global setup clock.
+%    \item In a previous treatment, the clock in UC was local to each party and it would have to receive update messages from the other parties (everyone is doing this operation). Hence, with GUC the environment can control the clock speed and define when clock updates happen (as other protocol sessions might also be accessing it).
+%\end{itemize}
+%
+%There are several works from the past few years that try to model a blockchain within the Universal Composability framework---some attempting to model it in its extendion, (G)UC \cite{uc, guc}.
+%
+%% Modelling blockchain for reward/penalty in a fair MPC setting, downfalls reported in next paragraph
+%Kiayias et al.~\cite{kiayias2016fair} models a Bitcoin-like blockchain for fair and robust multi-party computation.
+%It is motivated by the impossibility result for fairness in secure MPC \footnote{Fairness in MPC is defined as: either all parties learn the output or none of them do.} and circumeventing it by imposing monetary penalties on participants.
+%The model consists of two global functionalities, $\globalf{G}_{\msf{clock}}$ and $\globalf{G}_{\msf{blockchain}}$.
+%The blockchain functionality enables the expected functionality like submitting tranasctions, validating them, batching them into blocks, and allowing an adversary to reorder transcations.
+%Because of the GUC framework, the state of the blockchain is available to all parties including the environment and any other protocol sessions (or dummy parties).
+%This work however, fails to prove that their model of the blockchain is GUC-realized in any currently existing blockchain system.
+%Such a security proof is essential as it provide credibility to the possibility of implementing protocols in the $\globalf{G}_\msf{blockchain}$-hybrid world.
+%Furthermore, the assumptions that are made for the blockchain and what the adversary can do severly limit the scope of adversaries in the rearl-world.
+%The first failure of this model is to consider an adversary which can change the view some parties have of the blockchain state.
+%For example, if the adversary mines a new block and keeps it a secret, or if some nodes have not received new blocks because of communication delays.
+%Another failure is that all transactions in the buffer between blocks are always included in the next block.
+%This, again, prevents a miner-like adversary which can censor transactions and delay their entry into the chain.
+%Finally, the state of the blockchain is updated at fixed time intervals which does not accurately convey the consensus model of Bitcoin or Ethereum.
+%
+%% Bitcoin composable treatment in GUC
+%Badertscher et al.~\cite{badertscher2017bitcoin} attempt to solve these problems by allowing a more unrestricted in the GUC framework.
+%The shared functionality in this case is a global clock functionality, $\globalf{G}_\msf{clock}$, which enables modelling a synchronous system in the UC framework by proceeding in rounds.
+%Because it is a shared functionality, the clock allows any other protocol session in the environment to be synchronized with the challenge protocol. 
+%The blockchain functionality is a local functionality (only available to the parties within the protocol session) that allows the adversary to have more power in what it can do.
+%The adversary can inject transactions and modify the state of the chain that all parties that query it can see.
+%This is accomplished by allowing a maximum distance, $d$, that the adversary can specify and return a prefix of the chain which is at most a distance $d$ from the head of the chain.
+%Furthermore, the adversary can choose exactly which transactions are allowed to be in the next block.
+%The blockchain functionality is modularized by allowing the definition of subroutines that capture extending the blockchain state (specifically for Bitcoin in this paper).
+%The authors of this work admit that the paper's only intent is to model the Bitcoin blockchain hence the choice to use the ledger as only a local functionality. 
+%This prevents other protocol sessions from using the same blockchain (definitely a limitation of modelling the reality of a blockchain environment).
+%Furthermore, this paper makes the argument that it is dangerous to have a global ledger functionality as such replacement does not ``in general, preserve a realization proof of some ideal functionality $\F{}$ that is conducted in a ledger-hybrid world, because the simulator in that proof might rely on specific capabilities that are not available any more after the replacement (as the global setup is also replaced in the real world)''.
+%It claims that~\cite{canetti2016universally} provides a sufficient condition for such a replacement, but that the condition is too strong to be satisfied by any ledger implementation.
+%
+%% UC with a global PKI
+%Canneti et al.~\cite{uc-pki} addresses the global PKI and an ideal authentication within the UC with global setup.
+%The specific problem presented in this paper is that the ideal authentication functionality, $\F_\msf{auth}$,is usually formulated with the desirable property of non-transferrability of authentication.
+%This means that when I send an authenticated message to another person, they are unable to use that proof to convince anyone else of the authentication.
+%The paper realized that the real world PKI model is global \emph{and} that, within it, signatures are globally verifiable.
+%Once a key has signed a message for authentication, that proof is verifiable by and transferrable to anyone else in the system.
+%Therefore, this work models a new relaxed global PKI, relaxes the UC authentication protocol to not require deniability, and formulates new functionalities for authentication and key exchange without deniability.
+%Finally, they propose a new composition theorem allowing substitution of global functionalitites, $\f{F} \textit{ EUC-realizes } \f{G}$.
+%The problem being solved relates back to a claim made by Badertscher et al.~\cite{badertscher2017bitcoin} that replacement of global functionalities with real implementations generally invalidates a realization proof of some functionality that shares state with it. 
+%In this paper, this arises as replacement of the UC PKI system with a real one where transferrability is possible invalidates the realization proof of the ideal authentication functionality in the plain-PKI model.
+%
+%They formulate a new authentication functionality that does not impose non-transferrability and a long lasting global functionality handling certificates.
+%Finally they prove that the certificate functionality guarantees are precisely captured by EU-CMA signatures and a globally-available PKI .
+%This paper however imposes some restrictions on what can be done.
+%For example, there is a limitation that a particular ITI may only register a single key with the Cert and Bulletin Board functionalities.
+%They claim however, that it is possible to realize $\F_\msf{cert\_auth}$, but a certificate-based approach is not it.
+%
+%One of the main takeaways in this paper is that you can define a functionality and analyze it for it's properties then prove that it is equivalent to another functionality that realizes this protocol. 
+%In this paper that is done by defining
+%
+%\paragraph{Differentiating $\f{G}_\msf{cert}^\msf{pid}$ and $\f{G}_\msf{swk}^\msf{pid}$.}
+%
+%
+%
+%
+%Questions to answer:
+%\begin{itemize}
+%\item What is the precise difference between $\f{G}_\msf{cert}^\msf{pid}$ and $\f{G}_\msf{cwk}^\msf{pid}$ and why is the substitution necessary?
+%\end{itemize}
 
 
