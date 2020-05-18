@@ -1,0 +1,19 @@
+\begin{bbox}[title={\textbf{Wrapper} $\mathcal{W}_{\msf{leak}}$} ]
+
+Initiaize $\msf{leaks} := \emptyset$
+
+\vspace{2mm} \hrule \vspace{2mm}
+
+\OnInput \inmsg{leak, msg} $d \token$ from $\F_i$/$P_i$:
+
+	\begin{ritemize}
+		\item Append $(msg, d \token)$ to \msf{leakbuffer}
+	\end{ritemize}
+
+\OnInput \inmsg{getleaks} from $\mathcal{A}$:
+
+	\begin{ritemize}
+		\item Pop all $(msg_i, d_i \token)$ and send $\{msg_1,...,msg_n\}, \sum_{i=0}^{n} d_i \token$ to $\mathcal{A}$
+	\end{ritemize}
+
+\end{bbox}

@@ -1,0 +1,65 @@
+In this section we introduce our models for asynchronous and synchronous communcation.
+Both are implemented through wrappers, $\mathcal{W}_{\msf{sync}}$ and $\mathcal{W}_{\msf{async}}$, which use the new {\em import mechanism} introduced in ~\cite{uc} and described in detail in Section~\ref{sec:prelim}.
+Before defining our wrappers we first define how ITMs leak information to the adversary.
+
+
+\subsection{Leakage Wrapper}
+In the original UC framework, leakage of information to the adversary means writing a message to the backdoor tape of $\mathcal{A}$.
+For our construction we instead use a wrapper called the {\em leakage wrapper} which stores all messages leaked from a party along with the import of the message.
+Figure \ref{fig:wrapper:leak} describes how the wrapper works.
+For the sake of simplicity, we combine the leakage code with the communication wrappers to create one ITM that performs all the requisite tasks.
+
+\begin{figure}[h]
+	\input{figures/wrapper_leak}
+	\caption{Leakage wrapper. TODO}
+	\label{fig:wrapper:leak}
+\end{figure}
+
+\subsection{Asynchronous Wrapper}
+In this paper we present a new model for both synchronous and asynchronous communication.
+The model consists of a wrapper that exists in both the real and ideal worlds and facilitates delayed execution of codeblocks.
+Unlike prior works which only deal with delayed message delivery, we enable delay of arbitrary codeblocks.
+This abstraction of codeblocks makes protocol and functionality descriptions simpler and more indepdent of the communication model at play.
+In fact, as we will show in a later section, an example broadcast functionality and protocol are {\em uniform} accross the two models.
+That is, the protocol and functionality for both worlds nearly identical\footnote{The only difference is that the syncrhonous wrapper accepts an additional parameter for the upper bound of the number of rounds and adversary can delay a codeblock.}.
+We begin by describing the asynchronous wrapper in Figure \ref{fig:wrapper:async}.
+
+\begin{figure}
+\centering
+	\input{figures/wrapper_async}
+	\caption{The asynchronous wrapper. It accepts codeblocks from functionalities and parties, and it allows the adversary to decide execution with finite delay. The environment is also able to force progress in the protocol.}
+	\label{fig:wrapper:async}
+\end{figure}
+
+The wrapper maintains two internal variables.
+The first is a queue that stores the current set of codeblocks to be executed in the other in which they were scheduled.
+The other is a delay variable that tracks how much delay the adverasary has added onto codeblocks in the wrappers.
+Eventually, all the codeblocks must be executed, and they can be executed in two ways:
+\begin{itemize}
+\item The adversary has complete control over the order in which the codeblocks are executed. 
+It can send 1 unit of import and an \texttt{exec} message to the wrapper to pop any current codeblock off the queue and execute it. 
+\item As we're concerned with {\em eventual delivery}, it is insufficient to only allow the adversary to execute codeblocks and determine their delivery. 
+Therefore the environment can also force the wrapper to make progress by spending 1 unit of import to \texttt{advance} the wrapper.
+Over multiple such calls, the environment forces the delay to be 0, at which point the {\em next} codeblock in the \msf{runqueue} is removed and executed.
+\end{itemize}
+
+A critical point to address is {\em how} the environment can force the delay to reach 0.
+Even though the adversary can provide delay to the wrapper, it only has a limited amount of import that it can spend to do so~\footnote{Recall from Section \ref{sec:prelim} that a {\em balanced environment} must provide the the adversary with at least as much import as it gives to each of the other ITMs. Therefore, a simulator has finite import but enough to simulated a sandboxed real-world execution.}.
+Therefore, the adversary will eventually run out of import and lose the ability to delay the wrapper furter.
+Therefore, the bound on the delivery of the messages is unknown but upper-bounded by the polynomial runtime guaranteed by a finite amount of import provided to the adversary.
+
+
+%The model presented in this paper for both asynchronous and synchronous communication relies on the new \emph{import} mechanism described in \ref{uc} and the wrappers we present below.
+%The first departure that our wrapper make from tradition UC communication models is that they execute arbitrary code blocks rather than just deliver messages.
+%For example, a complex application may require some loging to execute some sort of state update function at a future time dependent on the communication model.
+%In the synchronous world, this may mean executing a codeblock within some number of rounds.
+%Similarly, the asynchronous world allows {\em eventual} execution of codeblocks.
+%In this section, however, we focus only on the asynchronous wrapper as its functionality is nearly identical to that of the synchronous wrapper minus some logic to ensure {\em guaranteed termination} and {\em input completeness}.
+
+The asynchronous wrapper provides an interface to functionalities and protocol parties to execute codeblocks asynchronously.
+The wrapper is shown in Figure~\ref{fig:wrapper:async}.
+
+\begin{itemize}
+\item describe the wrapper and how the import mechanism is used to ensure eventual delivery.
+\item Designing protocols with the wrapper
+\end{itemize}

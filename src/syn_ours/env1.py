@@ -47,7 +47,7 @@ def env1(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
         s = ('one', (sid,fro), (sid,to), r, delta)
         return (s,'F_chan')
 
-    z2a.write( ('A2W', ('get-leaks',)), n*(4*n+1))
+    z2a.write( ('A2W', ('get-leaks',)))
     #msgs = waits(pump, a2z, p2z)
     #log.debug('\033[91m [Leaks] \033[0m {}'.format( '\n'.join(str(m) for m in msgs.msg)))
     waits(pump)

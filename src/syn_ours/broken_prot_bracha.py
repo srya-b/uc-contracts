@@ -57,7 +57,7 @@ class Broken_Bracha_Protocol(UCWrappedProtocol):
         n = len(self.parties)
         self.num_echos[inp] += 1
         log.debug('[{}] Num echos {}, required: {}'.format(self.pid, self.num_echos[inp], ceil(n+(n/3))/2))
-        if self.num_echos[inp] == floor((n + (n/3))/2):
+        if self.num_echos[inp] == ceil((n + (n/3))/2):
             self.num_readys[inp] += 1
             # send out READY
             for p in self.except_me():
@@ -67,11 +67,12 @@ class Broken_Bracha_Protocol(UCWrappedProtocol):
     def ready_msg(self, inp, imp):
         self.num_readys[inp] += 1
         assert imp == 0
-        log.debug('[{}] Num readys {}'.format(self.pid, self.num_readys[inp]))
+        print('[{}] Num readys for inp={}, {}'.format(self.pid, inp, self.num_readys[inp]))
         log.debug('required {}'.format(floor(2*(self.n/3))))
-        if self.num_readys[inp] == floor(2*(self.n/3)):
-            print('\033[92m [{}] Accepted input {}\033[0m'.format(self.pid, self.prepared_value))
-            self.write( 'p2z', self.prepared_value )
+        if self.num_readys[inp] == ceil(2*(self.n/3)):
+            # TODO this change should be in the real protocol too i think
+            print('\033[92m [{}] Accepted input {}\033[0m'.format(self.pid, inp))
+            self.write( 'p2z', inp )
             self.halt = True
             return
         self.pump.write("dump")

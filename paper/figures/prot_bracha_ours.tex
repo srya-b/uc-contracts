@@ -11,7 +11,7 @@ Initialize $\msf{BQ} := \frac{\msf{ceil}(n+t)}{2}$, $\msf{init} := crnd$, $\msf{
 	\begin{renumerate}
 	\item \For $p_i \in \mathcal{P}$:
 
-		\quad  \Send $\msf{VAL}(m),4n \token \rightarrow \Fsync{\mathcal{D}}{p_i}$
+		\quad  \Send $\msf{VAL}(m),4n \token \rightarrow \Fchan{\mathcal{D}}{p_i}$
 	\end{renumerate}
 
 \vspace{2mm} \hrule \vspace{2mm}
@@ -23,8 +23,9 @@ Initialize $\msf{BQ} := \frac{\msf{ceil}(n+t)}{2}$, $\msf{init} := crnd$, $\msf{
 	\begin{renumerate}
 	\item \For $p_j \in \mathcal{P}$: 
 	
-	\quad \Send $\msf{ECHO}(m), 3 \token \rightarrow \Fchan{p_i}{p_j}$
+	\quad \Send $\msf{ECHO}(m), 3 \token \rightarrow \Fchan{p_i}{p_j}$\\
 	\end{renumerate}
+
 
 \OnInput \inmsg{$\msf{ECHO}(m)$}{$3 \token$} from $\Fchan{p_j}{p_i}$:
 	\begin{renumerate}
