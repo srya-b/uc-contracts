@@ -1,9 +1,10 @@
 import os
 import sys
-from utils import gwrite, z_write, wait_for
+from utils import gwrite, z_write, wait_for, waits
 from gevent.queue import Queue, Channel, Empty
 from gevent.event import AsyncResult, Event
 from numpy.polynomial.polynomial import Polynomial
+from errors import WriteImportError, TickError
 import dump
 import gevent
 import comm
@@ -89,6 +90,7 @@ class ITM:
     def __init__(self, sid, pid, channels, handlers, poly, importargs):
         self.sid = sid
         self.pid = pid
+        #self.sender = (sid,pid)
         self.poly = poly
         self.channels = channels
         self.handlers = handlers
@@ -136,26 +138,13 @@ class ITM:
         print('[sid={}, pid={}, imp_in={}, imp_out={}, spend={}, marked={}]'.format(self.sid, self.pid, self.imp_in, self.imp_out, self.spent, self.marked))
 
 
-    def writewait(self, ch, msg, waitch, imp=0):
-        if self.impflag:
-            if self.imp_in - self.imp_out + self.marked >= imp:
-                self.imp_out += imp
-                self.channels[ch].write(msg, imp)
-                return waits(self.channels[waitch])
-            else:
-                #self.pump.write('dump')
-                return 0
-        else:
-            self.channels[ch].write(msg, 0)
-            return waits(self.channels[waitch])
-
     def write(self, ch, msg, imp=0):
         if self.impflag:
             if self.imp_in - self.imp_out + self.marked >= imp:
                 self.imp_out += imp
                 self.channels[ch].write(msg, imp)
             else:
-                self.pump.write('dump')
+                raise WriteImportError((self.sid,self.pid), msg, imp)
         else:
             self.channels[ch].write(msg, 0)
 
@@ -178,7 +167,15 @@ class ITM:
             imp = d.imp
             self.imp_in += imp
             r.reset()
-            self.handlers[r](d)
+            try:
+                self.handlers[r](d)
+            except WriteImportError as e:
+                self.log.error('WriteImportError: from={}, msg={}, imp={}'.format(e.fro, e.msg, e.imp))
+                self.pump.write('dump')
+            except TickError as e:
+                self.log.error("TickError: from={}, amount={}".format(e.fro, e.amt))
+                self.pump.write('dump')
+
 
 class UCProtocol(ITM):
     def __init__(self, sid, pid, channels):

@@ -141,9 +141,9 @@ class RBC_Simulator(ITM):
         # The ideal wrapper decreased its delay, so we do the same
         self.internal_delay -= 1
         if self.internal_delay == 0:
-            #self.write('a2w', ('delay',1), 1)
-            #m = waits(self.channels['w2a']); assert m.msg == 'OK', str(m)
-            self.writewait('a2w', ('delay',1), 'w2a', 1)
+            self.write('a2w', ('delay',1), 1)
+            m = waits(self.channels['w2a']); assert m.msg == 'OK', str(m)
+            #self.writewait('a2w', ('delay',1), 'w2a', 1)
             self.internal_delay += 1
             self.total_extra_delay_added += 1
 
