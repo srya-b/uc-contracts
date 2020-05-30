@@ -5,49 +5,39 @@ Initialize $\msf{leakbuffer} := \emptyset, \msf{runqueue} := \emptyset, delay :=
 \vspace{2mm} \hrule \vspace{2mm}
 
 \OnInput \inmsg{schedule}{codeblock $e$} $1 \token$ from $\mathcal{F}_i$/$P_i$:
-
 	\begin{ritemize}
 
-	%\item $idx \leftarrow$ append $e$ to $\msf{runqueue}$
-	\item Append $e$ to $\msf{runqueue}$ with index $idx$, and increment $delay \pluseq 1$
+		\item Append $e$ to $\msf{runqueue}$ with index $idx$, and increment $delay \pluseq 1$
+		\item Append (schedule, $idx$) to \msf{leakbuffer} and respond to $\F_i,P_i$ with \msf{(scheduled)}
 
-	%\item $delay = delay + 1$
-
-	\item Append (schedule, $idx$) to \msf{leakbuffer} and respond to $\F_i,P_i$ with \msf{(scheduled)}
-
-	%\item \Send (scheduled) $\rightarrow \mathcal{F}_i/P_i$
 	\end{ritemize}
 
 \OnInput \inmsg{delay} $d \token$ from $\mathcal{A}$:
-
 	\begin{ritemize}
-	\item $delay = delay + d$
+		\item $delay = delay + d$
 	\end{ritemize}
 
 \OnInput \inmsg{execute}{$idx$} from $\mathcal{A}$:
 	\begin{ritemize}	
-	%\item $e \leftarrow$ pop $\msf{runqueue}[idx]$
-	\item Pop a codeblock off $\msf{runqueue}$  and execute it.
-	%\item Execute $e$
-	\end{ritemize}
+		\item Pop a codeblock off $\msf{runqueue}$  and execute it.
+	\end{ritemize} 
 
 \OnInput \inmsg{leak}{msg} from $\mathcal{F}_i/P_i$:
 	\begin{ritemize}
-	\item Append $(msg, \mathcal{F}_i/P_i, d \token)$ to $\msf{leakbuffer}$
+		\item Append $(msg, \mathcal{F}_i/P_i, d \token)$ to $\msf{leakbuffer}$
 	\end{ritemize}
 
 \OnInput \inmsg{advance} $1 \token$ from $\mathcal{Z}$:
 	\begin{ritemize}
-	\item \If $delay > 0$:
-		Decrement $delay \minuseq 1$ and leak \msf{(poll)} to $\mathcal{A}$
-	\item \Else: 
-		Pope a codeblok off $\msf{runqueue}$ and execute it.
+		\item \If $delay > 0$:
+			Decrement $delay \minuseq 1$ and leak \msf{(poll)} to $\mathcal{A}$
+		\item \Else: 
+			Pope a codeblok off $\msf{runqueue}$ and execute it.
 	\end{ritemize}
 
 \OnInput \inmsg{getleaks} from $\mathcal{A}$:
 	\begin{ritemize}
-	%\item $d \leftarrow$ total import in $\msf{leakbuffer}$
-	\item Sum the total amount of import in $\msf{leakbuffer}$, call it $d$.
-	\item Leak $(\msf{leakbuffer},d \token)$ to $\mathcal{A}$ and empty $\msf{leakbuffer}$
+		\item Sum the total amount of import in $\msf{leakbuffer}$, call it $d$.
+		\item Leak $(\msf{leakbuffer},d \token)$ to $\mathcal{A}$ and empty $\msf{leakbuffer}$
 	\end{ritemize}
 \end{bbox}

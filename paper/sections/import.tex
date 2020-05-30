@@ -1,0 +1,69 @@
+One of the goals of this work, alongside the new models for synchronous and asynchronous communication is to present an impementation of the UC framework.
+One of the goals of this implementation is to bridge the gap between the paper proofs in the UC framework and actual realizations of protocols in a real programming environment.
+Another is to provide an easy platform through which UC definitions and proofs can be more closely scrutinized with executable counter examples.
+In order to achieve this goal, we need to first more carefully define how the import mechanism~\cite{uc} workd.
+The previous section described the mechanism to the extent that it is presented in the original work by Canetti et al.~\cite{uc}.
+However, this definition lacks specific model for how import is handled at the ITM and message level.
+In this section we present the model of computation presented in the original UC framework but augmented with import.
+
+The import mechanism most resembles a token system where a finite number of tokens is distributed throughout the system.
+We will use the token terminology throughout the remainder of this paper.
+Before introducing the model, we first make a distinction between {\em import tokens} and {\em potential}.
+As mentioned above import tokens are in finite supply and can be transferred between ITMs.
+However, import is consumed by an ITM through a polynomial $T$.
+If an ITM, $m$, with zero import tokens receives a message of $n$ tokens, this ITM can now take $T(n)$ computationsl steps.
+We refer to $T(n)$ as the {\em potential} of the ITM\footnote{It is important to note that the ITM $m$, must consume an entire import token if it is to use even one unit of potential.}.
+
+The term ``computational steps'' also warrants further clarification.
+So far we are keeping the exact definition of a single computational step vague on purpose.
+We posit that as long as a single computational step actually corresponds to a constant amount of work, the remainder of the model still holds. \todo{this is very unsatisfying, need to make a clearer statement about definitions of a single ``computation step''}
+
+
+The first addition to the ITMs defined in \cite{uc} is a new tape called the \msf{import\ tape}.
+This tape consists of the following:
+\begin{itemize}
+	\item An integer, \msf{input\ import}, that tracks the total number of import tokens ever sent to the ITM on any of its externally writeable tapes.
+	\item The \msf{output\ import} tracks the total number of tokens ever sent to any other ITM through its extranlly writeable tapes.
+	\item The \msf{spent\ potential} is the total amount of potential consumed by the ITM.
+	\item The \msf{marked\ tokens} is the total number of tokens that are consumed and converted into potential through the polynomial $T$.
+\end{itemize}
+
+-- Change made to the external-write command to include the amount of import sent with the message
+
+-- state that computation steps here is an imprecise term and it doesn't really matter how it's defined, but any reasonable description of a computation step should still work. The main thing is constant vs linear vs polynomial work which must be captured in the definition
+
+-- when ITM does computation steps (need to formalize this some more because what exactly is a computation step in ITMs versus python) ticks is issued, and potential is generated when potential runs out but more computation is needed. Perhaps the right way to do it is to have tick called at the start of every activation for the amount og 
+
+-- ok so restate the ITM definitions from the UC paper. Stress that they do not interfere with the default definition so no need to reprove anything (import = 0 everywhere woul yield an equivalent ITM configuration).
+
+-- describing how ``tick'' is used might be more than can be said right now (might require some more formality).
+
+-- the state the definition/claim/lemma that an ITM that follows these rules will be T-bounded then state the entire execution is T-bounded because all the subsidiaries are T-bounded (use the argument from the UC paper about subroutines).
+
+
+\paragraph{Cost Model}
+The cost model defines the import cost of primitive operations that an ITM can perform in our proposed realization of the import mechanism.
+We define a protocol or implementation that adheres to the cost model and the import mechanism above achieves T-bounded-ness in its UC experiments.
+In the implementation of UC, programs self report the cost of their computations. 
+We propose that a program that follows the cost model in our implementation does achieve T-boundedness.
+Therefore, adversaries that don't report their computation steps through the cost model are not valid and therefore not guaranteed to comply with our import statement.
+
+
+need a cost model to represent basic operations that an ITM can perform and assign tick values to them
+
+primitive operations are write/read message to/from another ITM and create a new ITM (spawn a new one by calling it)
+
+The cost of the parameters of the create new ITM are already paid for when computing their amounts so creating a new ITM is a constant work operation
+
+The cost of sending a message though is dependent on the size of the message
+
+Define this cost model and an ITM system that implements this cost model has these properties that it satisfied T-bounded ness as is required by the import mechanism
+
+
+
+ITMs also have a new instructions
+\begin{itemize}
+	\item \msf{generatepot} consumes some number of tokens and converts than into usable potential. This function is usually only used when the ITM is out of potential and wants to generate more. If the ITM isout of import, this function fails and the ITM doesn't proceed with any further computation setps. Instead is returns control to \mc{Z}.
+	\item 
+\end{itemize}
+
