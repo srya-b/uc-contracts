@@ -13,7 +13,7 @@ In an execution of a UC experiment only one ITM can be activated at any time.
 At the beginning the environment is activate and it activates other ITMs by writing to their input tapes. 
 If an ITM completes execution and doesn't activate another ITM, the environment is activated again.
 
-#### ITMs
+### ITMs
 The basic ITM class, `class ITM`, is defined in `itm.py`.
 * Every ITM has an identity made up of `(sid, pid)`. `sid` is the id for this protocol session, `pid` is the ID of the ITM within this this session.
 * Instead of using common tapes for all ITMs to write to, we use uni-directional channels. 
@@ -24,9 +24,16 @@ Channels are uni-directional so each communication path consists of 2 channels.
 * The ITM is also parammeterized by `handlers` that are functions which are called when a specific channel is written to.
 Classes inheriting the basic `ITM` class define the handlers for each channel they read on.
 
-There are three main ITM classes, `ITMFunctionality`, `ITMProtocol`, `ITMPassthrough`. There is usually no need to directly access these classes. Most often they will be used through the wrappers `FunctionalityWrapper`, `ProtocolWrapper`, `PassthroughWrapper`. These wrappers provide some neat functionality:
-* They spawn ITMs of the type at the first message sent to them. Dynamic creation of ITMs is a handly tool for the environment.
-* It routes messages to the ITMs they wrap around.
+### Handling Import
+The new import mechanism in the UC paper is used to guarantee polynomial time execution of  UC experiment.
+The basic idea is that there are a finite number of import tokens that are bound by a polynomial and ITMs require
+import tokens to be able to do some computation.
+This repo implements import as an optional mechanism.
+
+#### Disabling Import
+ITMs also accept a dictionary `importargs` that determine things about the import mechanism.
+
+# INCOMPLETE and OUT OF DATE BELOW
 
 #### Adversary
 In `adversary.py` you'll find the DummyAdversary. This adversary doesn't do anything except forward messages from the environment. (This is the strongest adversary against which a protocol can be proven secure.)
