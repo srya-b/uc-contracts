@@ -7,11 +7,22 @@ This tutorial will run though how to create create the ideal world functionality
 First, we introduce the basic ITMs for protocol participants and the adversary.
 
 ### Implementing a protocol and creating ITMs that execute it
-The basic functionality of an ITM is located in `itm.py`. This file defines a bunch of classes that implement different kind of ITMs. Theroretically, all ITMs are the same, but due to differences in what they can do, ITMs for the adversary, functionalities, passthrough parties, and parties running a protocol are different classes. 
+The UC framework is based on interactive turing machines (ITMs) that are defined by input and output tapes.
+An ITM has several input tapes that other ITMs can write to, and it, in turn, can write to the tapes of other ITMs.
+In an execution of a UC experiment only one ITM can be activated at any time. 
+At the beginning the environment is activate and it activates other ITMs by writing to their input tapes. 
+If an ITM completes execution and doesn't activate another ITM, the environment is activated again.
 
 #### ITMs
-All communication between ITMs (i.e. one ITM writing to the input tape of another ITM) is handled through channels described by the `GenChannel` class. The channel inherits `gevent.Event` that provides a signal to waiting threads in the program.
-There's also simple read/write functions. Nothing too interesting.
+The basic ITM class, `class ITM`, is defined in `itm.py`.
+* Every ITM has an identity made up of `(sid, pid)`. `sid` is the id for this protocol session, `pid` is the ID of the ITM within this this session.
+* Instead of using common tapes for all ITMs to write to, we use uni-directional channels. 
+The `channels` dictionary consists of pairs of channels to communicate to other ITMs.
+For example a protocol party can read/write from/to a functionality, the adversary or the environment.
+Therefore, the `channels` would be populated with `channels['p2f'], channels['f2p'], channels['p2a']` and so on.
+Channels are uni-directional so each communication path consists of 2 channels.
+* The ITM is also parammeterized by `handlers` that are functions which are called when a specific channel is written to.
+Classes inheriting the basic `ITM` class define the handlers for each channel they read on.
 
 There are three main ITM classes, `ITMFunctionality`, `ITMProtocol`, `ITMPassthrough`. There is usually no need to directly access these classes. Most often they will be used through the wrappers `FunctionalityWrapper`, `ProtocolWrapper`, `PassthroughWrapper`. These wrappers provide some neat functionality:
 * They spawn ITMs of the type at the first message sent to them. Dynamic creation of ITMs is a handly tool for the environment.
