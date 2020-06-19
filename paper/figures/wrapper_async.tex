@@ -29,7 +29,7 @@ Initialize $\msf{leakbuffer} := \emptyset, \msf{runqueue} := \emptyset, delay :=
 
 \OnInput \inmsg{advance} $1 \token$ from $\mathcal{Z}$:
 	\begin{ritemize}
-		\item \If $delay > 0$:
+		\item If $delay > 0$:
 			Decrement $delay \minuseq 1$ and leak \msf{(poll)} to $\mathcal{A}$
 		\item \Else: 
 			Pope a codeblok off $\msf{runqueue}$ and execute it.

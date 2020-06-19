@@ -10,19 +10,19 @@ Initialize $\msf{idealqueue} := \emptyset, idealdelay := 0$
 	\begin{renumerate}
 	\item $leaks \leftarrow$ \{ \Send (\texttt{get-leaks}) $\rightarrow \mathcal{W}_{sync}$\}
 
-	\item \For $l \in leaks$:
+	\item For $l \in leaks$:
 		\begin{renumerate}
-		\item \If $l$ is (input, v), $n(4n+1) \token$ from $\F_{bcast}$:
+		\item If $l$ is (input, v), $n(4n+1) \token$ from $\F_{bcast}$:
 
 			\quad Simulate (input, $v$, $n(4n+1) \token$) $\rightarrow \mathcal{D}'$ 
 
-		\item \Else \If $l$ is (schedule, $rnd$, $idx$) from $\F_{bcast}$:
+		\item Else If $l$ is (schedule, $rnd$, $idx$) from $\F_{bcast}$:
 
 			\quad Map $p_i$ to $(rnd,idx)$ for the $i$th such leak.
 
 			\quad $idealdelay = idealdelay + 1$
 
-		\item \Else:
+		\item Else:
 
 			\quad $idealdelay = idealdelay + 1$
 		\end{renumerate}

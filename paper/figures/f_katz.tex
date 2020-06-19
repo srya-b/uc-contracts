@@ -12,11 +12,11 @@ Initialize $M := \bot$ and $D := 1$ and $\hat{D} := 1$
 
 	\qquad Set $D = D - 1$
 
-	\qquad \If $D = 0$: \Send ({\bf sent},$M$) $\rightarrow p_r$
+	\qquad If $D = 0$: \Send ({\bf sent},$M$) $\rightarrow p_r$
 
 -- \OnInput \inmsg{delay}{T} from $\mathcal{A}$:
 
-	\qquad \If $\hat{D} + T \leq \delta$: 
+	\qquad If $\hat{D} + T \leq \delta$: 
 
 		\qquad \quad $D := D + T$, $\hat{D} := \hat{D} + T$
 
@@ -24,7 +24,7 @@ Initialize $M := \bot$ and $D := 1$ and $\hat{D} := 1$
 
 -- \OnInput \inmsg{replace}{$m'$}{$T'$} from $\mathcal{A}$:
 
-	\qquad \If $p_s$ corrupted, $D > 0$ and $T'$ is valid:
+	\qquad If $p_s$ corrupted, $D > 0$ and $T'$ is valid:
 
 		\qquad \quad $D := T'$ and $M' = m$
 \end{bbox}

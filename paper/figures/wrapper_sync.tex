@@ -38,12 +38,12 @@ Initialize $\msf{leakbuffer} := \emptyset, \msf{runqueue} := \emptyset, r := 0, 
 
 \OnInput \inmsg{poll} $1 \token$ from $\mathcal{Z}$:
 	\begin{ritemize}
-	\item \If $delay > 0$:
+	\item If $delay > 0$:
 		\begin{renumerate}
 		\item $delay = delay - 1$
 		\item\Send (poll) to $\mathcal{A}$
 		\end{renumerate}
-	\item \Else: 
+	\item Else: 
 		\begin{renumerate}
 		\item $rnd \leftarrow \msf{argmin}_{r}\{ \msf{runqueue}[r] \neq \emptyset \}$
 		\item $e \leftarrow$ pop $\msf{runqueue}[rnd]$
