@@ -2,9 +2,11 @@
 This is a python implementation of the UC framework alongside the changes required for smart contract applications to be expressed.
 The only dependency of the project is **gevent** and the version of python is **3.5.3**.
 
+
 ## Tutorial
-This tutorial will run though how to create create the ideal world functionality and and the real protocol in this framework and run a UC experiment with an user-specified environment. 
+This tutorial will run though how to create the ideal world functionality and and the real protocol in this framework and run a UC experiment with an user-specified environment. 
 First, we introduce the basic ITMs for protocol participants and the adversary.
+
 
 ### Implementing a protocol and creating ITMs that execute it
 The UC framework is based on interactive turing machines (ITMs) that are defined by input and output tapes.
@@ -13,8 +15,10 @@ In an execution of a UC experiment only one ITM can be activated at any time.
 At the beginning the environment is activate and it activates other ITMs by writing to their input tapes. 
 If an ITM completes execution and doesn't activate another ITM, the environment is activated again.
 
+
 ### ITMs
 The basic ITM class, `class ITM`, is defined in `itm.py`.
+
 * Every ITM has an identity made up of `(sid, pid)`. `sid` is the id for this protocol session, `pid` is the ID of the ITM within this this session.
 * Instead of using common tapes for all ITMs to write to, we use uni-directional channels. 
 The `channels` dictionary consists of pairs of channels to communicate to other ITMs.
@@ -24,14 +28,17 @@ Channels are uni-directional so each communication path consists of 2 channels.
 * The ITM is also parammeterized by `handlers` that are functions which are called when a specific channel is written to.
 Classes inheriting the basic `ITM` class define the handlers for each channel they read on.
 
+
 ### Handling Import
 The new import mechanism in the UC paper is used to guarantee polynomial time execution of  UC experiment.
 The basic idea is that there are a finite number of import tokens that are bound by a polynomial and ITMs require
 import tokens to be able to do some computation.
 This repo implements import as an optional mechanism.
 
+
 #### Disabling Import
 ITMs also accept a dictionary `importargs` that determine things about the import mechanism.
+
 
 # INCOMPLETE and OUT OF DATE BELOW
 
@@ -80,6 +87,7 @@ The handlers above refer to the function `input_msg`. This function is shown bel
 ```
 This function jst parses the message and calls the relevant functions. The `check_round_ok` function is a Katz-specific function that is already implemented in the base class. I'd recommend just checking out the paper to understand it better.
 For the purposes of learning to use python-saucy it's not really important to understand the implementation of any of the Katz-specific function. It's sufficient to understand the pieces.
+
 
 #### Running the real world
 In the same file, `f_bracha/prot_bracha.py`, you'll find a sample environment that runs the real world, `test_all_honest()`.
