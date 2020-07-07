@@ -4,7 +4,7 @@ from utils import gwrite, z_write, wait_for, waits
 from gevent.queue import Queue, Channel, Empty
 from gevent.event import AsyncResult, Event
 from numpy.polynomial.polynomial import Polynomial
-from errors import WriteImportError, TickError
+#from errors import WriteImportError, TickError
 import dump
 import gevent
 import comm
