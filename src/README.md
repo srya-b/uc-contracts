@@ -4,15 +4,15 @@ Use `pip install -r requirements.txt` to install all required pip modules for th
 
 
 ## Tutorial
-This tutorial will run though how to create the ideal world functionality and and the real protocol in this framework and run a UC experiment with an user-specified environment. 
+This tutorial will run though how to create the ideal world functionality and and the real protocol in this framework and run a UC experiment with an user-specified environment.
 First, we introduce the basic ITMs for protocol participants and the adversary.
 
 
 ### Implementing a protocol and creating ITMs that execute it
 The UC framework is based on interactive turing machines (ITMs) that are defined by input and output tapes.
 An ITM has several input tapes that other ITMs can write to, and it, in turn, can write to the tapes of other ITMs.
-In an execution of a UC experiment only one ITM can be activated at any time. 
-At the beginning the environment is activate and it activates other ITMs by writing to their input tapes. 
+In an execution of a UC experiment only one ITM can be activated at any time.
+At the beginning the environment is activate and it activates other ITMs by writing to their input tapes.
 If an ITM completes execution and doesn't activate another ITM, the environment is activated again.
 
 
@@ -20,7 +20,7 @@ If an ITM completes execution and doesn't activate another ITM, the environment 
 The basic ITM class, `class ITM`, is defined in `itm.py`.
 
 * Every ITM has an identity made up of `(sid, pid)`. `sid` is the id for this protocol session, `pid` is the ID of the ITM within this this session.
-* Instead of using common tapes for all ITMs to write to, we use uni-directional channels. 
+* Instead of using common tapes for all ITMs to write to, we use uni-directional channels.
 The `channels` dictionary consists of pairs of channels to communicate to other ITMs.
 For example a protocol party can read/write from/to a functionality, the adversary or the environment.
 Therefore, the `channels` would be populated with `channels['p2f'], channels['f2p'], channels['p2a']` and so on.
@@ -68,8 +68,8 @@ class Bracha_Protocol(ITMSyncProtocol):
         }
 ```
 
-The parameters for the constructors of most protocols will be exactly the same: an `sid`, a `pid`, and channels to communicated with other ITMs. For example, `_p2f` is for this ITM to write to a functionality (in reality, the functionality wrapper). 
-Furthermore, every protocol inherits functions from some ITM class. Therefore, this class must mark which channels it will read on with `self.channels_to_read` (`a2p`, `z2p`, `f2p`) and which functions handle messages on those channels in `self.handlers`. 
+The parameters for the constructors of most protocols will be exactly the same: an `sid`, a `pid`, and channels to communicated with other ITMs. For example, `_p2f` is for this ITM to write to a functionality (in reality, the functionality wrapper).
+Furthermore, every protocol inherits functions from some ITM class. Therefore, this class must mark which channels it will read on with `self.channels_to_read` (`a2p`, `z2p`, `f2p`) and which functions handle messages on those channels in `self.handlers`.
 For this ITM we define a funtion `input_msg` that handles messages coming from the environment. The other two channels don't do anything for two reasons:
 * `f2p`: In this experiment there are no functionalities that write to this party on their own.
 * `a2p`: This protocol, by it's very existence is honest (corrupt parties in the real world are replaced with a passthrough party) and therefore, will never expect messages from the adversary.
@@ -127,8 +127,8 @@ Lastly we initialize the wrapper that handles the parties:
     gevent.spawn(p.run)
 ```
 
-The last step in this environment is having to call `spawn` on the different parties that will be used in this round. This does defeat the purpose of the wrapper spawning parties on command, but the Katz framework already defines the set of parties in the `sid` of the functionalities. 
-Additionally, the Katz framework requires a special first action for all of the parties that necessitates having to call `spawn`. 
+The last step in this environment is having to call `spawn` on the different parties that will be used in this round. This does defeat the purpose of the wrapper spawning parties on command, but the Katz framework already defines the set of parties in the `sid` of the functionalities.
+Additionally, the Katz framework requires a special first action for all of the parties that necessitates having to call `spawn`.
 ```python
     # Start synchronization requires roundOK first to determine honest parties
     # giving input to a party before all have done this will result in Exception
@@ -137,7 +137,7 @@ Additionally, the Katz framework requires a special first action for all of the 
     p.spawn(3); wait_for(a2z)
 ```
 
-In the snippet above, there's a function call `wait_for(a2z)` in here. This function is at the heart of how the UC framework is implemented. 
+In the snippet above, there's a function call `wait_for(a2z)` in here. This function is at the heart of how the UC framework is implemented.
 Namely, the control function that determines when control comes back to the environment. In python-saucy when and ITM is activates, it can either write to another ITM or dump control back to the environment with `dump.dump()` <-- you'll see that everywhere in the code.
 `wait_for` tries to wait and read on the channel passed in to it. Gevent throws an error when it knows a waiting action will block foever. Therefore, `wait_for` waits for either a write on the channel specified or for some ITM to dump control back to the environment. `wait_for` is necessary after every write the environment makes. **In future iterations of the code base, I'll try to abstract away, but certainly there are times when you want to read on certain channels, as the environment, and assert certain outputs.**
 
@@ -147,3 +147,4 @@ Finally, environment starts passing input into the parties by writing to `z2p`:
     z2p.write( (1, ('input',10)) )
     wait_for(a2z)
 ```
+
