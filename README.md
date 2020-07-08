@@ -21,3 +21,20 @@ This is a python implementation of the UC framework alongside the changes requir
 `src/sync_katz`: Katz's implementation under synchronous assumption ([ref](https://eprint.iacr.org/2011/310.pdf))
 
 
+### Files under `src/`
+> more detailed explanation of files under `src/` could refer to the `README.md` inside `src/` folder.
+
+`src/`: it is also a local python module.
+
+`src/itm.py`: basic class of Interactive Turing Machine(ITM)
+
+`src/adversary.py`: basic class of adversary
+
+`src/comm.py`: TODO
+
+`src/dump.py`: TODO
+
+`src/exeuc.py`: {execute|create} (wrapped)UC.
+
+`src/utils.py`: TODO
+
