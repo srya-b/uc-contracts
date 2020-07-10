@@ -38,3 +38,32 @@ This is a python implementation of the UC framework alongside the changes requir
 
 `src/utils.py`: TODO
 
+
+## Other modules used in this project
+
+`gevent`: [gevent](https://www.gevent.org/) is a [coroutine](https://en.wikipedia.org/wiki/Coroutine)-based Python networking library that uses `greenlet` to provide a high-level synchronous API on top of the `libev` or `libuv` event loop.
+
+Features include:
+
+- Fast event loop based on `libev` or `libuv`.
+
+- Lightweight execution units based on `greenlets`.
+
+- API that re-uses concepts from the Python standard library (for examples there are events and queues).
+
+- Cooperative sockets with SSL support
+
+- Cooperative DNS queries performed through a threadpool, dnspython, or c-ares.
+
+- Monkey patching utility to get 3rd party modules to become cooperative
+
+- TCP/UDP/HTTP servers
+
+- Subprocess support (through gevent.subprocess)
+
+- Thread pools
+
+(above are excerpted from [official website](https://www.gevent.org/))
+
+`inspect` (built-in): The inspect module provides several useful functions to help get information about live objects such as modules, classes, methods, functions, tracebacks, frame objects, and code objects.
+
