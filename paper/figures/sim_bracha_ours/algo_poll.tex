@@ -1,23 +1,51 @@
 \begin{bbox}[title={Algorithm $\msf{Poll}$}]
 
-Simulate (\texttt{poll}) $\rightarrow \mathcal{W}'$
+\begin{renumerate}
 
-Store $leaks \leftarrow \msf{SimGetLeaks}$ for $\mathcal{Z}$
+  \item $idealdelay = idealdelay - 1$
+  
+  \item If $idealdelay = 0$:
+   
+  \qquad \Send $(\texttt{delay}, 1 \token) \rightarrow \mathcal{W}_{sync}$
 
-Check for input:
+  \qquad $idealdelay = 1$
+
+  \item \Send $(\texttt{poll},) \rightarrow \mathcal{W}_{sync}'$
+  
+  \item $msg \leftarrow$ wait for ouput from some simulated ITM.
+
+  \item Execute $\msf{SimGetLeaks}$
+
+\item Match $msg$ with:
 
 -- \OnInput (m) from $P_i'$:
-
-	\qquad \If no input from $\mathcal{D}$ from $\F_{bcast}$:
-
-		\qqquad Add \{\Send (m) to $P_i$\} to $\mathcal{W}$.
-
-		\qqquad $idealdelay = idealdelay + 1$
-
-	\qquad Execute output for $p_i$ in $\mathcal{W}$.
+     
+   \qquad call \msf{SimPartyOutput}(m, $P_i'$)
 
 -- \OnInput (m) from $\mathcal{A}'$:
+   
+   \qquad \Send $m \rightarrow \mathcal{Z}$
+   
+\end{renumerate}
 
-	\qquad \Send $(m) \rightarrow \mathcal{Z}$
+%Simulate (\texttt{poll}) $\rightarrow \mathcal{W}'$
+%
+%Store $leaks \leftarrow \msf{SimGetLeaks}$ for $\mathcal{Z}$
+%
+%Check for input:
+%
+%-- \OnInput (m) from $P_i'$:
+%
+%	\qquad \If no input from $\mathcal{D}$ from $\F_{bcast}$:
+%
+%		\qqquad Add \{\Send (m) to $P_i$\} to $\mathcal{W}$.
+%
+%		\qqquad $idealdelay = idealdelay + 1$
+%
+%	\qquad Execute output for $p_i$ in $\mathcal{W}$.
+%
+%-- \OnInput (m) from $\mathcal{A}'$:
+%
+%	\qquad \Send $(m) \rightarrow \mathcal{Z}$
 
 \end{bbox}
