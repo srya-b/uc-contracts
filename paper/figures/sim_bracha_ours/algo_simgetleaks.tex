@@ -6,17 +6,7 @@ $n \leftarrow \#$ of (schedule,...) messages in $leaks$
 
 $idealdelay = idealdelay + n$
 
-If $idealdelay = n$:
-
-	\quad $idealdelay = idealdelay + 1$
-
-	\quad \{ \Send (delay, $n+1 \token$) $\rightarrow \mathcal{W}_{sync}$ \}
-
-\Else:
-
-	\quad \{ \Send (delay $n \token$) $\rightarrow \mathcal{W}_{sync}$ \}
-
-\Return $leaks$
+\{ \Send (delay, $n \token$) $\rightarrow \mathcal{W}_{sync}$ \}
 
 \end{bbox}
 
