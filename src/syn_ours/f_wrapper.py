@@ -7,6 +7,60 @@ import logging
 
 log = logging.getLogger(__name__)
 
+'''
+This wrapper exists in the UC execution in both the real and ideal worlds
+as a standalone ITM. In a way this can be seen as a functionality where 
+it acts as a trusted third party that does what it is expected to do.
+
+THe logic behind the wrapper is to enable synchronout communication in UC.
+Recall from the original formulation of the UC framework, all communication 
+is asynchronous. This means that the adversary can arbitrarily delay message
+delivery between any two parties. Synchronous communication requires that 
+message delay has a known upper bound. This means that the synchronous world
+proceeds in rounds. 
+
+The wrappers generalizes the idea of message delivery by instead allowing 
+synchronous execution of code blocks. The protocol parties and funutonalities
+can schedule codeblocks to be executed synchronously in the same way as a message
+normally would be. The upper bound delay is added to the codeblock when 
+scheduled but the adversary can control which round it executes the codeblock
+with the ``exec'' call. The adversary can not have complete control over 
+the execution of codeblocks and the progression of rounds so the environment
+can try to advance the wrapper through ``poll''. Eventually the delay parameter
+will reach 0 with enough ``poll'' calls causing the next codeblock to be popped
+off the queue and executed. 
+
+Party/Functionality Interface
+
+-- ``schedule''   : this message by a party of a functionality comes with a 
+                    codeblock to execute (in the form of a function and input
+                    parameters), and the environment specified upper-bound on delay
+                    delta. Scheduling a codeblock saves it to the ``todo'' list
+                    which the maximum delay assinged by default. This means that new
+                    codeblocks are automatically inserted into todo[curr_round + delta].
+                    Additionally this increments a ``delay'' parameter.
+
+-- ``clock-round'': the functionality just writes the current clock round back to the 
+                    calling party.
+
+-- ``call me''    : (party only) Part of a synchronous model is input completeness: every honest party
+                    is able to give input in each round that it wants to. A party passes in a round
+                    number, r, with the ``call-me'' message. The wrapper schedules the
+                    caling party to be activated in round ``todo[curr_round + r]''
+
+-- ``leak''       : there are two was of leaking information to the adversary:
+                    1). directly write the leak onto the tape of the adverasry (activating it)
+                    2). buffer the leaks in the functionality that the adversary can ask for
+                    In this wrapper we opt for #2 simply because it simplifies protocols
+                    and functionalities.
+
+Adversary Interface
+
+-- ``delay''      : There is a delay parameter that the adversary can increase with import
+                    tokens.
+-- 
+'''
+
 class Syn_FWrapper(UCWrapper):
     def __init__(self, channels, pump, poly, importargs):
         self.curr_round = 1
