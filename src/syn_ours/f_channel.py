@@ -4,14 +4,14 @@ import logging
 log = logging.getLogger(__name__)
 
 class Syn_Channel(UCWrappedFunctionality):
-    def __init__(self, sid, pid, channels, pump, poly, importargs):
+    def __init__(self, k, sid, pid, channels, pump, poly, importargs):
         self.ssid = sid[0]
         self.sender = sid[1]
         self.receiver = sid[2]
         self.round = sid[3]
         self.delta = sid[4]
         self.pump = pump
-        UCWrappedFunctionality.__init__(self, sid, pid, channels, poly, importargs)
+        UCWrappedFunctionality.__init__(self, k, sid, pid, channels, poly, importargs)
         self.leakbuffer = None
 
     def leak(self, msg):

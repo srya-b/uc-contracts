@@ -12,7 +12,7 @@ from numpy.polynomial.polynomial import Polynomial
 log = logging.getLogger(__name__)
 logging.basicConfig( level="DEBUG")
 
-def env(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
+def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     delta = 3
     n = 4
     sid = ('one', tuple(range(1,n+1)), delta)
@@ -113,6 +113,7 @@ def distinguisher(t_ideal, t_real):
 if __name__=='__main__':
     print('\n\t\t\033[93m [IDEAL WORLD] \033[0m\n')
     t1 = execWrappedUC(
+        128,
         env,
         [('F_bracha',Syn_Bracha_Functionality)],
         wrappedPartyWrapper('F_bracha'),
@@ -123,6 +124,7 @@ if __name__=='__main__':
  
     print('\n\t\t\033[93m [REAL WORLD] \033[0m\n')
     t2 = execWrappedUC(
+        128,
         env, 
         [('F_chan',Syn_Channel)], 
         wrappedProtocolWrapper(Broken_Bracha_Protocol),
