@@ -1,4 +1,3 @@
-import dump
 from itm import UCWrappedProtocol, MSG
 from math import ceil, floor
 from utils import wait_for, waits
