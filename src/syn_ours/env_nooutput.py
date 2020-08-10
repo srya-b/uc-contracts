@@ -41,31 +41,31 @@ def env(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
         s = ('one', (sid,fro), (sid,to), r, delta)
         return (s,'F_chan')
     
-    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,2,1)), ('send', ('VAL', 1)))))), 4*n)
+    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,2,1)), ('send', ('VAL', 1))))), 4*n), 4*n)
     waits(pump)
-    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,3,1)), ('send', ('VAL', 1)))))), 4*n)
+    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,3,1)), ('send', ('VAL', 1))))), 4*n), 4*n)
     waits(pump)
 
-    z2a.write( ('A2W', ('get-leaks',)), n*(4*n+1))
+    z2a.write( ('A2W', ('get-leaks',), n*(4*n+1)), n*(4*n+1))
     waits(pump)
 
     for _ in range(4):
         z2w.write( ('poll',), 1)
         waits(pump)
 
-    z2a.write( ('A2P', ((sid,1), ('P2W', ('clock-round',)))) )
+    z2a.write( ('A2P', ((sid,1), ('P2W', ('clock-round',))), 0) )
     waits(pump)
 
-    z2a.write( ('A2W', ('exec', 4, 0)) )
+    z2a.write( ('A2W', ('exec', 4, 0), 0) )
     waits(pump)
 
     for _ in range(6):
-        z2a.write( ('A2W', ('exec', 7, 0)) )
+        z2a.write( ('A2W', ('exec', 7, 0), 0) )
         waits(pump)
 
-    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,2,7)), ('send', ('ECHO',1)))))), 3)
+    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,2,7)), ('send', ('ECHO',1))))), 3), 3)
     waits(pump)
-    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,3,7)), ('send', ('ECHO',1)))))), 3)
+    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,3,7)), ('send', ('ECHO',1))))), 3), 3)
     waits(pump)
 
     for _ in range(3):
@@ -73,19 +73,19 @@ def env(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
         waits(pump)
 
     for _ in range(8):
-        z2a.write( ('A2W', ('exec', 7 , 0)) )
+        z2a.write( ('A2W', ('exec', 7 , 0), 0) )
         waits(pump)
 
-    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,2,7)), ('send', ('READY',1)))))), 0)
+    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,2,7)), ('send', ('READY',1))))), 0), 0)
     waits(pump)
 
-    z2a.write( ('A2W', ('exec', 7 , 0)) )
+    z2a.write( ('A2W', ('exec', 7 , 0), 0) )
     waits(pump)
 
-    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,3,7)), ('send', ('READY',1)))))), 0)
+    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,3,7)), ('send', ('READY',1))))), 0), 0)
     waits(pump)
 
-    z2a.write( ('A2W', ('exec', 7 , 0)) )
+    z2a.write( ('A2W', ('exec', 7 , 0), 0) )
     waits(pump)
 
     for _ in range(77):
