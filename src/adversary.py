@@ -23,6 +23,29 @@ class DummyAdversary(ITM):
     def env_msg(self, d):
         msg = d.msg
         imp = d.imp
+        if msg[0] == 'A2F':
+            t,msg,iprime = msg
+            self.write('a2f', msg, iprime )
+        elif msg[0] == 'A2P':
+            t,msg,iprime = msg
+            self.write('a2p', msg, iprime )
+        elif msg[0] == 'corrupt':
+            self.input_corrupt(msg[1])
+        else: 
+            self.pump.write("dump")
+
+    def party_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        assert imp == 0
+        self.channels['a2z'].write( msg )
+
+    def func_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        assert imp == 0
+        self.channels['a2z'].write(msg)
+
 
     '''
         Instead of waiting for a party to write to the adversary
@@ -125,16 +148,18 @@ class DummyWrappedAdversary(ITM):
     def party_msg(self, d):
         msg = d.msg
         imp = d.imp
-        #print('Go back from party', msg)
+        assert imp == 0
         self.channels['a2z'].write( msg )
 
     def func_msg(self, d):
         msg = d.msg
         imp = d.imp
+        assert imp == 0
         self.channels['a2z'].write(msg)
 
     def wrapper_msg(self, d):
         msg = d.msg
         imp = d.imp
+        assert imp == 0
         self.channels['a2z'].write(msg)
 
