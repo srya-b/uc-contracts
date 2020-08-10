@@ -1,4 +1,3 @@
-import dump
 import gevent
 from itm import ITM, UCWrapper
 from collections import defaultdict
@@ -56,11 +55,9 @@ Party/Functionality Interface
 
 Adversary Interface
 
--- ``delay''      : There is a delay parameter that the adversary can increase with import
-                    tokens.
+-- ``delay''      : There is a
 -- 
 '''
-
 class Syn_FWrapper(UCWrapper):
     def __init__(self, channels, pump, poly, importargs):
         self.curr_round = 1
