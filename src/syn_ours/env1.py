@@ -35,7 +35,7 @@ def env1(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     z2p.write( ((sid,1), ('input', 2)), n*(4*n + 1))
     waits(pump)
 
-    z2a.write( ('A2W', ('get-leaks',)))
+    z2a.write( ('A2W', ('get-leaks',), 0))
     waits(pump)
 
     log.debug('\033[91m send first VAL, get +2 ECHO messages \033[0m')
@@ -74,7 +74,7 @@ def env1(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
         waits(pump)
 
     log.debug('\033[91m DELAYING \033[0m')
-    z2a.write( ('A2W', ('delay', 3)), 3)
+    z2a.write( ('A2W', ('delay', 3), 3), 3)
     waits(pump)
 
     log.debug('\033[91m +0 READY +1 = 3 polls to send 3 -> 1 ECHO msg, +0 msgs \033[0m')

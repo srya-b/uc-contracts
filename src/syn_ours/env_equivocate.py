@@ -189,7 +189,7 @@ def distinguisher(t_ideal, t_real):
 if __name__=='__main__':
     print('\n\t\t\033[93m [IDEAL WORLD] \033[0m\n')
     t1 = execWrappedUC(
-        env,
+        env_equivocation,
         [('F_bracha',Syn_Bracha_Functionality)],
         wrappedPartyWrapper('F_bracha'),
         Syn_FWrapper, 
@@ -199,7 +199,7 @@ if __name__=='__main__':
  
     print('\n\t\t\033[93m [REAL WORLD] \033[0m\n')
     t2 = execWrappedUC(
-        env, 
+        env_equivocation, 
         [('F_chan',Syn_Channel)], 
         wrappedProtocolWrapper(Broken_Bracha_Protocol),
         Syn_FWrapper, 
