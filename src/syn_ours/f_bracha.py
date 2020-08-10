@@ -1,4 +1,3 @@
-import dump
 from itm import UCWrappedFunctionality, ITM
 from utils import wait_for, waits
 from numpy.polynomial.polynomial import Polynomial
@@ -173,7 +172,7 @@ class RBC_Simulator(ITM):
     def env_exec(self, rnd, idx):
         # pass the exec onto the internel wrapper and check for output by some party
         self.tick(1)
-        self.sim_channels['z2a'].write( ('A2W', ('exec', rnd, idx)) )
+        self.sim_channels['z2a'].write( ('A2W', ('exec', rnd, idx), 0) )
         r = gevent.wait(objects=[self.sim_pump, self.sim_channels['a2z'], self.sim_channels['p2z']],count=1)[0]
         m = r.read()
         r.reset()
@@ -189,7 +188,7 @@ class RBC_Simulator(ITM):
 
     def env_delay(self, d, imp):
         # first send this to the emulated wrapper
-        self.sim_channels['z2a'].write( ('A2W', ('delay', d)))
+        self.sim_channels['z2a'].write( ('A2W', ('delay', d), 0))
         assert waits(self.sim_pump, self.sim_channels['a2z']).msg == 'OK'
 
         # now send it to the ideal world wrapper
@@ -288,7 +287,7 @@ class RBC_Simulator(ITM):
         # Ask for leaks from the simulated wrapper
         self.log.debug('sin_get_leaks asking for leaks')
         self.tick(1)
-        leaks = self.sim_write_and_wait('z2a', ('A2W', ('get-leaks',)), 0, 'a2z')
+        leaks = self.sim_write_and_wait('z2a', ('A2W', ('get-leaks',), 0), 0, 'a2z')
         n = 0
         self.log.debug('\n\t leaks = {} \n'.format(leaks))
 
@@ -317,17 +316,17 @@ class RBC_Simulator(ITM):
         imp = d.imp
         self.get_ideal_wrapper_leaks()
         if msg[0] == 'A2F':
-            t,msg = msg
-            self.channels['a2f'].write( msg, imp )
+            t,msg,iprime = msg
+            self.channels['a2f'].write( msg, iprime )
         elif msg[0] == 'A2P':
-            _,(to,m) = msg
+            _,(to,m),iprime = msg
             # Only crupt parties can be written to by the adversary
             if ishonest(*to):
                 raise Exception("Environment send message to A for honest party")
             else:
-                self.sim_channels['z2a'].write( msg , imp )
+                self.sim_channels['z2a'].write( msg , iprime )
         elif msg[0] == 'A2W':
-            t,msg = msg
+            t,msg,iprime = msg
             if msg[0] == 'get-leaks':
                 self.env_get_leaks()
             elif msg[0] == 'exec':
