@@ -1,0 +1,17 @@
+\begin{bbox}[title={\textbf{Functionality} $\F_{\msf{RPS}}$}]
+
+-- \OnInput \inmsg{x} from $p_i$:
+
+	\qquad Store $x_i$ for $p_i$
+
+	\qquad \Send (ready) $\rightarrow \mathcal{A}$
+
+-- \OnInput \inmsg{ok}{$p_i$} from $\mathcal{A}$:
+
+	\qquad \If $x_1,x_2$ are set:
+
+		\qqquad $w \leftarrow \msf{rps_comp}(x_1,x_2)$
+
+		\qqquad  \Send $w \rightarrow p_i$
+
+\end{bbox}

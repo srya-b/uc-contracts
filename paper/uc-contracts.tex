@@ -4,7 +4,9 @@
 \usepackage{url}
 \usepackage[most]{tcolorbox}
 \usepackage{multirow}
-
+\usepackage{subcaption}
+\usepackage{setspace}
+\usepackage{enumitem}
 \usetikzlibrary{matrix, arrows.meta, calc, positioning}
 \tikzset{myarrow/.style={-Latex, rounded corners},}
 
@@ -41,7 +43,7 @@
 %\lhead{\sc IACR Policy for Cryptology Schools}
 %\rhead{\sc \lastupdate}
 
-\title{\bf Synchronous SAUCY}
+\title{\bf SAUCY}
 \author{\mbox{Surya Bakshi, Andrew Miller}}
 
 %\date{\lastupdate
@@ -84,7 +86,10 @@ We work our way up from a simple broadcast primitive~\cite{bracha-broadcast} to 
 %	\label{fig:functionality:exectx}
 %\end{figure}
 
-\section{Synchronous Broadcast}
+\section{Wrappers} \label{sec:wrappers}
+\input{sections/wrappers}
+
+\section{Synchronous Broadcast} \label{sec:sync_broadcast}
 \input{sections/synchronous}
 
 \section{Ledger Functionality}

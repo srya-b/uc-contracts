@@ -39,8 +39,8 @@
 
 # for solving a linear system
 import logging
-from field import GF
-from polynomial import polynomials_over, EvalPoint
+from honeybadgermpc.field import GF
+from honeybadgermpc.polynomial import polynomials_over, EvalPoint
 
 
 def make_wb_encoder_decoder(n, k, p, point=None):

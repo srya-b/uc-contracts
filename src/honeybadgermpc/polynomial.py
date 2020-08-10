@@ -8,9 +8,9 @@ from itertools import zip_longest
 #from honeybadgermpc.ntl import fft as fft_cpp
 #from honeybadgermpc.ntl import fft_interpolate as fft_interpolate_cpp
 
-from betterpairing import ZR
-from elliptic_curve import Subgroup
-from field import GF, GFElement
+from honeybadgermpc.betterpairing import ZR
+from honeybadgermpc.elliptic_curve import Subgroup
+from honeybadgermpc.field import GF, GFElement
 
 
 def strip_trailing_zeros(a):

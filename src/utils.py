@@ -4,6 +4,7 @@ import dump
 import gevent 
 import comm
 from collections import defaultdict
+from enum import Enum
 
 global pouts
 pouts = defaultdict(list)
@@ -80,11 +81,17 @@ def z_delay_tx(z2a, a2z, fro, nonce, rounds):
 #    resp = wait_for(a2z)
 #    return resp
 
-def z_get_leaks(z2a, a2z, t, fro):
-    msg = (t, (fro, ('get-leaks',)))
-    z2a.write( msg )
-    resp = wait_for(a2z)
-    return resp
+#def z_get_leaks(z2a, a2z, t, fro):
+#    msg = (t, (fro, ('get-leaks',)))
+#    z2a.write( msg )
+#    resp = wait_for(a2z)
+#    return resp
+
+def z_get_leaks(z2a, a2z, to):
+    z2a.write( ('A2F', ( to, ('get-leaks',))) )
+    # TODO don't even try waiting for dump.dump
+    # you'll always get a response here
+    return wait_for(a2z)
 
 def z_set_delays(z2a, a2z, delays):
     fro,leaks = z_get_leaks(z2a, a2z, 'A2F', (69,'G_ledger'))
@@ -114,18 +121,16 @@ def wait_for(_2_):
 #        print('DOESNT RETURN ANYTHING\n\n')
         return None
 
-def waits(c1, c2):
-    try:
-        r = gevent.wait(objects=[c1,c2],count=1)
-        r = r[0]
-        if r == c1: c1.reset()
-        if r == c2: c2.reset()
-        return r.read()
-    except gevent.exceptions.LoopExit:
-        dump.dump_wait()
-        print('DOESNT RETURN ANYTHING\n\n')
-        return None
-    
+#def waits(c1, c2):
+def waits(*cs):
+    r = gevent.wait(objects=[*cs],count=1)
+    assert len(r) == 1
+    r = r[0]
+    #if r == c1: c1.reset()
+    #if r == c2: c2.reset()
+    r.reset()
+    return r.read()
+
 def z_send_money(_z2p, _p2z, sid, pid, v, to):
     msg = ('transfer', (sid, to), v, (), 'does not matter')
     _z2p.write( (pid, ((69,'G_ledger'), msg)) )
@@ -262,12 +267,28 @@ def execUC(psid, nump, cpwrapper, pargs, cfwrapper, adv):
     _z2f = GenChannel('z2f')
     _f2z = GenChannel('f2z')
 
-class ChannelWrapper:
-    def __init__(self):
-        self.channels = defaultdict(lambda: None)
-    
-    def setChannel(self, channelName, channel):
-        self.channels[channelName] = channel
-    
-    def getChannel(self, channelName):
-        return self.channels[channelName]
+class MessageTag(Enum):
+    INPUT_VAL = 1
+    CREATE_CONTRACT = 2
+    CONTRACT = 3
+    VAR = 4
+    RAND = 5
+    LABEL = 6
+    TRIPLE = 7
+    TX = 8
+    LEAK = 9
+    EVENTUALLY = 10
+    ADVANCE = 11
+    EXECUTE = 12
+    DELAY = 13
+    SEND_LEAKS = 14
+    OK = 15
+    REJECT = 16
+    OUTPUT = 17
+    DEFINED_CONTRACT = 18
+    DEFINED_VAR = 19
+    A2F = 20
+    A2W = 21
+    A2P = 22
+    GEN_OUTPUTS = 23
+    DELIVER = 24

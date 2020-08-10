@@ -1,0 +1,41 @@
+\begin{bbox}[title={$\Pi_{\msf{Bracha}} (\mathcal{D}, \mathcal{P} = p_1,...,p_n)$ in $\F_{\msf{sync-chan}}$-hybrid}]
+
+Initialize $\msf{BQ} := \frac{\msf{ceil}(n+t)}{2}$, $\msf{init} := crnd$, $\msf{out} := \emptyset$
+
+\vspace{2mm} \hrule \vspace{2mm}
+
+% dealer input INPUT
+{\bf Dealer $\mathcal{D}$ Protocol}
+
+-- \OnInput \inmsg{input}{m}{$ n(4n+1) \token $} from $\mathcal{Z}$:
+
+	\qquad \For $p_i \in \mathcal{P}$:
+
+		\qquad \quad \Send $\msf{VAL}(m),4n \token \rightarrow \Fsync{\mathcal{D}}{p_i}$
+
+\vspace{2mm} \hrule \vspace{2mm}
+
+{\bf Party $p_i$ Protocol}
+
+% on input VAL
+-- \OnInput \inmsg{$\msf{VAL}(m)$}{$4n \token$} from $\Fchan{\mathcal{D}}{p_i}$ (once):
+
+	\qquad \For $p_j \in \mathcal{P}$: \Send $\msf{ECHO}(m), 3 \token \rightarrow \Fchan{p_i}{p_j}$\\
+
+-- \OnInput \inmsg{$\msf{ECHO}(m)$}{$3 \token$} from $\Fsync{p_j}{p_i}$:
+
+	\qquad \If received $\msf{ECHO}(m)$ from $\msf{BQ}$ parties:
+
+		\qquad \quad \For $p_j \in \mathcal{P}$: \Send $\msf{READY}(m), 0 \token \rightarrow \Fchan{p_i}{p_j}$ \\
+% on input READY
+
+-- \OnInput \inmsg{$\msf{READY}(m)$}{$0 \token$} from $\Fchan{p_j}{p_i}$:
+
+	\qquad \If received $\msf{READY}(m)$ from $2t+1$ parties:
+
+		\qqquad $\Send m \rightarrow \mathcal{Z}$
+
+\vspace{2mm} \hrule \vspace{2mm}
+
+\end{bbox}
+
