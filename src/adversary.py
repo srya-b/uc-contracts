@@ -1,25 +1,15 @@
-import dump
 import comm
 import gevent
 from itm import ITM
 from gevent.queue import Queue, Channel, Empty
 from gevent.event import AsyncResult
-class DummyAdversary(object):
+class DummyAdversary(ITM):
     '''Implementation of the dummy adversary. Doesn't do anything locally,
      just forwards all messages to the intended party. Z communicates with
      corrupt parties through dummy adversary'''
-    def __init__(self, sid, pid, z2a, a2z, p2a, a2p, a2f, f2a):
-        self.sid = sid
-        self.pid = pid
-        self.sender = (sid,pid)
-        self.z2a = z2a; self.a2z = a2z
-        self.p2a = p2a; self.a2p = a2p
-        self.f2a = f2a; self.a2f = a2f
-
-        self.input = AsyncResult()
-        self.leak = AsyncResult()
-        self.parties = {}
-        self.leakbuffer = []
+    #def __init__(self, sid, pid, z2a, a2z, p2a, a2p, a2f, f2a):
+    def __init__(self, sid, pid, channels, pum, poly, importargs):
+        UCAdversary.__init__(self, sid, pif, channels, poly, importargs)
     
     def __str__(self):
         return str(self.F)
@@ -29,6 +19,10 @@ class DummyAdversary(object):
 
     def input_corrupt(self, pid):
         comm.corrupt(self.sid, pid)
+
+    def env_msg(self, d):
+        msg = d.msg
+        imp = d.imp
 
     '''
         Instead of waiting for a party to write to the adversary
@@ -92,7 +86,6 @@ class DummyWrappedAdversary(ITM):
 
         self.input = AsyncResult()
         self.leak = AsyncResult()
-        self.parties = {}
         self.leakbuffer = []
     
     def __str__(self):
@@ -104,25 +97,27 @@ class DummyWrappedAdversary(ITM):
     def input_corrupt(self, pid):
         comm.corrupt(self.sid, pid)
 
+
+    '''
+        Messages from the environment inteded for the dummy address can 
+        carry import and also specify in the message body how much import 
+        to forward with the message being sent. Dummy adversary as specified
+        in the UC paper accepts messages of the form (i, (msg, ..., i')) where 
+        i is the import sent to the dummy and i' is the import to be sent by
+        the dummy to other parties.
+    '''
     def env_msg(self, d):
         msg = d.msg
         imp = d.imp
         if msg[0] == 'A2F':
-            t,msg = msg
-            to,msg = msg
-            if msg[0] == 'get-leaks':
-                self.getLeaks(msg[1])
-            else:
-                #self.channels['a2f'].write( msg, imp )
-                self.write('a2f', msg, imp )
+            t,msg,iprime = msg
+            self.write('a2f', msg, iprime )
         elif msg[0] == 'A2P':
-            t,msg = msg
-            #self.channels['a2p'].write( msg, imp )
-            self.write('a2p', msg, imp )
+            t,msg,iprime = msg
+            self.write('a2p', msg, iprime )
         elif msg[0] == 'A2W':
-            t,msg = msg
-            #self.channels['a2w'].write( msg, imp )
-            self.write('a2w', msg, imp)
+            t,msg,iprime = msg
+            self.write('a2w', msg, iprime )
         elif msg[0] == 'corrupt':
             self.input_corrupt(msg[1])
         else: self.pump.write("dump")#dump.dump()
