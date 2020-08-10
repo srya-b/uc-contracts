@@ -8,14 +8,14 @@ import logging
 log = logging.getLogger(__name__)
 
 class Syn_Bracha_Functionality(UCWrappedFunctionality):
-    def __init__(self, sid, pid, channels, pump, poly, importargs):
+    def __init__(self, k, sid, pid, channels, pump, poly, importargs):
         self.ssid = sid[0]
         self.parties = sid[1]
         self.n = len(self.parties)
         self.pump = pump
         self.round_upper_bound = 5
         self.delta = sid[2] * self.round_upper_bound
-        UCWrappedFunctionality.__init__(self, sid, pid, channels, poly, importargs)
+        UCWrappedFunctionality.__init__(self, k, sid, pid, channels, poly, importargs)
 
     def send_output(self, to, msg):
         #self.f2p.write( (to, msg) )
@@ -62,12 +62,12 @@ from execuc import createWrappedUC
 from syn_ours import Syn_Channel, Syn_Bracha_Protocol
 
 def brachaSimulator(prot):
-    def f(sid, pid, channels, pump, poly, importargs):
-        return RBC_Simulator(sid, pid, channels, pump, prot, poly, importargs)
+    def f(k, sid, pid, channels, pump, poly, importargs):
+        return RBC_Simulator(k, sid, pid, channels, pump, prot, poly, importargs)
     return f
 
 class RBC_Simulator(ITM):
-    def __init__(self, sid, pid, channels, pump, prot, poly, importargs):
+    def __init__(self, k, sid, pid, channels, pump, prot, poly, importargs):
         self.ssid = sid[0]
         self.parties = sid[1]
         self.delta = sid[2]
@@ -98,10 +98,10 @@ class RBC_Simulator(ITM):
             channels['f2a']: self.func_msg,
         }
 
-        ITM.__init__(self, sid, pid, channels, handlers, poly, importargs)
+        ITM.__init__(self, k, sid, pid, channels, handlers, poly, importargs)
 
         # Spawn UC experiment of real world (local to the simulator)
-        self.sim_channels,static,_pump = createWrappedUC([('F_chan',Syn_Channel)], wrappedProtocolWrapper(prot), Syn_FWrapper, DummyWrappedAdversary, poly, importargs={'ctx': self.ctx, 'impflag':False})
+        self.sim_channels,static,_pump = createWrappedUC(k, [('F_chan',Syn_Channel)], wrappedProtocolWrapper(prot), Syn_FWrapper, DummyWrappedAdversary, poly, importargs={'ctx': self.ctx, 'impflag':False})
 
         # Forward the same 'sid' to the simulation 
         # TODO forward crupt parties as well

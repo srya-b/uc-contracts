@@ -8,14 +8,14 @@ import logging
 log = logging.getLogger(__name__)
 
 class Broken_Bracha_Protocol(UCWrappedProtocol):
-    def __init__(self, sid, pid, channels, pump, poly, importargs):
+    def __init__(self, k, sid, pid, channels, pump, poly, importargs):
         self.ssid = sid[0]
         self.parties = sid[1]
         self.delta = sid[2]
         self.n = len(self.parties)
         self.t = floor(self.n/3)
         self.pump = pump
-        UCWrappedProtocol.__init__(self, sid, pid, channels, poly, importargs)
+        UCWrappedProtocol.__init__(self, k, sid, pid, channels, poly, importargs)
 
         self.prepared_value = None
         self.echoed = False
