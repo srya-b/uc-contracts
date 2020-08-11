@@ -64,13 +64,12 @@ class Syn_FWrapper(UCWrapper):
         self.delay = 0
         self.todo = { self.curr_round: [] }
         self.leaks = []
-        self.pump = pump
         # TODO keep the round here until something happens
         # alternate theory: the round won't change unless something exists todo
         # in future rounds
         #self.adv_callme(self.curr_round)
         self.total_queue_ever = 0
-        UCWrapper.__init__(self, k, 'wrap', 'me', channels, poly, importargs)
+        UCWrapper.__init__(self, k, 'wrap', 'me', channels, poly, pump, importargs)
 
     def party_clock_round(self, sender):
         self.write( 'w2p', (sender, self.curr_round))

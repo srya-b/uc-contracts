@@ -12,10 +12,9 @@ class Syn_Bracha_Functionality(UCWrappedFunctionality):
         self.ssid = sid[0]
         self.parties = sid[1]
         self.n = len(self.parties)
-        self.pump = pump
         self.round_upper_bound = 5
         self.delta = sid[2] * self.round_upper_bound
-        UCWrappedFunctionality.__init__(self, k, sid, pid, channels, poly, importargs)
+        UCWrappedFunctionality.__init__(self, k, sid, pid, channels, poly, pump, importargs)
 
     def send_output(self, to, msg):
         #self.f2p.write( (to, msg) )
@@ -30,7 +29,7 @@ class Syn_Bracha_Functionality(UCWrappedFunctionality):
                 #self.f2w.write( ('schedule', self.send_output, ((self.sid,p), inp), self.delta), 0)
                 print('scheduling input')
                 self.write('f2w', ('schedule', self.send_output, ((self.sid,p), inp), self.delta), 0)
-                m = wait_for(self.w2f).msg
+                m = wait_for(self.channels['w2f']).msg
                 assert m == ('OK',)
             n = len(self.parties)
             self.leak( ('input', pid, inp), n*(4*n + 1))
@@ -71,7 +70,6 @@ class RBC_Simulator(ITM):
         self.ssid = sid[0]
         self.parties = sid[1]
         self.delta = sid[2]
-        self.pump = pump
         self.prot = prot
 
         # Maintain a copy of the ideal world wrapper queue
@@ -98,7 +96,7 @@ class RBC_Simulator(ITM):
             channels['f2a']: self.func_msg,
         }
 
-        ITM.__init__(self, k, sid, pid, channels, handlers, poly, importargs)
+        ITM.__init__(self, k, sid, pid, channels, handlers, poly, pump, importargs)
 
         # Spawn UC experiment of real world (local to the simulator)
         self.sim_channels,static,_pump = createWrappedUC(k, [('F_chan',Syn_Channel)], wrappedProtocolWrapper(prot), Syn_FWrapper, DummyWrappedAdversary, poly, importargs={'ctx': self.ctx, 'impflag':False})
