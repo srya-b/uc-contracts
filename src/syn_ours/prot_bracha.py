@@ -15,8 +15,7 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
         self.delta = sid[2]
         self.n = len(self.parties)
         self.t = floor(self.n/3)
-        self.pump = pump
-        UCWrappedProtocol.__init__(self, k, sid, pid, channels, poly, importargs)
+        UCWrappedProtocol.__init__(self, k, sid, pid, channels, poly, pump, importargs)
 
         self.prepared_value = None
         self.echoed = False
@@ -31,7 +30,7 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
 
     def clock_round(self):
         self.write('p2w', ('clock-round',), 0)
-        rnd = wait_for(self.w2p).msg[1]
+        rnd = wait_for(self.channels['w2p']).msg[1]
         return rnd
 
     def send_msg(self, to, msg, imp):

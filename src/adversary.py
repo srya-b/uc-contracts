@@ -1,15 +1,17 @@
 import comm
 import gevent
-from itm import ITM
+from itm import ITM, UCAdversary
 from gevent.queue import Queue, Channel, Empty
 from gevent.event import AsyncResult
 
-class DummyAdversary(ITM):
+class DummyAdversary(UCAdversary):
     '''Implementation of the dummy adversary. Doesn't do anything locally,
      just forwards all messages to the intended party. Z communicates with
-     corrupt parties through dummy adversary'''
-    def __init__(self, k, sid, pid, channels, pum, poly, importargs):
-        UCAdversary.__init__(self, sid, pif, channels, poly, importargs)
+    corrupt parties through dummy adversary'''
+    # TODO Dummy tracks v = in - (out + lengths of all inputs) halt if
+    #      v < k
+    def __init__(self, k, sid, pid, channels, pump, poly, importargs):
+        UCAdversary.__init__(self, sid, pid, channels, poly, pump, importargs)
     
     def __str__(self):
         return str(self.F)
@@ -53,7 +55,6 @@ class DummyWrappedAdversary(ITM):
     def __init__(self, k, sid, pid, channels, pump, poly, importargs):
         self.sid = sid
         self.pid = pid
-        self.pump = pump
         self.sender = (sid,pid)
     
         handlers = {
@@ -63,7 +64,7 @@ class DummyWrappedAdversary(ITM):
             channels['w2a']: self.wrapper_msg,
         }
         
-        ITM.__init__(self, k, sid, pid, channels, handlers, poly, importargs)
+        ITM.__init__(self, k, sid, pid, channels, handlers, poly, pump, importargs)
     
     def __str__(self):
         return str(self.F)

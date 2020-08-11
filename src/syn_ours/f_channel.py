@@ -10,8 +10,7 @@ class Syn_Channel(UCWrappedFunctionality):
         self.receiver = sid[2]
         self.round = sid[3]
         self.delta = sid[4]
-        self.pump = pump
-        UCWrappedFunctionality.__init__(self, k, sid, pid, channels, poly, importargs)
+        UCWrappedFunctionality.__init__(self, k, sid, pid, channels, poly, pump, importargs)
         self.leakbuffer = None
 
     def leak(self, msg):
@@ -23,7 +22,7 @@ class Syn_Channel(UCWrappedFunctionality):
     def party_send(self, sender, msg, imp):
         if sender == self.sender:
             self.write( 'f2w', ('schedule', self.send_message, (msg,imp), self.delta), 0)
-            assert wait_for(self.w2f).msg == ('OK',)
+            assert wait_for(self.channels['w2f']).msg == ('OK',)
             self.leak( msg )
             self.write('f2p', (self.sender, 'OK'))
         else:
