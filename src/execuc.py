@@ -110,7 +110,8 @@ def createWrappedUC(k, fs, ps, wrapper, adv, poly, importargs={}):
         for t,c in fs:
             f.newcls(t,c)
         gevent.spawn( f.run )
-        p = ps(k, z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, pump, poly, importargs)
+        #p = ps(k, sid, z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, pump, poly, importargs)
+        p = ps(k, sid, {'z2p':z2p, 'p2z':p2z, 'f2p':f2p, 'p2f':p2f, 'a2p':a2p, 'p2a':p2a, 'w2p':w2p, 'p2w':p2w}, pump, poly, importargs)
         gevent.spawn(p.run)
         # TODO change to wrapped adversray
         advitm = adv(k, sid, -1, adv_channels, pump, poly, importargs)
