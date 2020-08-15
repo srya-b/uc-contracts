@@ -98,8 +98,9 @@ class ITMContext:
             raise Exception("Can't mark any more tokens, you're out!")
 
 class ITM:
-    def __init__(self, k, sid, pid, channels, handlers, poly, pump, importargs):
+    def __init__(self, k, bits, sid, pid, channels, handlers, poly, pump, importargs):
         self.k = k
+        self.bits = bits
         self.sid = sid
         self.pid = pid
         #self.sender = (sid,pid)
@@ -144,6 +145,12 @@ class ITM:
     @spent.setter
     def spent(self, x):
         self.ctx.spent = x
+    @property
+    def isdishonest(self):
+        return comm.isdishonest(self.sid, self.pid)
+    @property
+    def ishonest(self):
+        return not self.isdishonest
 
     def assertimp(self, x, y):
         if self.impflag:
@@ -193,13 +200,13 @@ class ITM:
 
 
 class UCProtocol(ITM):
-    def __init__(self, k, sid, pid, channels):
+    def __init__(self, k, bits, sid, pid, channels):
         self.handlers = {
             channels['z2p'] : self.env_msg,
             channels['f2p'] : self.func_msg,
             channels['a2p'] : self.adv_msg,
         }
-        ITM.__init__(self, sid, pid, channels, self.handlers)
+        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers)
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
@@ -211,13 +218,13 @@ class UCProtocol(ITM):
         Exception("env_msg needs to be defined")
 
 class UCFunctionality(ITM):
-    def __init__(self, k, sid, pid, channels):
+    def __init__(self, k, bits, sid, pid, channels):
         self.handlers = {
             channels['p2f'] : self.party_msg,
             channels['a2f'] : self.adv_msg,
             channels['z2f'] : self.env_msg
         }
-        ITM.__init__(self, sid, pid, channels, self.handlers)
+        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers)
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
@@ -229,13 +236,13 @@ class UCFunctionality(ITM):
         Exception("env_msg needs to be defined")
 
 class UCAdversary(ITM):
-    def __init__(self, k, sid, pid, channels, poly, pump, importargs):
+    def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
         self.handlers = {
             channels['p2a'] : self.party_msg,
             channels['f2a'] : self.func_msg,
             channels['z2a'] : self.env_msg
         }
-        ITM.__init__(self, k, sid, pid, channels, self.handlers, poly, pump, importargs)
+        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
 
     def party_msg(self, d):
         Exception("party_msg needs to be implemented")
@@ -247,14 +254,14 @@ class UCAdversary(ITM):
         Exception("env_msg needs to be implemented")
 
 class UCWrappedFunctionality(ITM):
-    def __init__(self, k, sid, pid, channels, poly, pump, importargs):
+    def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
         self.handlers = {
             channels['z2f'] : self.env_msg,
             channels['p2f'] : self.party_msg,
             channels['a2f'] : self.adv_msg,
             channels['w2f'] : self.wrapper_msg,
         }
-        ITM.__init__(self, k, sid, pid, channels, self.handlers, poly, pump, importargs)
+        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
@@ -273,14 +280,14 @@ class UCWrappedFunctionality(ITM):
         self.write('f2w', ('leak',msg), imp)
 
 class UCWrappedProtocol(ITM):
-    def __init__(self, k, sid, pid, channels, poly, pump, importargs):
+    def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
         self.handlers = {
             channels['z2p'] : self.env_msg,
             channels['f2p'] : self.func_msg,
             channels['a2p'] : self.adv_msg,
             channels['w2p'] : self.wrapper_msg,
         }
-        ITM.__init__(self, k, sid, pid, channels, self.handlers, poly, pump, importargs)
+        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
@@ -298,14 +305,14 @@ class UCWrappedProtocol(ITM):
         Exception("leak needs to be defined")
 
 class UCWrapper(ITM):
-    def __init__(self, k, sid, pid, channels, poly, pump, importargs):
+    def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
         self.handlers = {
             channels['z2w'] : self.env_msg,
             channels['f2w'] : self.func_msg,
             channels['a2w'] : self.adv_msg,
             channels['p2w'] : self.party_msg,
         }
-        ITM.__init__(self, k, sid, pid, channels, self.handlers, poly, pump, importargs)
+        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
@@ -323,8 +330,8 @@ class UCWrapper(ITM):
         Exception("leak needs to be defined")
 
 class UCAsyncWrappedFunctionality(UCWrappedFunctionality):
-    def __init__(self, k, sid, pid, channels):
-        UCWrappedFunctionality.__init__(self, sid, pid, channels)
+    def __init__(self, k, bits, sid, pid, channels):
+        UCWrappedFunctionality.__init__(self, k, bits, sid, pid, channels)
         
     def leak(self, msg):
         self.f2w(("leak", msg))
@@ -333,44 +340,37 @@ class UCAsyncWrappedFunctionality(UCWrappedFunctionality):
         self.f2w(("eventually", msg))
         
 class UCAsyncWrappedProtocol(UCWrappedProtocol):
-    def __init__(self, k, sid, pid, channels):
-        UCWrappedProtocol.__init__(self, sid, pid, channels)
+    def __init__(self, k, bits, sid, pid, channels):
+        UCWrappedProtocol.__init__(self, k, bits, sid, pid, channels)
         
     def leak(self, msg):
         dump.dump() # should not generally happen
         
     def eventually(self, msg):
         dump.dump() # should not generally happen
-        
-class ITMFunctionality(object):
-    #def __init__(self, sid, pid, a2f, f2a, z2f, f2z, p2f, f2p, _2f, f2_):
-    def __init__(self, sid, pid, channels, handlers):
-        self.sid = sid; self.pid = pid
-        self.sender = (sid,pid)
-        self.channels = channels
-        self.handlers = handlers
-
        
-    def __str__(self):
-        return str(self.F)
 
-    def init(self, functionality):
-        self.F = functionality
-        self.outputs = self.F.outputs
-    def run(self):
-        while True:
-            ready = gevent.wait(
-                objects=self.channels,
-                count=1
-            )
-            assert len(ready) == 1
-            r = ready[0]
-            msg = r.read()
-            r.reset()
-            self.handlers[r](msg)
+class DummyParty(ITM):
+    def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
+        self.hanlers = {
+            channels['z2p'] : self.env_msg,
+            channels['a2p'] : self.adv_msg,
+            channels['f2p'] : self.func_msg
+        }
+        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
+
+    def adv_msg(self, msg):
+        if self.ishonest:
+            raise Exception("adv writing to honest party")
+        self.write('p2f', d.msg, d.imp)
+
+    def env_msg(self, msg):
+        if self.isdishonest:
+            raise Exception("env writing to a corrupt party")
+        self.write('p2f', d.msg, d.imp)
 
 class ITMPassthrough(object):
-    def __init__(self, sid, pid, a2p, p2a, z2p, p2z, f2p, p2f):
+    def __init__(self, k, bits, sid, pid, a2p, p2a, z2p, p2z, f2p, p2f):
         self.sid = sid
         self.pid = pid
         self.sender = (sid,pid)
@@ -577,6 +577,46 @@ class ITMSyncCruptProtocol(object):
                     self.p2a.write( msg )
             else:
                 print('else dumping somewhere ive never been'); dump.dump()
+
+
+class WrappedDummyParty(ITM):
+    def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
+        self.handlers = {
+            channels['z2p'] : self.env_msg,
+            channels['a2p'] : self.adv_msg,
+            channels['f2p'] : self.func_msg,
+            channels['w2p'] : self.wrapper_msg
+        }
+        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
+
+    def adv_msg(self, d):
+        if self.ishonest:
+            raise Exception("adv writing to honest party")
+        tag,msg = d.msg
+        if tag == 'P2F':
+            self.write('p2f', msg, d.imp)
+        elif tag == 'P2W':
+            self.write('p2w', msg, d.imp)
+        else:
+            raise Exception("adv message without tag: {}".format(d.msg))
+
+    def env_msg(self, d):
+        if self.isdishonest:
+            raise Exception("env writing to a corrupt party")
+        self.write('p2f', d.msg, d.imp)
+
+    def func_msg(self, d):
+        fro,msg = d.msg
+        if self.ishonest:
+            self.write('p2z', msg, d.imp)
+        else:
+            self.write('p2a', msg, d.imp)
+
+    def wrapper_msg(self, d):
+        if self.ishonest:
+            self.write('p2z', d.msg, d.imp)
+        else:
+            self.write('p2a', d.msg, d.imp)
 
 class ITMWrappedPassthrough(ITM):
     def __init__(self, k, sid, pid, a2p, p2a, z2p, p2z, f2p, p2f, w2p, p2w, pump, poly, importargs):
@@ -834,13 +874,12 @@ class ProtocolWrapper:
         print('Its over??')
 
 def wrappedPartyWrapper(tof):
-    def f(k, sid, channels, pump, poly, importargs):
-        return WrappedPartyWrapper(k, sid, channels, pump, tof, poly, importargs)
+    def f(k, bits, sid, channels, pump, poly, importargs):
+        return WrappedPartyWrapper(k, bits, sid, channels, pump, tof, poly, importargs)
     return f
 
 class WrappedPartyWrapper(ITM):
-    #def __init__(self, k, sid, z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, pump, tof, poly, importargs):
-    def __init__(self, k, sid, channels, pump, tof, poly, importargs):
+    def __init__(self, k, bits, sid, channels, pump, tof, poly, importargs):
         self.z2pid = {}
         self.f2pid = {}
         self.a2pid = {}
@@ -854,7 +893,7 @@ class WrappedPartyWrapper(ITM):
             channels['f2p']: self.func_msg,
             channels['w2p']: self.wrapper_msg,
         }
-        ITM.__init__(self, k, sid, None, channels, self.handlers, poly, pump, importargs)
+        ITM.__init__(self, k, bits, sid, None, channels, self.handlers, poly, pump, importargs)
 
     def _newPID(self, sid, pid, _2pid, p2_, tag):
         pp2_ = GenChannel(('write-translate',sid,pid))
@@ -882,10 +921,10 @@ class WrappedPartyWrapper(ITM):
         _a2p,_p2a = self._newPID(sid, pid, self.a2pid, self.channels['p2a'], 'NA')
         _w2p,_p2w = self._newPID(sid, pid, self.w2pid, self.channels['p2w'], 'NA')
         
-        if comm.isdishonest(sid,pid):
-            itm = ITMCruptWrappedPassthrough(self.k, self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f, _w2p, _p2w, self.pump, self.poly, self.importargs)
-        else:
-            itm = ITMWrappedPassthrough(self.k, self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f, _w2p, _p2w, self.pump, self.poly, self.importargs)
+        #if comm.isdishonest(sid,pid):
+        #    itm = ITMCruptWrappedPassthrough(self.k, self.bits, self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f, _w2p, _p2w, self.pump, self.poly, self.importargs)
+        #else:
+        itm = WrappedDummyParty(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p,'p2f':_p2f, 'w2p':_w2p,'p2w':_p2w}, self.poly, self.pump, self.importargs)
         setParty(itm)
         gevent.spawn(itm.run)
 
@@ -929,12 +968,12 @@ class WrappedPartyWrapper(ITM):
         self.pump.write('dump')
 
 def wrappedProtocolWrapper(prot):
-    def f(k, sid, channels, pump, poly, importargs):
-        return WrappedProtocolWrapper(k, sid, channels, pump, prot, poly, importargs)
+    def f(k, bits, sid, channels, pump, poly, importargs):
+        return WrappedProtocolWrapper(k, bits, sid, channels, pump, prot, poly, importargs)
     return f
 
 class WrappedProtocolWrapper(ITM):
-    def __init__(self, k, sid, channels, pump, prot, poly, importargs):
+    def __init__(self, k, bits, sid, channels, pump, prot, poly, importargs):
         self.z2pid = {}
         self.f2pid = {}
         self.a2pid = {}
@@ -949,7 +988,7 @@ class WrappedProtocolWrapper(ITM):
             channels['f2p'] : self.func_msg,
             channels['w2p'] : self.wrapper_msg
         }
-        ITM.__init__(self, k, sid, None, channels, self.handlers, poly, pump, importargs)
+        ITM.__init__(self, k, bits, sid, None, channels, self.handlers, poly, pump, importargs)
 
     def _newPID(self, sid, pid, _2pid, p2_, tag):
         pp2_ = GenChannel(('write-translate',sid,pid)) 
@@ -974,9 +1013,10 @@ class WrappedProtocolWrapper(ITM):
        
         # TODO add wrapped passthrough party
         if comm.isdishonest(sid, pid):
-            p = ITMCruptWrappedPassthrough(self.k, self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f, _w2p, _p2w, self.pump, self.poly, self.importargs)
+            #p = ITMCruptWrappedPassthrough(self.k, self.bits, self.sid, pid, _a2p, _p2a, _z2p, _p2z, _f2p, _p2f, _w2p, _p2w, self.pump, self.poly, self.importargs)
+            p = WrappedDummyParty(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p,'p2f':_p2f, 'w2p':_w2p,'p2w':_p2w}, self.poly, self.pump, self.importargs)
         else:
-            p = self.prot(self.k, self.sid, pid, {'p2f':_p2f, 'f2p':_f2p, 'p2a':_p2a, 'a2p':_a2p, 'p2z':_p2z, 'z2p':_z2p, 'p2w':_p2w, 'w2p':_w2p}, self.pump, self.poly, self.importargs)
+            p = self.prot(self.k, self.bits, self.sid, pid, {'p2f':_p2f, 'f2p':_f2p, 'p2a':_p2a, 'a2p':_a2p, 'p2z':_p2z, 'z2p':_z2p, 'p2w':_p2w, 'w2p':_w2p}, self.pump, self.poly, self.importargs)
         setParty(p)
         gevent.spawn(p.run)
 
@@ -1103,8 +1143,9 @@ class FunctionalityWrapper:
                 dump.dump()
 
 class WrappedFunctionalityWrapper:
-    def __init__(self, k, p2f, f2p, a2f, f2a, z2f, f2z, w2f, f2w, pump, poly, importargs):
+    def __init__(self, k, bits, p2f, f2p, a2f, f2a, z2f, f2z, w2f, f2w, pump, poly, importargs):
         self.k = k
+        self.bits = bits
         self.z2fid = {}
         self.p2fid = {}
         self.a2fid = {}
@@ -1153,7 +1194,7 @@ class WrappedFunctionalityWrapper:
         _2f,_f2_ = self._newFID(self.f2fid, self.f2_, sid, tag)
       
         #f = cls(sid, -1, _f2p, _p2f, _f2a, _a2f, _f2z, _z2f, _f2w, _w2f)
-        f = cls(self.k, sid, -1, {'f2p':_f2p, 'p2f':_p2f, 'f2a':_f2a, 'a2f':_a2f, 'f2z':_f2z, 'z2f':_z2f, 'f2w':_f2w, 'w2f':_w2f}, self.pump, self.poly, self.importargs)
+        f = cls(self.k, self.bits, sid, -1, {'f2p':_f2p, 'p2f':_p2f, 'f2a':_f2a, 'a2f':_a2f, 'f2z':_f2z, 'z2f':_z2f, 'f2w':_f2w, 'w2f':_w2f}, self.pump, self.poly, self.importargs)
         setFunctionality2(sid,tag)
         gevent.spawn(f.run)
 
@@ -1179,6 +1220,7 @@ class WrappedFunctionalityWrapper:
                 d = r.read()
                 ((_sid,_pid), msg) = d.msg
                 self.p2f.reset()
+                print('d.msg', d.msg)
                 ((__sid,_tag), msg) = msg
                 _fid = self.getFID(self.p2fid, __sid, _tag)
                 _fid.write( ((_sid,_pid), msg), d.imp)

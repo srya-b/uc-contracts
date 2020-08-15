@@ -59,7 +59,7 @@ Adversary Interface
 -- 
 '''
 class Syn_FWrapper(UCWrapper):
-    def __init__(self, k, channels, pump, poly, importargs):
+    def __init__(self, k, bits, channels, pump, poly, importargs):
         self.curr_round = 1
         self.delay = 0
         self.todo = { self.curr_round: [] }
@@ -69,7 +69,7 @@ class Syn_FWrapper(UCWrapper):
         # in future rounds
         #self.adv_callme(self.curr_round)
         self.total_queue_ever = 0
-        UCWrapper.__init__(self, k, 'wrap', 'me', channels, poly, pump, importargs)
+        UCWrapper.__init__(self, k, bits, 'wrap', 'me', channels, poly, pump, importargs)
 
     def party_clock_round(self, sender):
         self.write( 'w2p', (sender, self.curr_round))
