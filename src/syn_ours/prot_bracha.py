@@ -9,13 +9,13 @@ log = logging.getLogger(__name__)
 
 class Syn_Bracha_Protocol(UCWrappedProtocol):
     #def __init__(self, sid, pid, channels):
-    def __init__(self, k, sid, pid, channels, pump, poly, importargs):
+    def __init__(self, k, bits, sid, pid, channels, pump, poly, importargs):
         self.ssid = sid[0]
         self.parties = sid[1]
         self.delta = sid[2]
         self.n = len(self.parties)
         self.t = floor(self.n/3)
-        UCWrappedProtocol.__init__(self, k, sid, pid, channels, poly, pump, importargs)
+        UCWrappedProtocol.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
 
         self.prepared_value = None
         self.echoed = False

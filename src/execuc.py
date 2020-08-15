@@ -3,6 +3,7 @@ from comm import setAdversary
 from utils import z_crupt
 import gevent
 from numpy.polynomial.polynomial import Polynomial
+import random, os
 
 #def createUC(fs, pwrapper, prot, adv):
 def createUC(fs, ps, pwrapper, adv, poly, importargs={}):
@@ -27,6 +28,9 @@ def createUC(fs, ps, pwrapper, adv, poly, importargs={}):
     channels.update(wrapper_channels)
    
     static = GenChannel('static')
+
+    # initialize random bits
+    rng = random.Random(os.urandom(32))
     
     def _exec():
         r = gevent.wait( objects=[static], count=1)[0]
@@ -88,6 +92,7 @@ def createWrappedUC(k, fs, ps, wrapper, adv, poly, importargs={}):
     channels.update(wrapper_channels)
 
     static = GenChannel()
+    rng = random.Random(os.urandom(32))
     
     def _exec():
         r = gevent.wait( objects=[static], count=1)[0]
@@ -103,18 +108,18 @@ def createWrappedUC(k, fs, ps, wrapper, adv, poly, importargs={}):
         for _s,_p in crupt_msg[1:]:
             z_crupt(_s,_p)
 
-        w = wrapper(k, {'f2w':f2w, 'w2f':w2f, 'p2w':p2w, 'w2p':w2p, 'a2w':a2w, 'w2a':w2a, 'z2w':z2w, 'w2z':w2z}, pump, poly, importargs)
+        w = wrapper(k, rng, {'f2w':f2w, 'w2f':w2f, 'p2w':p2w, 'w2p':w2p, 'a2w':a2w, 'w2a':w2a, 'z2w':z2w, 'w2z':w2z}, pump, poly, importargs)
         gevent.spawn(w.run)
 
-        f = WrappedFunctionalityWrapper(k, p2f, f2p, a2f, f2a, z2f, f2z, w2f, f2w, pump, poly, importargs)
+        f = WrappedFunctionalityWrapper(k, rng, p2f, f2p, a2f, f2a, z2f, f2z, w2f, f2w, pump, poly, importargs)
         for t,c in fs:
             f.newcls(t,c)
         gevent.spawn( f.run )
         #p = ps(k, sid, z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, pump, poly, importargs)
-        p = ps(k, sid, {'z2p':z2p, 'p2z':p2z, 'f2p':f2p, 'p2f':p2f, 'a2p':a2p, 'p2a':p2a, 'w2p':w2p, 'p2w':p2w}, pump, poly, importargs)
+        p = ps(k, rng, sid, {'z2p':z2p, 'p2z':p2z, 'f2p':f2p, 'p2f':p2f, 'a2p':a2p, 'p2a':p2a, 'w2p':w2p, 'p2w':p2w}, pump, poly, importargs)
         gevent.spawn(p.run)
         # TODO change to wrapped adversray
-        advitm = adv(k, sid, -1, adv_channels, pump, poly, importargs)
+        advitm = adv(k, rng, sid, -1, adv_channels, pump, poly, importargs)
         setAdversary(advitm)
         gevent.spawn(advitm.run)
 
