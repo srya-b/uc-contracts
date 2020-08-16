@@ -751,21 +751,21 @@ class ProtocolWrapper(ITM):
         imp = d.imp
         ((sid,pid), msg) = msg
         _pid = self.getPID(self.z2pid,sid,pid)
-        _pid.write(msg)
+        _pid.write(msg, imp)
     
     def func_msg(self, d):
         msg = d.msg
         imp = d.imp
         (fro, ((sid,pid), msg)) = msg
         _pid = self.getPID(self.f2pid, sid, pid)
-        _pid.write( (fro, msg) )
+        _pid.write( (fro, msg), imp )
 
     def adv_msg(self, d):
         msg = d.msg
         imp = d.imp
         (sid,pid), msg = msg
         _pid = self.getPID(self.a2pid, sid, pid)
-        _pid.write( msg )
+        _pid.write( msg, imp )
 
 def wrappedPartyWrapper(tof):
     def f(k, bits, sid, channels, pump, poly, importargs):
@@ -863,37 +863,13 @@ def wrappedProtocolWrapper(prot):
         return WrappedProtocolWrapper(k, bits, sid, channels, pump, prot, poly, importargs)
     return f
 
-class WrappedProtocolWrapper(ITM):
+class WrappedProtocolWrapper(ProtocolWrapper):
     def __init__(self, k, bits, sid, channels, pump, prot, poly, importargs):
-        self.z2pid = {}
-        self.f2pid = {}
-        self.a2pid = {}
-        self.p2pid = {}
         self.w2pid = {}
-        self.prot = prot
         self.log = logging.getLogger('WrappedProtocolWrapper')
-        self.importargs = importargs
-        self.handlers = {
-            channels['z2p'] : self.env_msg,
-            channels['a2p'] : self.adv_msg,
-            channels['f2p'] : self.func_msg,
-            channels['w2p'] : self.wrapper_msg
-        }
-        ITM.__init__(self, k, bits, sid, None, channels, self.handlers, poly, pump, importargs)
+        ProtocolWrapper.__init__(self, k, bits, sid, channels, pump, prot, poly, importargs)
+        self.handlers[channels['w2p']] = self.wrapper_msg
 
-    def _newPID(self, sid, pid, _2pid, p2_, tag):
-        pp2_ = GenChannel(('write-translate',sid,pid)) 
-        _2pp = GenChannel(('read',sid,pid)) # _ to 
-
-        def _translate():
-            while True:
-                r = gevent.wait(objects=[pp2_],count=1)
-                m = r[0].read()
-                pp2_.reset('pp2_ translate reset')
-                p2_.write( ((sid,pid), m.msg), m.imp )
-        gevent.spawn(_translate)
-        _2pid[sid,pid] = _2pp
-        return (_2pp, pp2_) 
 
     def newPID(self, sid, pid):
         self.log.debug('\033[1m[WrappedProtocol {}]\033[0m Creating new party with pid: {}'.format('PWrapper', pid))
@@ -916,28 +892,6 @@ class WrappedProtocolWrapper(ITM):
             assert sid == self.sid
             self.newPID(sid,pid)
             return _2pid[sid,pid]
-
-    def env_msg(self, d):
-        msg = d.msg
-        imp = d.imp
-        ((sid,pid), msg) = msg
-        _pid = self.getPID(self.z2pid, sid, pid)
-        _pid.write(msg, imp)
-
-    def func_msg(self, d):
-        msg = d.msg
-        imp = d.imp
-        (fro, ((sid,pid),msg)) = msg
-        _pid = self.getPID(self.f2pid, sid, pid)
-        _pid.write( (fro,msg), imp)
-
-    def adv_msg(self, d):
-        msg = d.msg
-        imp = d.imp
-        (sid,pid),msg = msg
-        if comm.ishonest(sid,pid): raise Exception
-        _pid = self.getPID(self.a2pid, sid, pid)
-        _pid.write( msg, imp )
 
     def wrapper_msg(self, d):
         msg = d.msg
