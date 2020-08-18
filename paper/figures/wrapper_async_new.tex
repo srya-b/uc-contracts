@@ -18,12 +18,28 @@ Initialize $\msf{leakbuffer} := \emptyset, \msf{runqueue} := \emptyset, \msf{del
 	\quad Append ($\mathcal{F}$, (\textsc{Eventually}, \textsf{leak\_msg})) to \textsf{leakbuffer}
 	
 	\quad Send \textsc{OK} to $\mathcal{F}$
+
+\OnInput (\textsc{EventuallySend}, \textsf{to}, \textsf{msg}, \textsf{leak\_msg}) from $\mathcal{F}$:
+	
+	\quad Append (\textsc{send}, $\mathcal{F}$, \textsf{to}, \textsf{msg}) to \textsf{runqueue}
+
+	\quad Append (\textsc{send}, (\textsc{EventuallySend}, \textsf{leak\_msg})) to \textsf{leakbuffer}
+
+	\quad Send \textsc{OK} to $\mathcal{F}$
 	
 \OnInput (\textsc{Execute}, \msf{idx}) from $\mathcal{A}$:
 
-	\quad ($\mathcal{F}$, \textsf{func\_ptr}, \textsf{args}) $\leftarrow$ pop \textsf{runqueue[idx]}
+	\quad $e \leftarrow$ pop \textsf{runqueue[idx]}
+
+	\quad Match $e$:
+
+		\qquad ($\mathcal{F}$, \textsf{func\_ptr}, \textsf{args}):
 	
-	\quad Send (\textsf{func\_ptr}, \textsf{args}) to $\mathcal{F}$
+		\qqquad Send (\textsf{func\_ptr}, \textsf{args}) to $\mathcal{F}$
+	
+		\qquad (\textsc{send}, $\mathcal{F}$, \textsf{to}, \textsf{msg}):
+			
+		\qqquad Send ($\mathcal{F}$, \textsf{msg}) to \textsf{to}
 	
 \OnInput \textsc{GetLeaks} from $\mathcal{A}$:
 
@@ -43,9 +59,11 @@ Initialize $\msf{leakbuffer} := \emptyset, \msf{runqueue} := \emptyset, \msf{del
 	
 	\quad If $\msf{delay} == 0$ and $\msf{runqueue}$ is non-empty:
 	
-		\qquad ($\mathcal{F}$, \textsf{func\_ptr}, \textsf{args}) $\leftarrow$ pop $\msf{runqueue}[0]$
+		%\qquad ($\mathcal{F}$, \textsf{func\_ptr}, \textsf{args}) $\leftarrow$ pop $\msf{runqueue}[0]$
 		
-		\qquad Send (\textsf{func\_ptr}, \textsf{args}) to $\mathcal{F}$
+		%\qquad Send (\textsf{func\_ptr}, \textsf{args}) to $\mathcal{F}$
+
+		\qquad exec subroutine for message (\textsc{Execute}, 0)
 	
 	\quad Else:
 	
