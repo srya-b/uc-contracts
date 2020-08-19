@@ -80,14 +80,16 @@ def fwd(ch1, ch2):
     gevent.spawn(foo, ch1, ch2)
 
 class ITMContext:
-    def __init__(self):
+    def __init__(self, poly):
         self.imp_in = 0
         self.imp_out = 0
         self.spent = 0
         self.marked = 0
+        self.poly = poly
     
     def tick(self, poly, n):
-        if poly(self.marked) < self.spent + n:
+        #if poly(self.marked) < self.spent + n:
+        if self.poly(self.marked) < self.spent + n:
             self.generate_pot(1)
         self.spent += 1
 
@@ -111,7 +113,7 @@ class ITM:
         self.importargs = importargs
 
         if 'ctx' not in importargs:
-            self.ctx = ITMContext()
+            self.ctx = ITMContext(self.poly)
         else:
             self.ctx = importargs['ctx']
         if 'impflag' in importargs:
@@ -166,7 +168,8 @@ class ITM:
                 self.imp_out += imp
                 self.channels[ch].write(msg, imp)
             else:
-                raise WriteImportError((self.sid,self.pid), msg, imp)
+                #raise WriteImportError((self.sid,self.pid), msg, imp)
+                raise Exception("out of import")
         else:
             self.channels[ch].write(msg, 0)
 
@@ -378,7 +381,7 @@ class DummyParty(ITM):
 
     def func_msg(self, d):
         if self.isdishonest:
-            self.write('p2a', d.msg, d.imp)
+            self.write('p2a', d.msg, 0)
         else:
             self.write('p2z', d.msg, d.imp)
 

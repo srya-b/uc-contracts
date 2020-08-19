@@ -23,10 +23,10 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     gevent.spawn(_p2z)
     gevent.spawn(_a2z)
 
-    z2p.write( ((sid,1), ('commit',0)) )
+    z2p.write( ((sid,1), ('commit',0)), 3 )
     waits(pump)
 
-    z2p.write( ((sid,1), ('reveal',)) )
+    z2p.write( ((sid,1), ('reveal',)), 1 )
     waits(pump)
 
     print('transcript', transcript)
@@ -54,13 +54,13 @@ def env2(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     gevent.spawn(_p2z)
     gevent.spawn(_a2z)
 
-    z2p.write( ((sid,1), ('commit',0)) )
+    z2p.write( ((sid,1), ('commit',0)), 3)
     waits(pump)
 
-    z2p.write( ((sid,1), ('reveal',)) )
+    z2p.write( ((sid,1), ('reveal',)), 1)
     waits(pump)
 
-    print('transcript', transcript)
+    #print('transcript', transcript)
     return transcript
 
 def distinguisher(t_ideal, t_real):
@@ -83,6 +83,7 @@ from numpy.polynomial.polynomial import Polynomial
 from f_com import F_Com
 from sim_com import Sim_Com
 from itm import PartyWrapper, partyWrapper
+from lemmaS import Lemma_Simulator, lemmaS
 
 if __name__=='__main__':
     treal = execUC(
@@ -101,7 +102,7 @@ if __name__=='__main__':
         env2,
         [('F_ro',F_Com)],
         partyWrapper('F_ro'),
-        Sim_Com,
+        lemmaS(Sim_Com, DummyAdversary),
         poly=Polynomial([1,2,3,3])
     )
 
