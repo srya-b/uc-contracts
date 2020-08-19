@@ -17,7 +17,6 @@ class Syn_Bracha_Functionality(UCWrappedFunctionality):
         UCWrappedFunctionality.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
 
     def send_output(self, to, msg):
-        #self.f2p.write( (to, msg) )
         self.write('f2p', (to, msg) )
 
     '''Dealer, assumed to be pid=1 gives some input and invokes
@@ -47,7 +46,7 @@ class Syn_Bracha_Functionality(UCWrappedFunctionality):
             self.party_input(pid, msg[1])
         elif msg[0] == 'output':
             self.party_output(pid)
-        else: self.pump.write("dump")#dump.dump()
+        else: self.pump.write("dump")
 
     def wrapper_msg(self, msg):
         self.pump.write("dump")

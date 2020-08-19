@@ -10,8 +10,8 @@ class DummyAdversary(UCAdversary):
     corrupt parties through dummy adversary'''
     # TODO Dummy tracks v = in - (out + lengths of all inputs) halt if
     #      v < k
-    def __init__(self, k, sid, pid, channels, pump, poly, importargs):
-        UCAdversary.__init__(self, sid, pid, channels, poly, pump, importargs)
+    def __init__(self, k, bits, sid, pid, channels, pump, poly, importargs):
+        UCAdversary.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
     
     def __str__(self):
         return str(self.F)

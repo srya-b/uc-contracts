@@ -6,7 +6,7 @@ from numpy.polynomial.polynomial import Polynomial
 import random, os
 
 #def createUC(fs, pwrapper, prot, adv):
-def createUC(fs, ps, pwrapper, adv, poly, importargs={}):
+def createUC(k, fs, ps, adv, poly, importargs={}):
     f2p,p2f = GenChannel('f2p'),GenChannel('p2f')
     f2a,a2f = GenChannel('f2a'),GenChannel('a2f')
     f2z,z2f = GenChannel('f2z'),GenChannel('z2f')
@@ -25,7 +25,6 @@ def createUC(fs, ps, pwrapper, adv, poly, importargs={}):
     channels.update(func_channels)
     channels.update(party_channels)
     channels.update(adv_channels)
-    channels.update(wrapper_channels)
    
     static = GenChannel('static')
 
@@ -46,23 +45,24 @@ def createUC(fs, ps, pwrapper, adv, poly, importargs={}):
         for _s,_p in crupt_msg[1:]:
             z_crupt(_s,_p)
 
-        f = FunctionalityWrapper(p2f, f2p, a2f, f2a, z2f, f2z, pump, poly, importargs)
+        f = FunctionalityWrapper(k, rng, sid, func_channels, pump, poly, importargs)
         for t,c in fs:
             f.newcls(t,c)
         gevent.spawn( f.run )
-        p = ps(z2p, p2z, f2p, p2f, a2p, p2a, pump, poly, importargs)
+        p = ps(k, rng, sid, party_channels, pump, poly, importargs)
+
         gevent.spawn(p.run)
         # TODO change to wrapped adversray
-        advitm = adv(sid, -1, adv_channels, pump, poly, importargs)
+        advitm = adv(k, rng, sid, -1, adv_channels, pump, poly, importargs)
         setAdversary(advitm)
         gevent.spawn(advitm.run)
     
     gevent.spawn(_exec)
     return channels,static,pump
 
-def execUC(env, fs, pwrapper, prot, adv):
-    c,static,pump = createUC(fs, ps, adv, poly)
-    return env(static, c['z2p'], c['z2f'], c['z2a'], c['a2z'], c['p2z'], c['f2z'], pump)
+def execUC(k, env, fs, ps, adv, poly):
+    c,static,pump = createUC(k, fs, ps, adv, poly)
+    return env(k, static, c['z2p'], c['z2f'], c['z2a'], c['a2z'], c['f2z'], c['p2z'], pump)
 
 #def createWrappedUC(fs, ps, wrapper, prot, adv, poly):
 def createWrappedUC(k, fs, ps, wrapper, adv, poly, importargs={}):
