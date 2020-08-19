@@ -55,7 +55,7 @@ class Sim_Com(ITM):
         msg = m.msg
         imp = m.imp
         fro,msg = msg
-        print('adv party message')
+        print('adv party message', m)
         if isdishonest(self.sid, self.receiver) and fro == (self.sid, self.receiver):
             if msg == 'commit' and self.receiver_state == 1:
                 self.receiver_random = self.sample(self.k)
