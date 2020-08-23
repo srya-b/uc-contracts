@@ -28,7 +28,7 @@ class Sim_Com(ITM):
 
     def env_msg(self, m):
         msg = m.msg
-        imp = d.imp
+        imp = m.imp
         if msg[0] == 'A2F':
             t,msg,iprime = msg
             if msg[0] == 'ro':
