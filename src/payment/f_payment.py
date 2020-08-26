@@ -21,28 +21,41 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
     def init_channel(self, _from, amount):
         if not self.isOpen:
             self.leak('f2a', ('init', (_from, amount)), 0)
-            self.balances[_from] += amount
+            self.balances[_from] += amount # TODO: needs delay
             self.isOpen = True
 
     def close_channel(self, _from):
         if self.isOpen:
             self.leak('f2a', ('close', (_from)), 0)
-            self.write('f2w', ('withdrawAll', _from, self.n, self.balances))
-            self.balances = [0] * self.n
+            self.write('f2w', ('schedule', withdraw(), (_from, self.n, self.balances), delay)) # write a codeblock to wrapper, asking wrapper to schedule this codeblock (for now, all codeblocks are executed in wrapper)
+            self.balances = [0] * self.n # move this to an action that should be done in wrapper
             self.isOpen = False
 
     def pay(self, _from, _to, amount):
         if self.balances[_from] < amount:
-            self.write('f2w', ('pay_fail', sender, amount))
+            self.write('f2w', ('pay_fail', sender, amount)) # TODO: write to wrapper, asking a scheduler to do this action
             return
-        self.balances[_from] -=  amount
-        self.balances[_to] += amount
+        self.balances[_from] -=  amount # move this to an action that should be done in wrapper
+        self.balances[_to] += amount # move this to an action that should be done in wrapper
         self.leak('f2a', ('pay', (_from, _to, amount)), 0)
 
     def read_balance(self, _from):
         amount = self.balances[_from]
         self.write('f2p', ('read_balance', _from, amount))
-        self.leak('f2a', ('read_balance', (_from, amount)), 0)
+        # self.leak('f2a', ('read_balance', (_from, amount)), 0) -> no need to leak to adversary, pointless
+
+    # the handler bound on p2f channel, handling message from parties
+    def party_msg(sef, msg):
+        if msg['msg'] == 'init':
+            pass
+        elif msg['msg'] == 'close':
+            pass
+        elif msg['msg'] == 'pay':
+            pass
+        elif msg['msg'] == 'read':
+            pass
+        else:
+            self.pump.write("pump")
 
     def wrapper_msg(self, msg):
         self.pump.write("dump")
