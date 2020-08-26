@@ -51,9 +51,19 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
 
     def close_channel(self, _from):
         if self.isOpen:
-            self.leak('f2a', ('close', (_from)), 0)
-            self.write('f2w', ('schedule', withdraw(), (_from, self.n, self.balances), delay)) # write a codeblock to wrapper, asking wrapper to schedule this codeblock (for now, all codeblocks are executed in wrapper)
-            self.balances = [0] * self.n # move this to an action that should be done in wrapper
+            delay = 0 # some delay of time
+            codeblock = (
+                'schedule'
+                self.__all_withdraw_all,
+                (),
+                delay
+            )
+            self.write('f2w', codeblock)
+            m = wait_for(self.channels['w2f']).msg
+            assert m == ('OK',)
+
+            leaked_msg = ('close', (_from))
+            self.leak('f2a', leaked_msg, 0)
             self.isOpen = False
 
     def pay(self, _from, _to, amount):
