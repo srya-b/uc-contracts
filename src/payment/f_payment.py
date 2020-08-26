@@ -67,12 +67,21 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
             self.isOpen = False
 
     def pay(self, _from, _to, amount):
-        if self.balances[_from] < amount:
-            self.write('f2w', ('pay_fail', sender, amount)) # TODO: write to wrapper, asking a scheduler to do this action
-            return
-        self.balances[_from] -=  amount # move this to an action that should be done in wrapper
-        self.balances[_to] += amount # move this to an action that should be done in wrapper
-        self.leak('f2a', ('pay', (_from, _to, amount)), 0)
+        if self.balances[_from] < amount: return
+
+        delay = 0 # some delay of time
+        codeblock = (
+            'schedule'
+            self.__pay,
+            (_from, _to, amount),
+            delay
+        )
+        self.write('f2w', codeblock)
+        m = wait_for(self.channels['w2f']).msg
+        assert m == ('OK',)
+
+        leaked_msg = ('pay', (_from, _to, amount))
+        self.leak('f2a', leaked_msg, 0)
 
     def read_balance(self, _from):
         amount = self.balances[_from]
