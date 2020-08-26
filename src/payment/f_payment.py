@@ -85,8 +85,9 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
 
     def read_balance(self, _from):
         amount = self.balances[_from]
-        self.write('f2p', ('read_balance', _from, amount))
-        # self.leak('f2a', ('read_balance', (_from, amount)), 0) -> no need to leak to adversary, pointless
+        msg = ('read_balance', (_from, amount)) # donna if the format is right
+        self.write('f2p', msg)
+        # no need to leak to adversary, pointless
 
     # the handler bound on p2f channel, handling message from parties
     def party_msg(sef, msg):
