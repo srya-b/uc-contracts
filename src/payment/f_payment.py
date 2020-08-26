@@ -18,6 +18,20 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         self.isOpen = False # if there's a payment channel open
         UCWrappedFunctionality.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
 
+    def __deposit(self, _from, _amount):
+        self.balances[_from] += _amount
+
+    def __withdraw(self, _from, _amount):
+        self.balances[_from] -= _amount
+
+    def __all_withdraw_all(self):
+        for i in range(self.n):
+            __withdraw(i, self.balances[i])
+
+    def __pay(self, _from, _to, _amount):
+        self.balances[_from] -= _amount
+        self.balances[_to] += _amount
+
     def init_channel(self, _from, amount):
         if not self.isOpen:
             self.leak('f2a', ('init', (_from, amount)), 0)
@@ -46,14 +60,25 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
 
     # the handler bound on p2f channel, handling message from parties
     def party_msg(sef, msg):
-        if msg['msg'] == 'init':
-            pass
-        elif msg['msg'] == 'close':
-            pass
-        elif msg['msg'] == 'pay':
-            pass
-        elif msg['msg'] == 'read':
-            pass
+        log.debug('Party message in payment {}'.format(msg))
+        command = msg['msg']
+        tokens = msg['imp']
+        data = msg['data']
+        if command == 'init':
+            sender = data['sender']
+            amount = data['amount']
+            init_channel(sender, amount)
+        elif command == 'close':
+            sender = data['sender']
+            close_channel(sender)
+        elif command == 'pay':
+            sender = data['sender']
+            receiver = data['receiver']
+            amount = data['amount']
+            pay(sender, receiver, amount)
+        elif command == 'read':
+            sender = data['sender']
+            read_balance(sender)
         else:
             self.pump.write("pump")
 
