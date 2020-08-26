@@ -168,8 +168,8 @@ class ITM:
                 self.imp_out += imp
                 self.channels[ch].write(msg, imp)
             else:
-                #raise WriteImportError((self.sid,self.pid), msg, imp)
-                raise Exception("out of import")
+                raise WriteImportError((self.sid,self.pid), msg, imp)
+                #raise Exception("out of import")
         else:
             self.channels[ch].write(msg, 0)
 
