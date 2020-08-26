@@ -186,7 +186,7 @@ class RBC_Simulator(ITM):
     def env_delay(self, d, imp):
         # first send this to the emulated wrapper
         self.sim_channels['z2a'].write( ('A2W', ('delay', d), 0))
-        assert waits(self.sim_pump, self.sim_channels['a2z']).msg == 'OK'
+        assert waits(self.sim_pump, self.sim_channels['a2z']).msg[1] == 'OK'
 
         # now send it to the ideal world wrapper
         self.write( 'a2w', ('delay',d), imp)
@@ -195,7 +195,7 @@ class RBC_Simulator(ITM):
         self.internal_delay += d
 
         #self.pump.write("dump")
-        self.write('a2z', 'OK')
+        self.write('a2z', ('W2A', 'OK'))
     
     ''' 
     env_get_leaks:
@@ -207,7 +207,7 @@ class RBC_Simulator(ITM):
         self.sim_get_leaks()
         leaks = list(self.sim_leaks)
         self.sim_leaks = []
-        self.write('a2z', leaks, 0)
+        self.write('a2z', ('W2A', leaks), 0)
 
     '''
         Grab leaks from the ideal world wrapper and
@@ -288,9 +288,11 @@ class RBC_Simulator(ITM):
         n = 0
         self.log.debug('\n\t leaks = {} \n'.format(leaks))
 
-        if len(leaks.msg):
+        # TODO added a tag
+        _,leaks = leaks.msg
+        if len(leaks):
             # check and count new "schedules" in in simulated wrapper
-            for x in leaks.msg:
+            for x in leaks:
                 fro,s,i = x
                 if s[0] == 'schedule': 
                     n += 1
@@ -301,7 +303,7 @@ class RBC_Simulator(ITM):
         self.internal_delay += n
         self.write('a2w', ('delay',n), n)
         m = waits(self.pump, self.channels['w2a']); assert m.msg == "OK", str(m.msg)
-        self.sim_leaks.extend(leaks.msg)
+        self.sim_leaks.extend(leaks)
         #return leaks
 
 
@@ -356,7 +358,7 @@ class RBC_Simulator(ITM):
         if isdishonest(_sid,_pid):
             self.tick(1)
             # forward this output to the environment
-            self.write('a2z', msg )
+            self.write('a2z', ('P2A', msg) )
             # don't do anything else since corrupt output in the ideal world doesn't 
             #     get delivered
             return
@@ -407,13 +409,13 @@ class RBC_Simulator(ITM):
         if msg[0] == 'poll':
             self.wrapper_poll()
         else:
-            self.channels['a2z'].write( msg, imp )
+            self.channels['a2z'].write( ('W2A', msg), imp )
 
     def func_msg(self, d):
         msg = d.msg
         imp = d.imp
         self.get_ideal_wrapper_leaks()
-        self.channels['a2z'].write( msg, imp )
+        self.channels['a2z'].write( ('F2A', msg), imp )
     
     ''' Same reason as below '''
     def sim_party_msg(self, d):

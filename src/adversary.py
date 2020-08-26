@@ -40,13 +40,13 @@ class DummyAdversary(UCAdversary):
         msg = d.msg
         imp = d.imp
         assert imp == 0
-        self.channels['a2z'].write( msg )
+        self.channels['a2z'].write( ('P2A', msg) )
 
     def func_msg(self, d):
         msg = d.msg
         imp = d.imp
         assert imp == 0
-        self.channels['a2z'].write(msg)
+        self.channels['a2z'].write( ('F2A', msg) )
 
 class DummyWrappedAdversary(ITM):
     '''Implementation of the dummy adversary. Doesn't do anything locally,
@@ -104,17 +104,17 @@ class DummyWrappedAdversary(ITM):
         msg = d.msg
         imp = d.imp
         assert imp == 0
-        self.channels['a2z'].write( msg )
+        self.channels['a2z'].write( ('P2A', msg) )
 
     def func_msg(self, d):
         msg = d.msg
         imp = d.imp
         assert imp == 0
-        self.channels['a2z'].write(msg)
+        self.channels['a2z'].write( ('F2A', msg) )
 
     def wrapper_msg(self, d):
         msg = d.msg
         imp = d.imp
         assert imp == 0
-        self.channels['a2z'].write(msg)
+        self.channels['a2z'].write( ('W2A', msg) )
 
