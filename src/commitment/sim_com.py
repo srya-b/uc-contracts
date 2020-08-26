@@ -32,7 +32,7 @@ class Sim_Com(ITM):
         if msg[0] == 'A2F':
             t,msg,iprime = msg
             if msg[0] == 'ro':
-                self.write('a2z', ('ro', self.hash(msg[1])))
+                self.write('a2f', ('ro', self.hash(msg[1])))
             else:
                 self.pump.write('')
         elif isdishonest(self.sid, self.committer):
@@ -59,11 +59,11 @@ class Sim_Com(ITM):
         if isdishonest(self.sid, self.receiver) and fro == (self.sid, self.receiver):
             if msg == 'commit' and self.receiver_state == 1:
                 self.receiver_random = self.sample(self.k)
-                self.write('a2z', (fro, ((self.sid, 'F_ro'),('send', self.receiver_random))))
+                self.write('a2z', ('P2A', (fro, ((self.sid, 'F_ro'),('send', self.receiver_random)))))
                 self.receiver_state = 2
             elif msg[0] == 'open' and self.receiver_state == 2 :
                 bit = msg[1]
-                self.write('a2z', (fro, ((self.sid,'F_ro'),('send', (self.sample(self.k), bit)))))
+                self.write('a2z', ('P2A', (fro, ((self.sid,'F_ro'),('send', (self.sample(self.k), bit))))))
                 self.receiver_state = 3
             else:
                 self.pump.write('')

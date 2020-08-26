@@ -119,13 +119,23 @@ def wait_for(_2_):
 #        print('DOESNT RETURN ANYTHING\n\n')
         return None
 
-#def waits(c1, c2):
 def waits(*cs):
     r = gevent.wait(objects=[*cs],count=1)
     assert len(r) == 1
     r = r[0]
     #if r == c1: c1.reset()
     #if r == c2: c2.reset()
+    r.reset()
+    return r.read()
+
+def read(ch):
+    r = gevent.wait([ch])[0]
+    r.reset()
+    return r.read()
+
+def read_one(*cs):
+    r = gevent.wait([*cs],count=1)
+    assert len(r) == 1
     r.reset()
     return r.read()
 

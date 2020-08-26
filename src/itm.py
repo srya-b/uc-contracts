@@ -69,6 +69,18 @@ class GenChannel(Event):
     def reset(self, s=''): 
         self.clear()
 
+#def forever(f):
+#    while True:
+#        f()
+#
+#def wrapwrite(wrch, wrap):
+#    rdch = GenChannel()
+#    gevent.spawn(
+#        forever( lambda: m = wait_for(rdch); wrch.write( (wrap, m.msg), m.imp )
+#        )
+#    )
+#    return rdch
+
 def fwd(ch1, ch2):
     def foo(ch1,ch2):
         print('Foo function. Ch1:', ch1, 'Ch2:', ch2)

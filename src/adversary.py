@@ -48,6 +48,11 @@ class DummyAdversary(UCAdversary):
         assert imp == 0
         self.channels['a2z'].write( ('F2A', msg) )
 
+
+#class DummyWrappedAdversary(DummyAdversary):
+#    def __init__(self, k, bits, sid, pid, channels, pun
+
+
 class DummyWrappedAdversary(ITM):
     '''Implementation of the dummy adversary. Doesn't do anything locally,
      just forwards all messages to the intended party. Z communicates with
