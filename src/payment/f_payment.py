@@ -34,8 +34,19 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
 
     def init_channel(self, _from, amount):
         if not self.isOpen:
-            self.leak('f2a', ('init', (_from, amount)), 0)
-            self.balances[_from] += amount # TODO: needs delay
+            delay = 0 # some delay of time
+            codeblock = (
+                'schedule'
+                self.__deposit,
+                (_from, amount),
+                delay
+            )
+            self.write('f2w', codeblock)
+            m = wait_for(self.channels['w2f']).msg
+            assert m == ('OK',)
+
+            leaked_msg = 'leaked msg (i don know what is the format of leaked message is look like, so a placeholder here)'
+            self.leak('f2a', leaked_msg, 0)
             self.isOpen = True
 
     def close_channel(self, _from):
