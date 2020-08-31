@@ -24,20 +24,25 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
     def __withdraw(self, _from, _amount):
         self.balances[_from] -= _amount
 
-    def __all_withdraw_all(self):
-        for i in range(self.n):
-            __withdraw(i, self.balances[i])
-
     def __pay(self, _from, _to, _amount):
         self.balances[_from] -= _amount
         self.balances[_to] += _amount
+
+    def __init(self, _from, _amount):
+        __deposit(_from, _amount)
+        self.write('f2p', 'channel init')
+
+    def __close(self):
+        for i in range(self.n):
+            __withdraw(i, self.balances[i])
+        self.write('f2p', 'channel close')
 
     def init_channel(self, _from, amount):
         if not self.isOpen:
             delay = 0 # some delay of time
             codeblock = (
                 'schedule'
-                self.__deposit,
+                self.__init,
                 (_from, amount),
                 delay
             )
@@ -54,7 +59,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
             delay = 0 # some delay of time
             codeblock = (
                 'schedule'
-                self.__all_withdraw_all,
+                self.__close,
                 (),
                 delay
             )
