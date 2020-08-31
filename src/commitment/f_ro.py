@@ -26,7 +26,7 @@ class Random_Oracle_and_Chan(UCFunctionality):
         if msg[0] == 'ro':
             self.write('f2p', (sender, ('ro', self.hash(msg[1]))))
         elif msg[0] == 'send':
-            self.send(msg[1], msg[2], imp)
+            self.send(msg[1], msg[2], msg[3])
         else:
             self.pump.write('')
 

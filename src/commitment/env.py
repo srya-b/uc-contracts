@@ -92,7 +92,7 @@ if __name__=='__main__':
         [('F_ro', Random_Oracle_and_Chan)],
         protocolWrapper(Commitment_Prot),
         DummyAdversary,
-        poly=Polynomial([1,2,3,4,4])
+        poly=Polynomial([1,2,3])
     )
 
     print('\n')
@@ -102,8 +102,8 @@ if __name__=='__main__':
         env2,
         [('F_ro',F_Com)],
         partyWrapper('F_ro'),
-        lemmaS(Sim_Com, DummyAdversary),
-        poly=Polynomial([1,2,3,3])
+        lemmaS(Sim_Com, Polynomial([1,2,3]), DummyAdversary),
+        poly=Polynomial([0,1])
     )
 
     distinguisher(tideal, treal)
