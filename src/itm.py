@@ -5,6 +5,7 @@ from gevent.queue import Queue, Channel, Empty
 from gevent.event import AsyncResult, Event
 from numpy.polynomial.polynomial import Polynomial
 from errors import WriteImportError, TickError
+from messages import *
 import gevent
 import comm
 import logging
@@ -40,12 +41,12 @@ Design Decision:
         that's the only way. That's the way it was the first time
         idk how I convinced myself to change it. rip
 '''
-class MSG:
-    def __init__(self, msg, imp=1):
-        self.msg = msg
-        self.imp = imp
-    def __repr__(self):
-        return 'MSG:' + str((self.msg,self.imp))
+#class MSG:
+#    def __init__(self, msg, imp=1):
+#        self.msg = msg
+#        self.imp = imp
+#    def __repr__(self):
+#        return 'MSG:' + str((self.msg,self.imp))
 
 class GenChannel(Event):
     def __init__(self, i=-1):
@@ -101,6 +102,7 @@ class ITMContext:
     
     def tick(self, poly, n):
         #if poly(self.marked) < self.spent + n:
+        print('tick imp_in', self.imp_in, 'imp_out', self.imp_out, 'spent', self.spent, 'marked', self.marked)
         if self.poly(self.marked) < self.spent + n:
             self.generate_pot(1)
         self.spent += 1
@@ -175,6 +177,7 @@ class ITM:
 
 
     def write(self, ch, msg, imp=0):
+        print('imp', imp, 'impflag', self.impflag)
         if self.impflag:
             if self.imp_in - self.imp_out + self.marked >= imp:
                 self.imp_out += imp
@@ -274,6 +277,28 @@ class UCAdversary(ITM):
 
     def env_msg(self, d):
         Exception("env_msg needs to be implemented")
+
+class UCWrappedAdversary(ITM):
+    def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
+        self.handlers = {
+            channels['p2a'] : self.party_msg,
+            channels['f2a'] : self.func_msg,
+            channels['z2a'] : self.env_msg,
+            channels['w2a'] : self.wrapper_msg
+        }
+        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
+
+    def party_msg(self, d):
+        Exception("party_msg needs to be implemented")
+
+    def func_msg(self, d):
+        Exception("func_msg needs to be implemented")
+
+    def env_msg(self, d):
+        Exception("env_msg needs to be implemented")
+
+    def wrapper_msg(self, d):
+        Exception("wrapper_msg needs to be implemented")
 
 class UCWrappedFunctionality(ITM):
     def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
@@ -387,6 +412,7 @@ class DummyParty(ITM):
         self.write('p2f', d.msg, d.imp)
 
     def env_msg(self, d):
+        print('Dummy party env msg', d)
         if self.isdishonest:
             raise Exception("env writing to a corrupt party")
         self.write('p2f', d.msg, d.imp)
@@ -703,21 +729,20 @@ class PartyWrapper(ITM):
         imp = d.imp
         (sid,pid),msg = msg
         _pid = self.getPID(self.z2pid,sid,pid)
-        _pid.write( ((sid,self.tof), msg) )
+        _pid.write( ((sid,self.tof), msg), imp )
 
     def func_msg(self, d):
-        print('func_msg', d)
         msg = d.msg
         imp = d.imp
         fro,((sid,pid),msg) = msg
         _pid = self.getPID(self.f2pid,sid,pid)
-        _pid.write(msg)
+        _pid.write(msg, imp)
 
     def adv_msg(self, d):
         msg = d.msg
         imp = d.imp
         _pid = self.getPID(self.a2pid, sid, pid)
-        _pid.write( msg )
+        _pid.write( msg, imp )
 
 def protocolWrapper(prot):
     def f(k, bits, sid, channels, pump, poly, importargs):
@@ -1111,7 +1136,6 @@ class WrappedFunctionalityWrapper:
                 d = r.read()
                 ((_sid,_pid), msg) = d.msg
                 self.p2f.reset()
-                print('d.msg', d.msg)
                 ((__sid,_tag), msg) = msg
                 _fid = self.getFID(self.p2fid, __sid, _tag)
                 _fid.write( ((_sid,_pid), msg), d.imp)

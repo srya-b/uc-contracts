@@ -136,8 +136,8 @@ def read(ch):
 def read_one(*cs):
     r = gevent.wait([*cs],count=1)
     assert len(r) == 1
-    r.reset()
-    return r.read()
+    r[0].reset()
+    return r[0], r[0].read()
 
 def z_send_money(_z2p, _p2z, sid, pid, v, to):
     msg = ('transfer', (sid, to), v, (), 'does not matter')
