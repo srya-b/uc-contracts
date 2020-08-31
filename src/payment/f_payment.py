@@ -94,6 +94,22 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         self.write('f2p', msg)
         # no need to leak to adversary, pointless
 
+    def deposit(self, _from, amount):
+        if self.isOpen:
+            delay = 0 # some delay of time
+            codeblock = (
+                'schedule'
+                self.__deposit,
+                (_from, amount),
+                delay
+            )
+            self.write('f2w', codeblock)
+            m = wait_for(self.channels['w2f']).msg
+            assert m == ('OK',)
+
+            leaked_msg = 'leaked msg (i don know what is the format of leaked message is look like, so a placeholder here)'
+            self.leak('f2a', leaked_msg, 0)
+
     # the handler bound on p2f channel, handling message from parties
     def party_msg(sef, msg):
         log.debug('Party message in payment {}'.format(msg))
@@ -115,6 +131,10 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         elif command == 'read':
             sender = data['sender']
             read_balance(sender)
+        elif command == 'deposit':
+            sender = data['sender']
+            amount = data['amount']
+            deposit(sender, amount)
         else:
             self.pump.write("pump")
 
