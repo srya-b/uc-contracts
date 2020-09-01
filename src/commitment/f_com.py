@@ -1,5 +1,7 @@
-from itm import UCFunctionality
+from itm import UCFunctionality, fork, forever, GenChannel
+from commsg import *
 from comm import ishonest, isdishonest
+from utils import read_on, read
 import logging
 
 log = logging.getLogger(__name__)
@@ -24,13 +26,31 @@ class F_Com(UCFunctionality):
         self.write('f2p', (self.receiver, ('open', self.bit)), 0)
         self.state = 2
 
-    def party_msg(self, m):
-        sender,msg = m.msg
-        if self.state is 0 and sender == self.committer and msg[0] == 'commit':
-            _,bit = msg
-            self.commit(bit)
-        elif self.state is 1 and sender == self.committer and msg[0] == 'reveal':
-            self.reveal()
-        else:
-            self.pump.write('')
+   
+    def run(self):
+        s2f = GenChannel()
+        def _p2s():
+            (sid,pid), msg = read(self.channels['p2f'])
+            if (sid,pid) == self.committer:
+                s2f.write(msg)
+        fork( forever( _p2s ) )
+
+        bit : ComP2F_Commit = read(s2f) 
+        print('Bit', bit)
+
+        self.write('f2p', (self.receiver, ComF2P_Commit()), 0)
+        
+        m : ComP2F_Open = read(s2f)
+
+        self.write('f2p', (self.reciver, ComF2P_Open(bit)))
+
+#    def party_msg(self, m):
+#        sender,msg = m.msg
+#        if self.state is 0 and sender == self.committer and msg[0] == 'commit':
+#            _,bit = msg
+#            self.commit(bit)
+#        elif self.state is 1 and sender == self.committer and msg[0] == 'reveal':
+#            self.reveal()
+#        else:
+#            self.pump.write('')
 
