@@ -41,12 +41,12 @@ Design Decision:
         that's the only way. That's the way it was the first time
         idk how I convinced myself to change it. rip
 '''
-#class MSG:
-#    def __init__(self, msg, imp=1):
-#        self.msg = msg
-#        self.imp = imp
-#    def __repr__(self):
-#        return 'MSG:' + str((self.msg,self.imp))
+class MSG:
+    def __init__(self, msg, imp=1):
+        self.msg = msg
+        self.imp = imp
+    def __repr__(self):
+        return 'MSG:' + str((self.msg,self.imp))
 
 class GenChannel(Event):
     def __init__(self, i=-1):
@@ -70,17 +70,12 @@ class GenChannel(Event):
     def reset(self, s=''): 
         self.clear()
 
-#def forever(f):
-#    while True:
-#        f()
-#
-#def wrapwrite(wrch, wrap):
-#    rdch = GenChannel()
-#    gevent.spawn(
-#        forever( lambda: m = wait_for(rdch); wrch.write( (wrap, m.msg), m.imp )
-#        )
-#    )
-#    return rdch
+def forever(f):
+    while True:
+        f()
+
+def fork(f):
+    gevent.spawn(f)
 
 def fwd(ch1, ch2):
     def foo(ch1,ch2):

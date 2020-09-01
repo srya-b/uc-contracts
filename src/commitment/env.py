@@ -1,4 +1,6 @@
 from utils import z_get_leaks, waits
+from messages import *
+from itm import fork, forever
 import gevent
 
 def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
@@ -54,10 +56,12 @@ def env2(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     gevent.spawn(_p2z)
     gevent.spawn(_a2z)
 
-    z2p.write( ((sid,1), ('commit',0)), 3)
+    #z2p.write( ((sid,1), ('commit',0)), 3)
+    z2p.write( ((sid,1), CommP2F_Commit(0)), 3)
     waits(pump)
 
-    z2p.write( ((sid,1), ('reveal',)), 1)
+    #z2p.write( ((sid,1), ('reveal',)), 1)
+    z2p.write( ((sid,1), CommP2F_Open()), 1)
     waits(pump)
 
     #print('transcript', transcript)
@@ -86,16 +90,16 @@ from itm import PartyWrapper, partyWrapper
 from lemmaS import Lemma_Simulator, lemmaS
 
 if __name__=='__main__':
-    treal = execUC(
-        128,
-        env2,
-        [('F_ro', Random_Oracle_and_Chan)],
-        protocolWrapper(Commitment_Prot),
-        DummyAdversary,
-        poly=Polynomial([1,2,3])
-    )
-
-    print('\n')
+#    treal = execUC(
+#        128,
+#        env2,
+#        [('F_ro', Random_Oracle_and_Chan)],
+#        protocolWrapper(Commitment_Prot),
+#        DummyAdversary,
+#        poly=Polynomial([1,2,3])
+#    )
+#
+#    print('\n')
 
     tideal = execUC(
         128,
@@ -106,4 +110,4 @@ if __name__=='__main__':
         poly=Polynomial([0,1])
     )
 
-    distinguisher(tideal, treal)
+#    distinguisher(tideal, treal)
