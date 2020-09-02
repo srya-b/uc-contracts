@@ -30,12 +30,15 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
 
     def __init(self, _from, _amount):
         __deposit(_from, _amount)
-        self.write('f2p', 'channel init')
+        for i in range(self.n):
+            msg = (i, 'channel init')
+            self.write('f2p', msg)
 
     def __close(self):
         for i in range(self.n):
             __withdraw(i, self.balances[i])
-        self.write('f2p', 'channel close')
+            msg = (i, 'channel close')
+            self.write('f2p', msg)
 
     def init_channel(self, _from, amount):
         if not self.isOpen:
