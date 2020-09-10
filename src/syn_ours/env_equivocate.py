@@ -4,7 +4,7 @@ from syn_ours import Syn_FWrapper, Syn_Channel, Syn_Bracha_Protocol#, RBC_Simula
 from syn_ours.f_bracha import Syn_Bracha_Functionality, RBC_Simulator, brachaSimulator
 from syn_ours.broken_prot_bracha import Broken_Bracha_Protocol
 from execuc import execWrappedUC
-from utils import z_get_leaks, waits
+from utils import waits
 import logging
 import gevent
 from numpy.polynomial.polynomial import Polynomial
@@ -12,7 +12,7 @@ from numpy.polynomial.polynomial import Polynomial
 log = logging.getLogger(__name__)
 logging.basicConfig( level=50)
 
-def env_equivocation(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
+def env_equivocation(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     delta = 3
     n = 4
     sid = ('one', tuple(range(1,n+1)), delta)
@@ -41,31 +41,31 @@ def env_equivocation(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
         s = ('one', (sid,fro), (sid,to), r, delta)
         return (s,'F_chan')
     
-    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,2,1)), ('send', ('VAL', 1)))))), 4*n)
+    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,2,1)), ('send', ('VAL', 1))))), 4*n), 4*n)
     waits(pump)
-    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,3,1)), ('send', ('VAL', 2)))))), 4*n)
+    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,3,1)), ('send', ('VAL', 2))))), 4*n), 4*n)
     waits(pump)
 
-    z2a.write( ('A2W', ('get-leaks',)), n*(4*n+1))
+    z2a.write( ('A2W', ('get-leaks',), n*(4*n+1)), n*(4*n+1))
     waits(pump)
 
     for _ in range(4):
         z2w.write( ('poll',), 1)
         waits(pump)
 
-    z2a.write( ('A2P', ((sid,1), ('P2W', ('clock-round',)))) )
+    z2a.write( ('A2P', ((sid,1), ('P2W', ('clock-round',))), 0) )
     waits(pump)
 
-    z2a.write( ('A2W', ('exec', 4, 0)) )
+    z2a.write( ('A2W', ('exec', 4, 0), 0) )
     waits(pump)
 
     for _ in range(6):
-        z2a.write( ('A2W', ('exec', 7, 0)) )
+        z2a.write( ('A2W', ('exec', 7, 0), 0) )
         waits(pump)
 
-    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,2,7)), ('send', ('ECHO',1)))))), 3)
+    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,2,7)), ('send', ('ECHO',1))))), 3), 3)
     waits(pump)
-    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,3,7)), ('send', ('ECHO',2)))))), 3)
+    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,3,7)), ('send', ('ECHO',2))))), 3), 3)
     waits(pump)
 
     for _ in range(3):
@@ -73,19 +73,19 @@ def env_equivocation(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
         waits(pump)
 
     for _ in range(8):
-        z2a.write( ('A2W', ('exec', 7 , 0)) )
+        z2a.write( ('A2W', ('exec', 7 , 0), 0) )
         waits(pump)
 
-    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,2,7)), ('send', ('READY',1)))))), 0)
+    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,2,7)), ('send', ('READY',1))))), 0), 0)
     waits(pump)
 
-    z2a.write( ('A2W', ('exec', 7 , 0)) )
+    z2a.write( ('A2W', ('exec', 7 , 0), 0) )
     waits(pump)
 
-    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,3,7)), ('send', ('READY',2)))))), 0)
+    z2a.write( ('A2P', ((sid,1), ('P2F', ((channel_id(1,3,7)), ('send', ('READY',2))))), 0), 0)
     waits(pump)
 
-    z2a.write( ('A2W', ('exec', 7 , 0)) )
+    z2a.write( ('A2W', ('exec', 7 , 0), 0) )
     waits(pump)
     
     gevent.kill(g1)
@@ -189,6 +189,7 @@ def distinguisher(t_ideal, t_real):
 if __name__=='__main__':
     print('\n\t\t\033[93m [IDEAL WORLD] \033[0m\n')
     t1 = execWrappedUC(
+        128,
         env_equivocation,
         [('F_bracha',Syn_Bracha_Functionality)],
         wrappedPartyWrapper('F_bracha'),
@@ -199,6 +200,7 @@ if __name__=='__main__':
  
     print('\n\t\t\033[93m [REAL WORLD] \033[0m\n')
     t2 = execWrappedUC(
+        128,
         env_equivocation, 
         [('F_chan',Syn_Channel)], 
         wrappedProtocolWrapper(Broken_Bracha_Protocol),

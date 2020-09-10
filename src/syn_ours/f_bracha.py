@@ -8,13 +8,13 @@ import logging
 log = logging.getLogger(__name__)
 
 class Syn_Bracha_Functionality(UCWrappedFunctionality):
-    def __init__(self, k, bits, sid, pid, channels, pump, poly, importargs):
+    def __init__(self, k, bits, crupt, sid, pid, channels, pump, poly, importargs):
         self.ssid = sid[0]
         self.parties = sid[1]
         self.n = len(self.parties)
         self.round_upper_bound = 5
         self.delta = sid[2] * self.round_upper_bound
-        UCWrappedFunctionality.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
+        UCWrappedFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
 
     def send_output(self, to, msg):
         self.write('f2p', (to, msg) )
@@ -60,12 +60,12 @@ from execuc import createWrappedUC
 from syn_ours import Syn_Channel, Syn_Bracha_Protocol
 
 def brachaSimulator(prot):
-    def f(k, bits, sid, pid, channels, pump, poly, importargs):
-        return RBC_Simulator(k, bits, sid, pid, channels, pump, prot, poly, importargs)
+    def f(k, bits, crupt, sid, pid, channels, pump, poly, importargs):
+        return RBC_Simulator(k, bits, crupt, sid, pid, channels, pump, prot, poly, importargs)
     return f
 
 class RBC_Simulator(ITM):
-    def __init__(self, k, bits, sid, pid, channels, pump, prot, poly, importargs):
+    def __init__(self, k, bits, crupt, sid, pid, channels, pump, prot, poly, importargs):
         self.ssid = sid[0]
         self.parties = sid[1]
         self.delta = sid[2]
