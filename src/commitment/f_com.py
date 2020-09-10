@@ -1,5 +1,4 @@
 from itm import UCFunctionality, fork, forever, GenChannel
-from commsg import *
 from comm import ishonest, isdishonest
 from utils import read_on, read
 import logging
