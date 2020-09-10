@@ -57,7 +57,7 @@ class DummyWrappedAdversary(ITM):
     '''Implementation of the dummy adversary. Doesn't do anything locally,
      just forwards all messages to the intended party. Z communicates with
      corrupt parties through dummy adversary'''
-    def __init__(self, k, bits, sid, pid, channels, pump, poly, importargs):
+    def __init__(self, k, bits, crupt, sid, pid, channels, pump, poly, importargs):
         self.sid = sid
         self.pid = pid
         self.sender = (sid,pid)
