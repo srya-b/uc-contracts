@@ -1,5 +1,4 @@
 from itm import ProtocolWrapper, FunctionalityWrapper, PartyWrapper, GenChannel, WrappedFunctionalityWrapper, WrappedProtocolWrapper, WrappedPartyWrapper
-from comm import setAdversary
 from utils import z_crupt
 import gevent
 from numpy.polynomial.polynomial import Polynomial
@@ -54,7 +53,6 @@ def createUC(k, fs, ps, adv, poly, importargs={}):
         gevent.spawn(p.run)
         # TODO change to wrapped adversray
         advitm = adv(k, rng, sid, -1, adv_channels, pump, poly, importargs)
-        setAdversary(advitm)
         gevent.spawn(advitm.run)
     
     gevent.spawn(_exec)
@@ -105,13 +103,16 @@ def createWrappedUC(k, fs, ps, wrapper, adv, poly, importargs={}):
 
         assert crupt_msg[0] == 'crupt'
         print('crupted', crupt_msg)
+        crupt = set()
         for _s,_p in crupt_msg[1:]:
             z_crupt(_s,_p)
+            crupt.add( (_s,_p) )
 
-        w = wrapper(k, rng, {'f2w':f2w, 'w2f':w2f, 'p2w':p2w, 'w2p':w2p, 'a2w':a2w, 'w2a':w2a, 'z2w':z2w, 'w2z':w2z}, pump, poly, importargs)
+        w = wrapper(k, rng, crupt, {'f2w':f2w, 'w2f':w2f, 'p2w':p2w, 'w2p':w2p, 'a2w':a2w, 'w2a':w2a, 'z2w':z2w, 'w2z':w2z}, pump, poly, importargs)
         gevent.spawn(w.run)
 
-        f = WrappedFunctionalityWrapper(k, rng, p2f, f2p, a2f, f2a, z2f, f2z, w2f, f2w, pump, poly, importargs)
+        #f = WrappedFunctionalityWrapper(k, rng, crupt, p2f, f2p, a2f, f2a, z2f, f2z, w2f, f2w, pump, poly, importargs)
+        f = WrappedFunctionalityWrapper(k, rng, crupt, sid, func_channels, pump, poly, importargs)
         for t,c in fs:
             f.newcls(t,c)
         gevent.spawn( f.run )
@@ -119,14 +120,12 @@ def createWrappedUC(k, fs, ps, wrapper, adv, poly, importargs={}):
         p = ps(k, rng, sid, {'z2p':z2p, 'p2z':p2z, 'f2p':f2p, 'p2f':p2f, 'a2p':a2p, 'p2a':p2a, 'w2p':w2p, 'p2w':p2w}, pump, poly, importargs)
         gevent.spawn(p.run)
         # TODO change to wrapped adversray
-        advitm = adv(k, rng, sid, -1, adv_channels, pump, poly, importargs)
-        setAdversary(advitm)
+        advitm = adv(k, rng, crupt, sid, -1, adv_channels, pump, poly, importargs)
         gevent.spawn(advitm.run)
 
     gevent.spawn(_exec)
     return channels,static,pump
 
-#def execWrappedUC(env, fs, ps, wrapper, prot, adv, poly=Polynomial([1])):
 def execWrappedUC(k, env, fs, ps, wrapper, adv, poly=Polynomial([1])):
     c,static,pump = createWrappedUC(k, fs, ps, wrapper, adv, poly)
     return env(k, static, c['z2p'], c['z2f'], c['z2a'], c['z2w'], c['a2z'], c['p2z'], c['f2z'], c['w2z'], pump)
