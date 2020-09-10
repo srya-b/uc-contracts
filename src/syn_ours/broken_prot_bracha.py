@@ -126,7 +126,6 @@ from itm import ProtocolWrapper, WrappedProtocolWrapper
 from adversary import DummyWrappedAdversary
 from syn_ours import Syn_FWrapper, Syn_Channel
 from execuc import execWrappedUC
-from utils import z_get_leaks
 
 def env1(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     delta = 3

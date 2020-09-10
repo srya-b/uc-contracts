@@ -4,7 +4,7 @@ from syn_ours import Syn_FWrapper, Syn_Channel, Syn_Bracha_Protocol#, RBC_Simula
 from syn_ours.f_bracha import Syn_Bracha_Functionality, RBC_Simulator, brachaSimulator
 from syn_ours.broken_prot_bracha import Broken_Bracha_Protocol
 from execuc import execWrappedUC
-from utils import z_get_leaks, waits
+from utils import waits
 import logging
 import gevent
 from numpy.polynomial.polynomial import Polynomial
