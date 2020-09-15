@@ -1,6 +1,6 @@
 from itm import UCFunctionality, fork, forever, GenChannel
 from comm import ishonest, isdishonest
-from utils import read_on, read
+from utils import read_one, read
 import logging
 
 log = logging.getLogger(__name__)

@@ -43,7 +43,7 @@ class ProtComm_Commit(ProtComm_Msg):
     def __init__(self, i):
         self.hash = i
 
-class ProtComm_Open(ProtComm_Open):
+class ProtComm_Open(ProtComm_Msg):
     def __init__(self, a, b):
         self.nonce = a
         self.bit = b
