@@ -1,6 +1,6 @@
 import comm
 import gevent
-from itm import ITM, UCAdversary
+from itm import ITM, UCAdversary, UCWrappedAdversary
 from gevent.queue import Queue, Channel, Empty
 from gevent.event import AsyncResult
 
@@ -10,17 +10,14 @@ class DummyAdversary(UCAdversary):
     corrupt parties through dummy adversary'''
     # TODO Dummy tracks v = in - (out + lengths of all inputs) halt if
     #      v < k
-    def __init__(self, k, bits, sid, pid, channels, pump, poly, importargs):
-        UCAdversary.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
+    def __init__(self, k, bits, crupt, sid, pid, channels, pump, poly, importargs):
+        UCAdversary.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
     
     def __str__(self):
         return str(self.F)
 
     def read(self, fro, msg):
         print(u'{:>20} -----> {}, msg={}'.format(str(fro), str(self), msg))
-
-    def input_corrupt(self, pid):
-        comm.corrupt(self.sid, pid)
 
     def env_msg(self, d):
         msg = d.msg
@@ -31,8 +28,6 @@ class DummyAdversary(UCAdversary):
         elif msg[0] == 'A2P':
             t,msg,iprime = msg
             self.write('a2p', msg, iprime )
-        elif msg[0] == 'corrupt':
-            self.input_corrupt(msg[1])
         else: 
             self.pump.write("dump")
 
@@ -49,37 +44,18 @@ class DummyAdversary(UCAdversary):
         self.channels['a2z'].write( ('F2A', msg) )
 
 
-#class DummyWrappedAdversary(DummyAdversary):
-#    def __init__(self, k, bits, sid, pid, channels, pun
-
-
-class DummyWrappedAdversary(ITM):
+class DummyWrappedAdversary(UCWrappedAdversary):
     '''Implementation of the dummy adversary. Doesn't do anything locally,
      just forwards all messages to the intended party. Z communicates with
      corrupt parties through dummy adversary'''
     def __init__(self, k, bits, crupt, sid, pid, channels, pump, poly, importargs):
-        self.sid = sid
-        self.pid = pid
-        self.sender = (sid,pid)
-    
-        handlers = {
-            channels['f2a']: self.func_msg,
-            channels['z2a']: self.env_msg,
-            channels['p2a']: self.party_msg,
-            channels['w2a']: self.wrapper_msg,
-        }
-        
-        ITM.__init__(self, k, bits, sid, pid, channels, handlers, poly, pump, importargs)
+        UCWrappedAdversary.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
     
     def __str__(self):
         return str(self.F)
 
     def read(self, fro, msg):
         print(u'{:>20} -----> {}, msg={}'.format(str(fro), str(self), msg))
-
-    def input_corrupt(self, pid):
-        comm.corrupt(self.sid, pid)
-
 
     '''
         Messages from the environment inteded for the dummy address can 
@@ -101,8 +77,6 @@ class DummyWrappedAdversary(ITM):
         elif msg[0] == 'A2W':
             t,msg,iprime = msg
             self.write('a2w', msg, iprime )
-        elif msg[0] == 'corrupt':
-            self.input_corrupt(msg[1])
         else: self.pump.write("dump")#dump.dump()
 
     def party_msg(self, d):

@@ -66,6 +66,7 @@ def brachaSimulator(prot):
 
 class RBC_Simulator(ITM):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump, prot, poly, importargs):
+        self.crupt = crupt
         self.ssid = sid[0]
         self.parties = sid[1]
         self.delta = sid[2]
@@ -107,7 +108,7 @@ class RBC_Simulator(ITM):
         #   tells us who the crupted parties are
         self.sim_sid = (sid[0], sid[1], sid[2])
         self.sim_pump = _pump
-        static.write( (('sid', self.sim_sid), ('crupt',)) )
+        static.write( (('sid', self.sim_sid), ('crupt', *[x for x in self.crupt])) )
     
         self.handlers.update(
         {
@@ -368,10 +369,12 @@ class RBC_Simulator(ITM):
             self.tick(1)
             assert isdishonest(self.sid,1)
             n = len(self.parties)
+            print('\n\t sending input to f_bracha \n\t')
             self.write( 'a2p', ((self.sid, 1), ('P2F', ((self.sid, 'F_bracha'), ('input',msg)) )), n*(4*n + 1))
             m = waits(self.pump, self.channels['p2a'])
+            print('\n******m\n', m, '\n')
             _fro,_msg = m.msg
-            self.dealer_input = msg; assert type(msg) == int, str(msg)
+            self.dealer_input = msg; assert type(msg) == int, 'msg:{}, fro:{}'.format(msg, fro)
             assert _msg == 'OK', str('fro={}, msg={}'.format(_fro,_msg))
             # Now get leaks, and populate self.pid_to_queue
             #leaks = self.get_ideal_wrapper_leaks()
