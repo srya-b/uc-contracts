@@ -590,11 +590,11 @@ class ProtocolWrapper(ITM):
         _a2p,_p2a = self._newPID(sid, pid, self.a2pid, self.channels['p2a'], 'p2a')
         
         #if comm.isdishonest(sid, pid):
-        if self.is_dishonest(sid,pid):
-            print('\033[1m[{}]\033[0m Party is corrupt'.format(pid))
-            p = DummyParty(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p, 'p2f':_p2f}, self.poly, self.pump, self.importargs)  
-        else:
-            p = self.prot(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p, 'p2f':_p2f}, self.poly, self.pump, self.importargs)
+        #if self.is_dishonest(sid,pid):
+        #    print('\033[1m[{}]\033[0m Party is corrupt'.format(pid))
+        #    p = DummyParty(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p, 'p2f':_p2f}, self.poly, self.pump, self.importargs)  
+        #else:
+        p = self.prot(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p, 'p2f':_p2f}, self.poly, self.pump, self.importargs)
         gevent.spawn(p.run)
 
     def getPID(self, _2pid, sid, pid):
@@ -707,10 +707,10 @@ class WrappedProtocolWrapper(ProtocolWrapper):
        
         # TODO add wrapped passthrough party
         #if comm.isdishonest(sid, pid):
-        if self.is_dishonest(sid,pid):
-            p = WrappedDummyParty(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p,'p2f':_p2f, 'w2p':_w2p,'p2w':_p2w}, self.poly, self.pump, self.importargs)
-        else:
-            p = self.prot(self.k, self.bits, self.sid, pid, {'p2f':_p2f, 'f2p':_f2p, 'p2a':_p2a, 'a2p':_a2p, 'p2z':_p2z, 'z2p':_z2p, 'p2w':_p2w, 'w2p':_w2p}, self.pump, self.poly, self.importargs)
+        #if self.is_dishonest(sid,pid):
+        #    p = WrappedDummyParty(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p,'p2f':_p2f, 'w2p':_w2p,'p2w':_p2w}, self.poly, self.pump, self.importargs)
+        #else:
+        p = self.prot(self.k, self.bits, self.sid, pid, {'p2f':_p2f, 'f2p':_f2p, 'p2a':_p2a, 'a2p':_a2p, 'p2z':_p2z, 'z2p':_z2p, 'p2w':_p2w, 'w2p':_w2p}, self.pump, self.poly, self.importargs)
         gevent.spawn(p.run)
 
     def getPID(self, _2pid, sid, pid):
