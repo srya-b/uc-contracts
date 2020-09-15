@@ -41,18 +41,20 @@ def createUC(k, fs, ps, adv, poly, importargs={}):
 
         assert crupt_msg[0] == 'crupt'
         print('crupted', crupt_msg)
+        crupt = set()
         for _s,_p in crupt_msg[1:]:
             z_crupt(_s,_p)
+            crupt.add( (_s,_p))
 
-        f = FunctionalityWrapper(k, rng, sid, func_channels, pump, poly, importargs)
+        f = FunctionalityWrapper(k, rng, crupt, sid, func_channels, pump, poly, importargs)
         for t,c in fs:
             f.newcls(t,c)
         gevent.spawn( f.run )
-        p = ps(k, rng, sid, party_channels, pump, poly, importargs)
+        p = ps(k, rng, crupt, sid, party_channels, pump, poly, importargs)
 
         gevent.spawn(p.run)
         # TODO change to wrapped adversray
-        advitm = adv(k, rng, sid, -1, adv_channels, pump, poly, importargs)
+        advitm = adv(k, rng, crupt, sid, -1, adv_channels, pump, poly, importargs)
         gevent.spawn(advitm.run)
     
     gevent.spawn(_exec)
@@ -102,7 +104,6 @@ def createWrappedUC(k, fs, ps, wrapper, adv, poly, importargs={}):
         sid = sid_msg[1]
 
         assert crupt_msg[0] == 'crupt'
-        print('crupted', crupt_msg)
         crupt = set()
         for _s,_p in crupt_msg[1:]:
             z_crupt(_s,_p)
@@ -117,7 +118,8 @@ def createWrappedUC(k, fs, ps, wrapper, adv, poly, importargs={}):
             f.newcls(t,c)
         gevent.spawn( f.run )
         #p = ps(k, sid, z2p, p2z, f2p, p2f, a2p, p2a, w2p, p2w, pump, poly, importargs)
-        p = ps(k, rng, sid, {'z2p':z2p, 'p2z':p2z, 'f2p':f2p, 'p2f':p2f, 'a2p':a2p, 'p2a':p2a, 'w2p':w2p, 'p2w':p2w}, pump, poly, importargs)
+        print('execuc crupt', crupt)
+        p = ps(k, rng, crupt, sid, {'z2p':z2p, 'p2z':p2z, 'f2p':f2p, 'p2f':p2f, 'a2p':a2p, 'p2a':p2a, 'w2p':w2p, 'p2w':p2w}, pump, poly, importargs)
         gevent.spawn(p.run)
         # TODO change to wrapped adversray
         advitm = adv(k, rng, crupt, sid, -1, adv_channels, pump, poly, importargs)

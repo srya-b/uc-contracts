@@ -10,7 +10,7 @@ import gevent
 from numpy.polynomial.polynomial import Polynomial
 
 log = logging.getLogger(__name__)
-logging.basicConfig( level="DEBUG")
+logging.basicConfig( level='DEBUG')
 
 def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     delta = 3
