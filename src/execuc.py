@@ -1,5 +1,4 @@
 from itm import ProtocolWrapper, FunctionalityWrapper, PartyWrapper, GenChannel, WrappedFunctionalityWrapper, WrappedProtocolWrapper, WrappedPartyWrapper
-from utils import z_crupt
 import gevent
 from numpy.polynomial.polynomial import Polynomial
 import random, os
@@ -43,7 +42,6 @@ def createUC(k, fs, ps, adv, poly, importargs={}):
         print('crupted', crupt_msg)
         crupt = set()
         for _s,_p in crupt_msg[1:]:
-            z_crupt(_s,_p)
             crupt.add( (_s,_p))
 
         f = FunctionalityWrapper(k, rng, crupt, sid, func_channels, pump, poly, importargs)
@@ -106,7 +104,6 @@ def createWrappedUC(k, fs, ps, wrapper, adv, poly, importargs={}):
         assert crupt_msg[0] == 'crupt'
         crupt = set()
         for _s,_p in crupt_msg[1:]:
-            z_crupt(_s,_p)
             crupt.add( (_s,_p) )
 
         w = wrapper(k, rng, crupt, {'f2w':f2w, 'w2f':w2f, 'p2w':p2w, 'w2p':w2p, 'a2w':a2w, 'w2a':w2a, 'z2w':z2w, 'w2z':w2z}, pump, poly, importargs)

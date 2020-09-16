@@ -1,7 +1,6 @@
 from itm import UCWrappedFunctionality, ITM
 from utils import wait_for, waits
 from numpy.polynomial.polynomial import Polynomial
-from comm import ishonest, isdishonest
 import gevent
 import logging
 
@@ -119,6 +118,12 @@ class RBC_Simulator(ITM):
         })
    
 
+
+    def is_dishonest(self, sid, pid):
+        return (sid,pid) in self.crupt
+
+    def is_honest(self, sid, pid):
+        return not self.is_dishonest(sid,pid)
 
     '''
         Entrypoints:
@@ -321,7 +326,7 @@ class RBC_Simulator(ITM):
         elif msg[0] == 'A2P':
             _,(to,m),iprime = msg
             # Only crupt parties can be written to by the adversary
-            if ishonest(*to):
+            if self.is_honest(*to):#ishonest(*to):
                 raise Exception("Environment send message to A for honest party")
             else:
                 self.sim_channels['z2a'].write( msg , iprime )
@@ -356,7 +361,7 @@ class RBC_Simulator(ITM):
         _sid,_pid = fro
         self.log.debug('\033[91m Got some output from pid={}, msg={}\033[0m'.format(_pid,msg))
 
-        if isdishonest(_sid,_pid):
+        if self.is_dishonest(_sid,_pid):#isdishonest(_sid,_pid):
             self.tick(1)
             # forward this output to the environment
             self.write('a2z', ('P2A', msg) )
@@ -367,7 +372,7 @@ class RBC_Simulator(ITM):
             assert len(self.internal_run_queue) == 0
             # If output and not dealer input, dealer is crupt. Call input on functonality
             self.tick(1)
-            assert isdishonest(self.sid,1)
+            assert self.is_dishonest(self.sid, 1)#isdishonest(self.sid,1)
             n = len(self.parties)
             print('\n\t sending input to f_bracha \n\t')
             self.write( 'a2p', ((self.sid, 1), ('P2F', ((self.sid, 'F_bracha'), ('input',msg)) )), n*(4*n + 1))

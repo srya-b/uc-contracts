@@ -1,13 +1,12 @@
 from itm import UCFunctionality
-from comm import ishonest, isdishonest
 import logging
 
 log = logging.getLogger(__name__)
 
 class Random_Oracle_and_Chan(UCFunctionality):
-    def __init__(self, k, bits, sid, pid, channels, pump, poly, importargs):
+    def __init__(self, k, bits, crupt, sid, pid, channels, pump, poly, importargs):
         self.table = {}
-        UCFunctionality.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
+        UCFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
 
     def hash(self, s):
         self.tick(1)
@@ -26,6 +25,7 @@ class Random_Oracle_and_Chan(UCFunctionality):
         if msg[0] == 'ro':
             self.write('f2p', (sender, ('ro', self.hash(msg[1]))))
         elif msg[0] == 'send':
+            print('send msg', msg)
             self.send(msg[1], msg[2], msg[3])
         else:
             self.pump.write('')
