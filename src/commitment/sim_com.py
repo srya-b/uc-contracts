@@ -1,8 +1,8 @@
 from itm import ITM
-from comm import ishonest, isdishonest
 
 class Sim_Com(ITM):
-    def __init__(self, k, bits, sid, pid, channels, pump, poly, importargs):
+    def __init__(self, k, bits, crupt, sid, pid, channels, pump, poly, importargs):
+        self.crupt = crupt
         self.ssid = sid[0]
         self.committer = sid[1]
         self.receiver = sid[2]
@@ -20,6 +20,12 @@ class Sim_Com(ITM):
 
         ITM.__init__(self, k, bits, sid, pid, channels, handlers, poly, pump, importargs)
 
+    def is_dishonest(self, sid, pid):
+        return (sid,pid) in self.crupt
+
+    def is_honest(self, sid, pid):
+        return not self.is_dishonest(sid,pid)
+
     def hash(self, s):
         if k not in self.table:
             self.table[s] = self.sample(self.k)
@@ -35,7 +41,8 @@ class Sim_Com(ITM):
                 self.write('a2f', ('ro', self.hash(msg[1])))
             else:
                 self.pump.write('')
-        elif isdishonest(self.sid, self.committer):
+        #elif isdishonest(self.sid, self.committer):
+        elif self.is_dishonest(self.sid, self.committer):
             if msg[0] == 'A2P':
                 _,to,msg = msg
                 assert to == (self.sid, self.committer)
@@ -56,14 +63,16 @@ class Sim_Com(ITM):
         imp = m.imp
         fro,msg = msg
         print('adv party message', m)
-        if isdishonest(self.sid, self.receiver) and fro == (self.sid, self.receiver):
+        if self.is_dishonest(self.sid, self.receiver) and fro == (self.sid, self.receiver):
             if msg == 'commit' and self.receiver_state == 1:
                 self.receiver_random = self.sample(self.k)
-                self.write('a2z', ('P2A', (fro, ((self.sid, 'F_ro'),('send', self.receiver_random)))))
+                #self.write('a2z', ('P2A', (fro, ((self.sid, 'F_ro'),('send', self.receiver_random)))))
+                self.write('a2z', ('P2A', (fro, ('send', self.receiver_random))))
                 self.receiver_state = 2
             elif msg[0] == 'open' and self.receiver_state == 2 :
                 bit = msg[1]
-                self.write('a2z', ('P2A', (fro, ((self.sid,'F_ro'),('send', (self.sample(self.k), bit))))))
+                #self.write('a2z', ('P2A', (fro, ((self.sid,'F_ro'),('send', (self.sample(self.k), bit))))))
+                self.write('a2z', ('P2A', (fro, ('send', (self.sample(self.k), bit)))))
                 self.receiver_state = 3
             else:
                 self.pump.write('')

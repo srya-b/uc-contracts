@@ -1,4 +1,3 @@
-import comm
 import gevent
 from itm import ITM, UCAdversary, UCWrappedAdversary
 from gevent.queue import Queue, Channel, Empty
@@ -35,6 +34,7 @@ class DummyAdversary(UCAdversary):
         msg = d.msg
         imp = d.imp
         assert imp == 0
+        print('some party message at dummy adv')
         self.channels['a2z'].write( ('P2A', msg) )
 
     def func_msg(self, d):

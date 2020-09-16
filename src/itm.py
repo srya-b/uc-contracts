@@ -7,40 +7,9 @@ from numpy.polynomial.polynomial import Polynomial
 from errors import WriteImportError, TickError
 from messages import *
 import gevent
-import comm
 import logging
 import inspect
 
-'''
-There are 2 options with channels:
-    1. The channels are greenlets themselves where they wait for
-        the AsyncResult to be set and then write the result to the
-        input of the 'to' itm. However, the channel itself needs
-        to be the input to the itm, otherwise there's just an extra
-        layer that ads another call to it.
-    2. Calling 'write' on the channel writes to the input tape of the
-        'to' itm. This allows the same interface for the party that's
-        writing, but the recipient can be someone different. If the
-        simulator want to run a sandbox of the adversary, then the 
-        desired construction is that all channels connect to the 
-        simulator and the simulator can control the output messages
-        to the actual intended recipient.
-
-Design Decision:
-    * Instead 'to' and 'fro' will be just identifiers of the form
-        (sid,pid). Having 'to' be the AsyncResult itself means the 
-        code will still be at the mercy of having to spawn itms
-        in a specific order based on the protocol at hand. Which
-        really blows.
-    * Can't be ^ (above) either. If 'to' is the identifier and the
-        itm is got from 'comm' then you're screwed because you have 
-        to fake an identifier and register is in 'comm' for the 
-        simulator to be able to sandbox run the adversary and
-        intercept outputs.
-    * Actually, shit the channel has to be the AsyncResult itself
-        that's the only way. That's the way it was the first time
-        idk how I convinced myself to change it. rip
-'''
 class MSG:
     def __init__(self, msg, imp=1):
         self.msg = msg
@@ -164,7 +133,8 @@ class ITM:
 
 
     def write(self, ch, msg, imp=0):
-#        print('imp', imp, 'impflag', self.impflag)
+        print('imp', imp, 'impflag', self.impflag)
+        self.printstate()
         if self.impflag:
             if self.imp_in - self.imp_out + self.marked >= imp:
                 self.imp_out += imp
@@ -420,10 +390,11 @@ class DummyParty(ITM):
         self.write('p2f', d.msg, d.imp)
 
     def func_msg(self, d):
-        if self.isdishonest:
-            self.write('p2a', d.msg, 0)
-        else:
-            self.write('p2z', d.msg, d.imp)
+        #if self.isdishonest:
+        #    self.write('p2a', d.msg, 0)
+        #else:
+        fro,msg = d.msg
+        self.write('p2z', msg, d.imp)
 
 class WrappedDummyParty(ITM):
     def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
@@ -526,7 +497,7 @@ class PartyWrapper(ITM):
         print('func message', d)
         fro,((sid,pid),msg) = msg
         if self.is_dishonest(sid,pid):
-            self.write( 'p2a', ((sid,pid), msg), imp)
+            self.write( 'p2a', ((sid,pid), msg), 0)#imp)
         else:
             _pid = self.getPID(self.f2pid,sid,pid)
             _pid.write( (fro, msg), imp)
@@ -589,11 +560,6 @@ class ProtocolWrapper(ITM):
         _f2p,_p2f = self._newPID(sid, pid, self.f2pid, self.channels['p2f'], 'p2f')
         _a2p,_p2a = self._newPID(sid, pid, self.a2pid, self.channels['p2a'], 'p2a')
         
-        #if comm.isdishonest(sid, pid):
-        #if self.is_dishonest(sid,pid):
-        #    print('\033[1m[{}]\033[0m Party is corrupt'.format(pid))
-        #    p = DummyParty(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p, 'p2f':_p2f}, self.poly, self.pump, self.importargs)  
-        #else:
         p = self.prot(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p, 'p2f':_p2f}, self.poly, self.pump, self.importargs)
         gevent.spawn(p.run)
 
@@ -617,7 +583,7 @@ class ProtocolWrapper(ITM):
         (fro, ((sid,pid), msg)) = msg
         print('func message ot adversary')
         if self.is_dishonest(sid,pid):
-            self.write('p2a', ((sid,pid), msg), imp)
+            self.write('p2a', ((sid,pid), msg), 0)#imp)
         else:
             _pid = self.getPID(self.f2pid, sid, pid)
             _pid.write( (fro, msg), imp )
@@ -679,7 +645,7 @@ class WrappedPartyWrapper(PartyWrapper):
         imp = d.imp
         (sid,pid),msg = msg
         if self.is_dishonest(sid,pid):
-            self.write('p2a', ((sid,pid), msg), imp)
+            self.write('p2a', ((sid,pid), msg), 0)#imp)
         else:
             _pid = self.getPID(self.w2pid, sid, pid)
             _pid.write( msg, imp )
@@ -705,11 +671,6 @@ class WrappedProtocolWrapper(ProtocolWrapper):
         _a2p,_p2a = self._newPID(sid, pid, self.a2pid, self.channels['p2a'], 'NA')
         _w2p,_p2w = self._newPID(sid, pid, self.w2pid, self.channels['p2w'], 'NA')
        
-        # TODO add wrapped passthrough party
-        #if comm.isdishonest(sid, pid):
-        #if self.is_dishonest(sid,pid):
-        #    p = WrappedDummyParty(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p,'p2f':_p2f, 'w2p':_w2p,'p2w':_p2w}, self.poly, self.pump, self.importargs)
-        #else:
         p = self.prot(self.k, self.bits, self.sid, pid, {'p2f':_p2f, 'f2p':_f2p, 'p2a':_p2a, 'a2p':_a2p, 'p2z':_p2z, 'z2p':_z2p, 'p2w':_p2w, 'w2p':_w2p}, self.pump, self.poly, self.importargs)
         gevent.spawn(p.run)
 
@@ -738,7 +699,7 @@ class WrappedProtocolWrapper(ProtocolWrapper):
         imp = d.imp
         (sid,pid),msg = msg
         if self.is_dishonest(sid,pid):
-            self.write('p2a', ((sid,pid), msg), imp)
+            self.write('p2a', ((sid,pid), msg), 0)#imp)
         else:
             _pid = self.getPID(self.w2pid, sid, pid)
             _pid.write( msg, imp )
@@ -785,7 +746,7 @@ class FunctionalityWrapper(ITM):
         _p2f,_f2p = self._newFID(self.p2fid, self.channels['f2p'], sid, tag)
         _a2f,_f2a = self._newFID(self.a2fid, self.channels['f2a'], sid, tag)
       
-        f = cls(self.k, self.bits, sid, -1, {'f2p':_f2p,'p2f':_p2f, 'f2a':_f2a,'a2f':_a2f, 'f2z':_f2z,'z2f':_z2f}, self.pump, self.poly, self.importargs)
+        f = cls(self.k, self.bits, self.crupt, sid, -1, {'f2p':_f2p,'p2f':_p2f, 'f2a':_f2a,'a2f':_a2f, 'f2z':_f2z,'z2f':_z2f}, self.pump, self.poly, self.importargs)
         gevent.spawn(f.run)
 
     '''Get the relevant channel for the functionality with (sid,tag)
