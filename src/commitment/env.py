@@ -35,6 +35,7 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     return transcript
 
 def env2(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
+    print('its this one')
     sid = ('one', 1, 2)
     static.write( (('sid',sid), ('crupt', (sid,2))))
 
@@ -90,7 +91,7 @@ from lemmaS import Lemma_Simulator, lemmaS
 if __name__=='__main__':
     treal = execUC(
         128,
-        env2,
+        env,
         [('F_ro', Random_Oracle_and_Chan)],
         protocolWrapper(Commitment_Prot),
         DummyAdversary,
@@ -98,15 +99,14 @@ if __name__=='__main__':
     )
 
     print('\n')
+    tideal = execUC(
+        128,
+        env,
+        [('F_com',F_Com)],
+        partyWrapper('F_com'),
+        Sim_Com,
+        #lemmaS(Sim_Com, Polynomial([1,2,3]), DummyAdversary),
+        poly=Polynomial([0,1])
+    )
 
-#    tideal = execUC(
-#        128,
-#        env2,
-#        [('F_ro',F_Com)],
-#        partyWrapper('F_ro'),
-#        Sim_Com,
-#        #lemmaS(Sim_Com, Polynomial([1,2,3]), DummyAdversary),
-#        poly=Polynomial([0,1])
-#    )
-
-#    distinguisher(tideal, treal)
+    distinguisher(tideal, treal)

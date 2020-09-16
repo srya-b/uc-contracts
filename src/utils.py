@@ -1,7 +1,6 @@
 from __future__ import print_function
 import inspect
 import gevent 
-import comm
 from collections import defaultdict
 
 global pouts
@@ -42,7 +41,3 @@ def read_one(*cs):
     assert len(r) == 1
     r[0].reset()
     return r[0], r[0].read()
-
-def z_crupt(sid, pid):
-    comm.corrupt(sid,pid)
-
