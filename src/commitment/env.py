@@ -91,7 +91,7 @@ from lemmaS import Lemma_Simulator, lemmaS
 if __name__=='__main__':
     treal = execUC(
         128,
-        env,
+        env2,
         [('F_ro', Random_Oracle_and_Chan)],
         protocolWrapper(Commitment_Prot),
         DummyAdversary,
@@ -101,7 +101,7 @@ if __name__=='__main__':
     print('\n')
     tideal = execUC(
         128,
-        env,
+        env2,
         [('F_com',F_Com)],
         partyWrapper('F_com'),
         Sim_Com,
