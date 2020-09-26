@@ -81,7 +81,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
             self.isOpen = False
 
     def pay(self, _from, _to, amount):
-        if self.balances[_from] < amount: return
+        if not self.isOpen or self.balances[_from] < amount: return
 
         delay = 0 # some delay of time
         codeblock = (
@@ -98,6 +98,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         self.leak('f2a', leaked_msg, 0)
 
     def read_balance(self, _from):
+        if not self.isOpen: return # if there's no channel, cannot read balance
         delay = 1 # the next round
         codeblock = (
             'schedule'
