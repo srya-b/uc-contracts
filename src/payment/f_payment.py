@@ -24,6 +24,12 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
     def __withdraw(self, _from, _amount):
         self.balances[_from] -= _amount
 
+    def __read(self):
+        bal = []
+        for i in range(self.n):
+            bal.append(self.balances[i])
+        return bal
+
     def __pay(self, _from, _to, _amount):
         self.balances[_from] -= _amount
         self.balances[_to] += _amount
@@ -92,6 +98,17 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         self.leak('f2a', leaked_msg, 0)
 
     def read_balance(self, _from):
+        delay = 1 # the next round
+        codeblock = (
+            'schedule'
+            self.__read,
+            (),
+            delay
+        )
+        self.write('f2w', codeblock)
+        m = wait_for(self.channels['w2f']).msg
+        assert m == ('OK',)
+
         amount = self.balances[_from]
         msg = ('read_balance', (_from, amount)) # donna if the format is right
         self.write('f2p', msg)
