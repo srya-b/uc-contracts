@@ -1,5 +1,8 @@
 # uc-contract
 This is a python implementation of the UC framework alongside the changes required for smart contract applications to be expressed.
+
+
+## Installation
 Use `pip install -r requirements.txt` to install all required pip modules for this project. Don't forget to run `pip install -e src/` to install this repository as an extra package before running the codes inside this project. Python version is **>= 3.5.3**.
 
 
