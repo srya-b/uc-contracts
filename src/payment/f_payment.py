@@ -8,6 +8,10 @@ import logging
 log = logging.getLogger(__name__)
 
 class Syn_Payment_Functionality(UCWrappedFunctionality):
+    '''
+    Ideal Functionality of Payment Channel (now only uni-directional)
+    It includes the ideal functionality of on-chain smart contract open/close payment channel + off-chain synchronous communication of signed payloads.
+    '''
     def __init__(self, k, bits, sid, pid, channels, pump, poly, importargs):
         self.ssid = sid[0]
         self.parties = sid[1]
@@ -150,7 +154,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
             leaked_msg = 'leaked msg (i don know what is the format of leaked message is look like, so a placeholder here)'
             self.leak('f2a', leaked_msg, 0)
 
-    # the handler bound on p2f channel, handling message from parties
+    # p2f channel handler, handling message from parties
     def party_msg(sef, msg):
         log.debug('Party message in payment {}'.format(msg))
         command = msg['msg']
@@ -180,12 +184,18 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
             amount = data['amount']
             withdraw(sender, amount)
         else:
+            log.debug('F_payment/Command not found: {}'.format(command))
             self.pump.write("pump")
 
+    # w2f channel handler, handling message from wrapper
     def wrapper_msg(self, msg):
         self.pump.write("dump")
+
+    # a2f channel handler, handling message from adversary
     def adv_msg(self, msg):
         self.pump.write("dump")
+
+    # e2f channel handler, handling message from environment
     def env_msg(self, msg):
         self.pump.write("dump")
 
