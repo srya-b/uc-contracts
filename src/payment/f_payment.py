@@ -19,8 +19,11 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         self.round_upper_bound = 1
         self.delta = sid[2] * self.round_upper_bound
 
-        self.balances[self.n] # record all parties' balances
-        self.isOpen = False # if there's a payment channel open
+        self.balances[self.n]   # record all parties' balances
+        self.isOpen = False     # if there's a payment channel open
+        self.flag = 'NORMAL'    # {'NORMAL', 'CHALLANGE'}
+                                # 'NORMAL': all are honest
+                                # 'CHALLANGE': enter into challenge period
         
         UCWrappedFunctionality.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
 
@@ -32,7 +35,8 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         self.balances[_from] += _amount
 
     def __withdraw(self, _from, _amount):
-        self.balances[_from] -= _amount
+        if _amount <= self.balances[_from]:
+            self.balances[_from] -= _amount
 
     def __read(self):
         bal = []
@@ -41,6 +45,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         return bal
 
     def __pay(self, _from, _to, _amount):
+        if self.balances[_from] < _amount: return
         self.balances[_from] -= _amount
         self.balances[_to] += _amount
 
@@ -91,7 +96,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
             self.isOpen = False
 
     def pay(self, _from, _to, amount):
-        if not self.isOpen or self.balances[_from] < amount: return
+        if not self.isOpen: return # if there's no channel, cannot pay offchain
 
         delay = 1 # delay only 1 round because pay is supposed to be off-chain
         codeblock = (
@@ -111,9 +116,9 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         if not self.isOpen: return # if there's no channel, cannot read balance
 
         amount = self.balances[_from]
-        msg = ('read_balance', (_from, amount)) # donna if the format is right
+        msg = (_from, 'balance: {}'.format(amount)) # msg format: (which party is gonna receive this message, the actual message)
         self.write('f2p', msg)
-        # no need to leak to adversary, pointless
+        # no need to leak to adversary because there's no communication via synchronous channel when reading balance
 
     def deposit(self, _from, amount):
         if self.isOpen:
@@ -133,9 +138,6 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
 
     def withdraw(self, _from, amount):
         if self.isOpen:
-            if amount > self.balances[_from]
-                return
-
             delay = self.delta # on-chain communication delay
             codeblock = (
                 'schedule'
