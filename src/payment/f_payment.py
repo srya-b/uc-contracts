@@ -58,7 +58,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
 
     def init_channel(self, _from, amount):
         if not self.isOpen:
-            delay = 0 # some delay of time
+            delay = self.delta # on-chain communication delay
             codeblock = (
                 'schedule'
                 self.__init,
@@ -75,7 +75,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
 
     def close_channel(self, _from):
         if self.isOpen:
-            delay = 0 # some delay of time
+            delay = self.delta # on-chain communication delay
             codeblock = (
                 'schedule'
                 self.__close,
@@ -93,7 +93,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
     def pay(self, _from, _to, amount):
         if not self.isOpen or self.balances[_from] < amount: return
 
-        delay = 0 # some delay of time
+        delay = 1 # delay only 1 round because pay is supposed to be off-chain
         codeblock = (
             'schedule'
             self.__pay,
@@ -109,16 +109,6 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
 
     def read_balance(self, _from):
         if not self.isOpen: return # if there's no channel, cannot read balance
-        delay = 1 # the next round
-        codeblock = (
-            'schedule'
-            self.__read,
-            (),
-            delay
-        )
-        self.write('f2w', codeblock)
-        m = wait_for(self.channels['w2f']).msg
-        assert m == ('OK',)
 
         amount = self.balances[_from]
         msg = ('read_balance', (_from, amount)) # donna if the format is right
@@ -127,7 +117,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
 
     def deposit(self, _from, amount):
         if self.isOpen:
-            delay = 0 # some delay of time
+            delay = self.delta # on-chain communication delay
             codeblock = (
                 'schedule'
                 self.__deposit,
@@ -146,7 +136,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
             if amount > self.balances[_from]
                 return
 
-            delay = 0 # some delay of time
+            delay = self.delta # on-chain communication delay
             codeblock = (
                 'schedule'
                 self.__withdraw,
