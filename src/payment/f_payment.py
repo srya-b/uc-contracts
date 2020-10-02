@@ -18,10 +18,16 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         self.n = len(self.parties)
         self.round_upper_bound = 1
         self.delta = sid[2] * self.round_upper_bound
+
         self.balances[self.n] # record all parties' balances
         self.isOpen = False # if there's a payment channel open
+        
         UCWrappedFunctionality.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
 
+    '''
+    __func: functions with __ as prefix are actually executed in the wrapper
+    func: normal functions are called in this ideal functionality to schedule __func call in the wrapper
+    '''
     def __deposit(self, _from, _amount):
         self.balances[_from] += _amount
 
@@ -61,10 +67,10 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
             )
             self.write('f2w', codeblock)
             m = wait_for(self.channels['w2f']).msg
-            assert m == ('OK',)
+            assert m == ('OK',) # supposed to get this immediately, just to check if the message is successfully queued in wrapper
 
             leaked_msg = 'leaked msg (i don know what is the format of leaked message is look like, so a placeholder here)'
-            self.leak('f2a', leaked_msg, 0)
+            self.leak('f2a', leaked_msg, 0) # leak msg to the adversary because this part simulates the msg being sent to the synchronous channel in the real world
             self.isOpen = True
 
     def close_channel(self, _from):
