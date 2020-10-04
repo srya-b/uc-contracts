@@ -15,23 +15,31 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         self.parties = sid[1]
         self.delta = sid[2]
         self.n = len(self.parties)
-        self.t = floor(self.n/3)
         UCWrappedProtocol.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
 
         self.id = # TODO: get id from sid or ?
         self.nonce = 0
         self.balances = [0] * self.n
-        self.states = {}
+        self.states = [] # (nonce) => {nonce, balances}
+        self.sigs = [] # (nonce) => [None] * self.n
         self.isOpen = False
         self.flag = 'NORMAL'    # {'NORMAL', 'CHALLANGE'}
                                 # 'NORMAL': all are honest
                                 # 'CHALLANGE': enter into challenge period
 
 
+    def _sign(self, state):
+        # TODO
+        # use it's private key to sign the state s
+        return signed_state
+
+
     def normal_offchain_payment(self, data):
         nonce = data['nonce']
         assert nonce == self.nonce
-        self.states[nonce] = data['state']
+
+        self.states.append(data['state'])
+        self.sigs.append(data['sig'])
         self.nonce += 1
 
         s = data['sender']
@@ -41,6 +49,7 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         assert a <= self.balances[s]
         self.balances[r] += a
         self.balances[s] -= a
+
 
     def react_challenge(self, data, imp):
         _s = data['state']
@@ -68,11 +77,13 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         self.isOpen = False
         self.flag = 'NORMAL'
 
+
     def recv_init_channel(self, data):
         s = data['sender']
         a = data['amount']
         self.balances[s] += amount
         self.isOpen = True
+
 
     # functionality handler
     # receive msg from the smart contract ideal functionality in the real world
@@ -96,13 +107,16 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         else:
             self.pump.write("dump")
 
+
     # wrapper handler
     def wrapper_msg(self, msg):
         self.pump.write("dump")
 
+
     # adv handler
     def adv_msg(self, msg):
         self.pump.write("dump")
+
 
     def close_channel(self, _from, imp):
         if not self.isOpen: return # if a channel doesnt exitst, then fail
@@ -115,6 +129,7 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
             }
         }
         self.write('p2f', msg)
+
 
     def init_channel(self, _from, imp):
         if self.isOpen: return # if a channel is already open, then fail
@@ -136,7 +151,15 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
 
         self.balances[_from] -= amount
         self.balances[_to] += amount
-        self.states[self.nonce] = self.balances
+
+        state = {
+            'nonce': self.nonce,
+            'balances': self.balances
+        }
+        self.states.append(state)
+
+        self.sigs.append([None] * self.n)
+        self.sigs[self.nonce][_from] = self._sign(state)
 
         msg = {
             'msg': 'pay',
@@ -147,6 +170,7 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
                 'amount': amount,
                 'nonce': self.nonce,
                 'state': self.states[self.nonce]
+                'sig': self.sigs[self.nonce]
             }
         }
         self.write('p2f', msg)
@@ -162,6 +186,7 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         if command == 'pay':
             # Z tells P_i to pay another P_j
             sender = data['sender']
+            assert sender = self.id
             receiver = data['receiver']
             amount = data['amount']
             self.pay(sender, receiver, amount, tokens)
