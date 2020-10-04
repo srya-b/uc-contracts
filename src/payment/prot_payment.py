@@ -45,6 +45,13 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
     def react_challenge(self):
         pass
 
+    def recv_close_channel(self, data):
+        self.nonce = 0
+        self.balances = [0] * self.n
+        self.states = {}
+        self.isOpen = False
+        self.flag = 'NORMAL'
+
     def recv_init_channel(self, data):
         s = data['sender']
         a = data['amount']
@@ -68,6 +75,8 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         elif command == 'init_channel':
             # get onchain notification of channel initialization
             self.recv_init_channel(data)
+        elif command == 'close_channel':
+            self.recv_close_channel(data)
         else:
             self.pump.write("dump")
 
@@ -79,6 +88,17 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
     def adv_msg(self, msg):
         self.pump.write("dump")
 
+    def close_channel(self, _from, imp):
+        if not self.isOpen: return # if a channel doesnt exitst, then fail
+
+        msg = {
+            'msg': 'close',
+            'imp': imp,
+            'data': {
+                'sender': _from
+            }
+        }
+        self.write('p2f', msg)
 
     def init_channel(self, _from, imp):
         if self.isOpen: return # if a channel is already open, then fail
@@ -139,7 +159,8 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
             init_channel(sender, amount, tokens)
         elif command == 'close':
             # Z tells P_i to close a channel
-            pass
+            sender = data['sender']
+            close_channel(sender, tokens)
         # elif command == 'deposit':
         #     # Z tells P_i to init a channel
         #     pass
