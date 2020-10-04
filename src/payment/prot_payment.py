@@ -45,8 +45,11 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
     def react_challenge(self):
         pass
 
-    def get_onchain_block(self):
-        pass
+    def recv_init_channel(self, data):
+        s = data['sender']
+        a = data['amount']
+        self.balances[s] += amount
+        self.isOpen = True
 
     # functionality handler
     # receive msg from the smart contract ideal functionality in the real world
@@ -62,9 +65,9 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         elif command == 'challenge':
             # entering into challenge
             pass
-        elif command == 'broadcast':
-            # get onchain broadcast (like a mining block notification)
-            pass
+        elif command == 'init_channel':
+            # get onchain notification of channel initialization
+            self.recv_init_channel(data)
         else:
             self.pump.write("dump")
 
@@ -75,6 +78,21 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
     # adv handler
     def adv_msg(self, msg):
         self.pump.write("dump")
+
+
+    def init_channel(self, _from, imp):
+        if self.isOpen: return # if a channel is already open, then fail
+
+        msg = {
+            'msg': 'init',
+            'imp': imp,
+            'data': {
+                'sender': _from,
+                'amount': amount
+            }
+        }
+        self.write('p2f', msg)
+
 
     def pay(self, _from, _to, amount, imp):
         if not self.isOpen: return # if there's no channel, cannot pay offchain
@@ -116,7 +134,9 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
             self.write('p2z', self.balances[self.id])
         elif command == 'init':
             # Z tells P_i to init a channel
-            pass
+            sender = data['sender']
+            amount = data['amount']
+            init_channel(sender, amount, tokens)
         elif command == 'close':
             # Z tells P_i to close a channel
             pass
