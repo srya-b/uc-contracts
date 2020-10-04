@@ -285,7 +285,7 @@ class UCWrappedFunctionality(ITM):
     def wrapper_msg(self, msg):
         Exception("wrapper_msg needs to be defined")
 
-    def leak(self, msg, imp):
+    def leak(self, msg, imp=0):
         #self.channels['f2w'].write( ('leak', msg), imp)
         self.write('f2w', ('leak',msg), imp)
 
