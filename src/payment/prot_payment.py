@@ -30,7 +30,7 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
 
     def normal_offchain_payment(self, data):
         nonce = data['nonce']
-        assert nonce == self.nonce + 1
+        assert nonce == self.nonce
         self.states[nonce] = data['state']
         self.nonce += 1
 
@@ -38,9 +38,9 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         r = data['receiver']
         a = data['amount']
         assert r == self.id
+        assert a <= self.balances[s]
         self.balances[r] += a
         self.balances[s] -= a
-        assert self.balances == data['state']
 
     def react_challenge(self, data, imp):
         _s = data['state']
