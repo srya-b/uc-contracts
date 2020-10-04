@@ -42,8 +42,24 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         self.balances[s] -= a
         assert self.balances == data['state']
 
-    def react_challenge(self):
-        pass
+    def react_challenge(self, data, imp):
+        _s = data['state']
+        _n = _s[0] # nonce of the state
+        _b = _s[1] # balances of the state
+        # basically P_recv doesnt need to check anything
+        # just send the latest state to challenge is fine
+
+        msg = {
+            'msg': 'challenge',
+            'imp': imp,
+            'data': {
+                'sender': self.id,
+                'nonce': self.nonce-1,
+                'states': self.states[self.nonce-1]
+            }
+        }
+        self.write('p2f', msg)
+
 
     def recv_close_channel(self, data):
         self.nonce = 0
@@ -71,7 +87,7 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
             self.normal_offchain_payment(data)
         elif command == 'challenge':
             # entering into challenge
-            pass
+            self.react_challenge(data, tokens)
         elif command == 'init_channel':
             # get onchain notification of channel initialization
             self.recv_init_channel(data)
