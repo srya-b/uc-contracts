@@ -140,12 +140,12 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         elif command == 'close':
             # Z tells P_i to close a channel
             pass
-        elif command == 'deposit':
-            # Z tells P_i to init a channel
-            pass
-        elif command == 'withdraw':
-            # Z tells P_i to close a channel
-            pass
+        # elif command == 'deposit':
+        #     # Z tells P_i to init a channel
+        #     pass
+        # elif command == 'withdraw':
+        #     # Z tells P_i to close a channel
+        #     pass
         else:
             self.pump.write("dump")
             return
