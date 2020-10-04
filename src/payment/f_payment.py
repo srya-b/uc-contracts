@@ -75,7 +75,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
             assert m == ('OK',) # supposed to get this immediately, just to check if the message is successfully queued in wrapper
 
             leaked_msg = 'leaked msg (i don know what is the format of leaked message is look like, so a placeholder here)'
-            self.leak('f2a', leaked_msg, 0) # leak msg to the adversary because this part simulates the msg being sent to the synchronous channel in the real world
+            self.leak(leaked_msg, 0) # leak msg to the adversary because this part simulates the msg being sent to the synchronous channel in the real world
             self.isOpen = True
 
     def close_channel(self, _from):
@@ -92,7 +92,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
             assert m == ('OK',)
 
             leaked_msg = ('close', (_from))
-            self.leak('f2a', leaked_msg, 0)
+            self.leak(leaked_msg, 0)
             self.isOpen = False
 
     def pay(self, _from, _to, amount):
@@ -110,7 +110,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         assert m == ('OK',)
 
         leaked_msg = ('pay', (_from, _to, amount))
-        self.leak('f2a', leaked_msg, 0)
+        self.leak(leaked_msg, 0)
 
     def read_balance(self, _from):
         if not self.isOpen: return # if there's no channel, cannot read balance
@@ -134,7 +134,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
             assert m == ('OK',)
 
             leaked_msg = 'leaked msg (i don know what is the format of leaked message is look like, so a placeholder here)'
-            self.leak('f2a', leaked_msg, 0)
+            self.leak(leaked_msg, 0)
 
     def withdraw(self, _from, amount):
         if self.isOpen:
@@ -150,7 +150,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
             assert m == ('OK',)
 
             leaked_msg = 'leaked msg (i don know what is the format of leaked message is look like, so a placeholder here)'
-            self.leak('f2a', leaked_msg, 0)
+            self.leak(leaked_msg, 0)
 
     # p2f channel handler, handling message from parties
     def party_msg(sef, msg):
