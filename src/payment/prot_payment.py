@@ -18,22 +18,29 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         self.t = floor(self.n/3)
         UCWrappedProtocol.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
 
+        self.id = # TODO: get id from sid or ?
         self.nonce = 0
         self.balances = [0] * self.n
+        self.states = {}
         self.isOpen = False
         self.flag = 'NORMAL'    # {'NORMAL', 'CHALLANGE'}
                                 # 'NORMAL': all are honest
                                 # 'CHALLANGE': enter into challenge period
 
 
-    def _pay_offchain(self):
-        pass
+    def normal_offchain_payment(self, data):
+        nonce = data['nonce']
+        assert nonce == self.nonce + 1
+        self.states[nonce] = data['state']
+        self.nonce += 1
 
-    def _pay_onchain(self):
-        pass
-
-    def normal_offchain_payment(self):
-        pass
+        s = data['sender']
+        r = data['receiver']
+        a = data['amount']
+        assert r == self.id
+        self.balances[r] += a
+        self.balances[s] -= a
+        assert self.balances == data['state']
 
     def react_challenge(self):
         pass
@@ -51,7 +58,7 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         data = msg['data']
         if command == 'pay':
             # normal offchain payment
-            pass
+            self.normal_offchain_payment(data)
         elif command == 'challenge':
             # entering into challenge
             pass
@@ -69,6 +76,29 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
     def adv_msg(self, msg):
         self.pump.write("dump")
 
+    def pay(self, _from, _to, amount, imp):
+        if not self.isOpen: return # if there's no channel, cannot pay offchain
+        if amount > self.balances[_from]: return # not enough balance
+
+        self.balances[_from] -= amount
+        self.balances[_to] += amount
+        self.states[self.nonce] = self.balances
+
+        msg = {
+            'msg': 'pay',
+            'imp': imp,
+            'data': {
+                'sender': _from,
+                'receiver': _to,
+                'amount': amount,
+                'nonce': self.nonce,
+                'state': self.states[self.nonce]
+            }
+        }
+        self.write('p2f', msg)
+        self.nonce += 1
+        
+
     # env handler
     def env_msg(self, msg):
         log.debug('Env/Receive message from Z in real world: {}'.format(msg))
@@ -77,10 +107,13 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         data = msg['data']
         if command == 'pay':
             # Z tells P_i to pay another P_j
-            pass
+            sender = data['sender']
+            receiver = data['receiver']
+            amount = data['amount']
+            self.pay(sender, receiver, amount, tokens)
         elif command == 'read':
             # Z tells P_i to read its own balance
-            pass
+            self.write('p2z', self.balances[self.id])
         elif command == 'init':
             # Z tells P_i to init a channel
             pass
