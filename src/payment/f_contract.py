@@ -64,7 +64,7 @@ class Contract(UCWrappedFunctionality):
         _sig = data['sig']
 
         assert self.flag == 'CHALLANGE'
-        for p in self.n:
+        for p in range(self.n):
             assert self._check_sig(p, _sig[p], _state)
 
         assert _state['nonce'] >= self.nonce
@@ -89,7 +89,7 @@ class Contract(UCWrappedFunctionality):
             m = wait_for(self.channels['w2f']).msg
             assert m == ('OK',)
 
-            leaked_msg = ('pay', (_from, _to, _amt))
+            leaked_msg = ('challenge', (_from, _state, _sig))
             self.leak(leaked_msg, 0)
 
 
