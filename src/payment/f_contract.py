@@ -107,8 +107,6 @@ class Contract(UCWrappedFunctionality):
             # entering into challenge, receive challenge from P_{receiver}
             self.recv_challenge(data, imp)
         # === ^ offchain operations === v onchain operations
-        elif command == 'read':
-            pass
         elif command == 'init':
             pass
         elif command == 'close':
