@@ -25,16 +25,34 @@ class Contract(UCWrappedFunctionality):
     def __send2p(self, i, msg, imp):
         self.write('f2p', (i, msg), imp)
 
-    def send2w(self, i, func, args, delta, imp):
+
+    def recv_pay(self, data, imp):
+        _from = data['sender']
+        _to = data['receiver']
+        _nonce = data['nonce']
+        _amt = data['amount']
+        _state = data['state']
+        _sig = data['sig']
+
+        msg = {
+            'msg': 'pay',
+            'imp': imp,
+            'data': data
+        }
+
         codeblock = (
             'schedule', 
-            func, 
-            args, 
-            delta
+            self.__send2p,
+            (_to, msg, imp),
+            1
         )
         self.write('f2w', codeblock, imp)
         m = wait_for(self.channels['w2f']).msg
         assert m == ('OK',)
+
+        leaked_msg = ('pay', (_from, _to, _amt))
+        self.leak(leaked_msg, 0)
+
 
     # p2f handler
     def party_msg(self, msg):
@@ -45,21 +63,21 @@ class Contract(UCWrappedFunctionality):
         sender = data['sender']
         if command == 'pay':
             # normal offchain payment
-            pass
+            self.recv_pay(data, imp)
         elif command == 'challenge':
             # entering into challenge, receive challenge from P_{receiver}
             pass
+        # === ^ offchain operations === v onchain operations
         elif command == 'read':
             pass
-        # === ^ offchain operations === v onchain operations
         elif command == 'init':
             pass
         elif command == 'close':
             pass
-        elif command == 'deposit':
-            pass
-        elif command == 'withdraw':
-            pass
+        # elif command == 'deposit':
+        #     pass
+        # elif command == 'withdraw':
+        #     pass
         else:
             self.pump.write("dump")
 
