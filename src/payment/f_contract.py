@@ -17,13 +17,52 @@ class Contract(UCWrappedFunctionality):
         self.deadline = 0
         self.nonce = 0
         self.balances = [0] * self.n
-        self.flag = 'NORMAL'    # {'NORMAL', 'CHALLANGE'}
-                                # 'NORMAL': all are honest
+        self.flag = 'CLOSED'    # {'CLOSED', 'OPEN', 'CHALLANGE'}
+                                # 'CLOSED': channel closed
+                                # 'OPEN': channel open
                                 # 'CHALLANGE': enter into challenge period
 
 
     def __send2p(self, i, msg, imp):
         self.write('f2p', (i, msg), imp)
+
+    def _check_sig(self, party, sig, state):
+        # check if party sign the state with signature sig
+        return True or False
+
+    def recv_challenge(self, data, imp):
+        _from = data['sender']
+        _state = data['state']
+        _sig = data['sig']
+
+        assert self.flag == 'CHALLANGE'
+        for p in self.n:
+            assert self._check_sig(p, _sig[p], _state)
+
+        assert _state['nonce'] >= self.nonce
+        self.nonce = _state['nonce']
+        self.balances = _state['balances']
+        self.flag = 'CLOSED'
+
+        msg = {
+            'msg': 'close_channel',
+            'imp': imp,
+            'data': data
+        }
+
+        for _to in range(self.n):
+            codeblock = (
+                'schedule',
+                self.__send2p,
+                (_to, msg, imp),
+                self.delta
+            )
+            self.write('f2w', codeblock, imp)
+            m = wait_for(self.channels['w2f']).msg
+            assert m == ('OK',)
+
+            leaked_msg = ('pay', (_from, _to, _amt))
+            self.leak(leaked_msg, 0)
 
 
     def recv_pay(self, data, imp):
@@ -66,7 +105,7 @@ class Contract(UCWrappedFunctionality):
             self.recv_pay(data, imp)
         elif command == 'challenge':
             # entering into challenge, receive challenge from P_{receiver}
-            pass
+            self.recv_challenge(data, imp)
         # === ^ offchain operations === v onchain operations
         elif command == 'read':
             pass
