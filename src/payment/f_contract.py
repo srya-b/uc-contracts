@@ -26,6 +26,34 @@ class Contract(UCWrappedFunctionality):
     def __send2p(self, i, msg, imp):
         self.write('f2p', (i, msg), imp)
 
+
+    def init_channel(self, data, imp):
+        _from = data['sender']
+        _amt = data['amount']
+
+        self.flag = 'OPEN'
+
+        msg = {
+            'msg': 'init_channel',
+            'imp': imp,
+            'data': data
+        }
+
+        for _to in range(self.n):
+            codeblock = (
+                'schedule',
+                self.__send2p,
+                (_to, msg, imp),
+                self.delta
+            )
+            self.write('f2w', codeblock, imp)
+            m = wait_for(self.channels['w2f']).msg
+            assert m == ('OK',)
+
+            leaked_msg = ('init', (_from, _amt))
+            self.leak(leaked_msg, 0)
+
+
     def _check_sig(self, party, sig, state):
         # check if party sign the state with signature sig
         return True or False
@@ -108,7 +136,7 @@ class Contract(UCWrappedFunctionality):
             self.recv_challenge(data, imp)
         # === ^ offchain operations === v onchain operations
         elif command == 'init':
-            pass
+            self.init_channel(data, imp)
         elif command == 'close':
             pass
         # elif command == 'deposit':
