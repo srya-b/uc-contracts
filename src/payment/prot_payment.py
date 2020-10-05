@@ -53,18 +53,27 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
 
     def react_challenge(self, data, imp):
         _s = data['state']
-        _n = _s[0] # nonce of the state
-        _b = _s[1] # balances of the state
-        # basically P_recv doesnt need to check anything
-        # just send the latest state to challenge is fine
+        _n = _s['nonce']
+        _b = _s['balances']
+        _sig = data['sig']
+        # basically P_recv doesnt need to check anything above
+        # just sign send the latest state to challenge is fine
+
+        if self.nonce == 0:
+            state = {'nonce': -1, 'balances': self.balances}
+            sig = data['sig']
+        else
+            state = self.states[self.nonce-1]
+            sig = self.sigs[self.nonce-1]
+        sig[self.id] = self._sign(state)
 
         msg = {
             'msg': 'challenge',
             'imp': imp,
             'data': {
                 'sender': self.id,
-                'nonce': self.nonce-1,
-                'states': self.states[self.nonce-1]
+                'states': state,
+                'sig': sig
             }
         }
         self.write('p2f', msg)
@@ -100,7 +109,6 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
             # entering into challenge
             self.react_challenge(data, tokens)
         elif command == 'init_channel':
-            # get onchain notification of channel initialization
             self.recv_init_channel(data)
         elif command == 'close_channel':
             self.recv_close_channel(data)
@@ -121,11 +129,21 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
     def close_channel(self, _from, imp):
         if not self.isOpen: return # if a channel doesnt exitst, then fail
 
+        if self.nonce == 0:
+            state = {'nonce': -1, 'balances': self.balances}
+            sig = [None] * self.n
+            sig[_from] = self._sign(state)
+        else
+            state = self.states[self.nonce-1]
+            sig = self.sigs[self.nonce-1]
+
         msg = {
             'msg': 'close',
             'imp': imp,
             'data': {
                 'sender': _from
+                'state': state
+                'sig': sig
             }
         }
         self.write('p2f', msg)
