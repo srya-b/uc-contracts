@@ -26,6 +26,73 @@ class Contract(UCWrappedFunctionality):
     def __send2p(self, i, msg, imp):
         self.write('f2p', (i, msg), imp)
 
+    def _check_sig(self, party, sig, state):
+        # TODO: check if party sign the state with signature sig
+        return True or False
+
+    def _current_time(self):
+        # TODO: return current round
+        return current_round
+
+
+    def close_channel(data, imp):
+        _from = data['sender']
+        _state = data['state']
+        _sig = data['sig']
+
+        assert self.flag = 'OPEN'
+        for p in range(self.n):
+            if p != _from:
+                isHonest = self._check_sig(p, _sig[p], _state)
+
+        if isHonest:
+            # means also receiver's signature
+            self.flag = 'CLOSED'
+            msg = {
+                'msg': 'close_channel',
+                'imp': imp,
+                'data': data
+            }
+
+            for _to in range(self.n):
+                codeblock = (
+                    'schedule',
+                    self.__send2p,
+                    (_to, msg, imp),
+                    self.delta
+                )
+                self.write('f2w', codeblock, imp)
+                m = wait_for(self.channels['w2f']).msg
+                assert m == ('OK',)
+
+                leaked_msg = ('close', (_from))
+                self.leak(leaked_msg, 0)
+
+        else:
+            # means only sender's signature
+            self.flag = 'CHALLANGE'
+            self.deadline = self.current_round() + self.settlement
+
+            msg = {
+                'msg': 'challenge',
+                'imp': imp,
+                'data': data
+            }
+
+            for _to in range(self.n):
+                codeblock = (
+                    'schedule',
+                    self.__send2p,
+                    (_to, msg, imp),
+                    self.delta
+                )
+                self.write('f2w', codeblock, imp)
+                m = wait_for(self.channels['w2f']).msg
+                assert m == ('OK',)
+
+                leaked_msg = ('challenge', (_from))
+                self.leak(leaked_msg, 0)
+
 
     def init_channel(self, data, imp):
         _from = data['sender']
@@ -53,10 +120,6 @@ class Contract(UCWrappedFunctionality):
             leaked_msg = ('init', (_from, _amt))
             self.leak(leaked_msg, 0)
 
-
-    def _check_sig(self, party, sig, state):
-        # check if party sign the state with signature sig
-        return True or False
 
     def recv_challenge(self, data, imp):
         _from = data['sender']
@@ -138,7 +201,7 @@ class Contract(UCWrappedFunctionality):
         elif command == 'init':
             self.init_channel(data, imp)
         elif command == 'close':
-            pass
+            self.close_channel(data, imp)
         # elif command == 'deposit':
         #     pass
         # elif command == 'withdraw':
