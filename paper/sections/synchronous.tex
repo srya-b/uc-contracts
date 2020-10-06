@@ -141,13 +141,19 @@ When \texttt{poll} is sent to the wrapper, the adversary is also activated so th
 In Figure~\ref{fig:functionality:channel}, we should a simple channel functionality that uses the wrapper to schedule messages in a synchronous fashion.
 In a protocol execution with pair-wise channels, $\F_{\msf{sync-chan},s,r}$, the adversary only needs to communicate with the wrapper~\footnote{In other adversarial models and un-authenticated channels, the adversary would still need to use the channels to modify messages.}.
 
-\begin{figure}
+\begin{figure}[!htb]
+\begin{subfigure}{\textwidth}
 	\input{figures/f_channel}
-	\caption{A basic point-to-point channel functionality that delivers the message in a synchronous way.}
+	\caption{A synchronous channel written in the style of the synchronous wrapper. The ``In $O(\Delta)$'' is high level code that is expanded in the next figure.}
 	\label{fig:functionality:channel}
+\end{subfigure}
+\begin{subfigure}{\textwidth}
+	\input{figures/f_channel_real}
+	\caption{The high level invocation of ``In $O(\Delta)$'' is expanded into a ``schedule'' msg that is sent to the wrapper.}
+\end{subfigure}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[!htb]
 	\input{figures/wrapper_sync}
 	\caption{This wrapper implements the enhancements made to the protocol to conform to the interace of the ideal functionality \Fbc. It reads in incoming messages in the first activation of a round and uses the next $|\mathcal{P}|$ activations to send messages to others.}
 	\label{fig:wrapper:synchronous}
@@ -160,7 +166,7 @@ The functionality just accepts input from the dealer (fixed to be pid = 1) and t
 This functionality, though, abstracts away the details of sending a message to the wrapper with the statement ``in $O(4\Delta)$''.
 Figure~\ref{fig:functionality:broadcast_import_real} shows the exact message being exchanged with the wrapper.
 
-\begin{figure}
+\begin{figure}[!htb]
 \begin{subfigure}{\textwidth}
 	\input{figures/f_broadcast_import}
 	\caption{A simple broadcast functionality that delivers the output to all the other parties within $O(\Delta)$ rounds. The functionality is described at a high level, with more specific messages and wrapper interaction shown below.}
@@ -174,39 +180,39 @@ Figure~\ref{fig:functionality:broadcast_import_real} shows the exact message bei
 \end{subfigure}
 \end{figure}
 
-\begin{figure}
-\begin{subfigure}{\textwidth}
-	\input{figures/f_bcast_async}
-	\caption{A simple broadcast functionality that delivers the output to all the other parties {\em eventually}. The functionality is described at a high level, with more specific messages and wrapper interaction shown below.}
-	\label{fig:functionality:broadcast_import}
-\end{subfigure}
-\newline
-\begin{subfigure}{\textwidth}
-	\input{figures/f_bcast_async_real}
-	\caption{This broacsat functionality illustrates the actual messages being passed between the functionality above and the wrapper. The wrapper handles asynchronous delivery of messages {\em and} leaks.}
-	\label{fig:functionality:broadcast_import_real}
-\end{subfigure}
-\end{figure}
+%\begin{figure}[!htb]
+%\begin{subfigure}{\textwidth}
+%	\input{figures/f_bcast_async}
+%	\caption{A simple broadcast functionality that delivers the output to all the other parties {\em eventually}. The functionality is described at a high level, with more specific messages and wrapper interaction shown below.}
+%	\label{fig:functionality:broadcast_import}
+%\end{subfigure}
+%\newline
+%\begin{subfigure}{\textwidth}
+%	\input{figures/f_bcast_async_real}
+%	\caption{This broacsat functionality illustrates the actual messages being passed between the functionality above and the wrapper. The wrapper handles asynchronous delivery of messages {\em and} leaks.}
+%	\label{fig:functionality:broadcast_import_real}
+%\end{subfigure}
+%\end{figure}
 A protocol realizing this functionality was proposed by Bracha~\cite{bracha} in the asynchronous setting.
-The pseudocode of the original protocol without any UC-specific details is shown in Figure \ref{fig:protocol:asyncbracha}.
-
-\begin{figure}
-\begin{minipage}[t]{0.55\textwidth}
-	\input{figures/async_bracha}
-	\caption{The original asynchronous broadcast protocol proposed by Bracha~\cite{bracha-broadcast}. The protocol proceeds in three rounds and terminates if enough messages are delivered.}
-	\label{fig:protocol:asyncbracha}
-\end{minipage}
-\end{figure}
-
-The protocol is simple and designed to handle $t < \frac{n}{3}$ Byzantine failures.
-The parties stage an input for commit if they witness a Byzantine qourum ($\frac{n+t}{2}$) of \texttt{ECHO} messages and send out \texttt{READY} messages to all of the other parties.
-Finally, each party waits for $2t + 1$ \texttt{READY} messages (at least 1 \texttt{READY} message from an honest party) and commits to the value.
+%The pseudocode of the original protocol without any UC-specific details is shown in Figure \ref{fig:protocol:asyncbracha}.
+%
+%\begin{figure}[!htb]
+%\begin{minipage}[t]{0.55\textwidth}
+%	\input{figures/async_bracha}
+%	\caption{The original asynchronous broadcast protocol proposed by Bracha~\cite{bracha-broadcast}. The protocol proceeds in three rounds and terminates if enough messages are delivered.}
+%	\label{fig:protocol:asyncbracha}
+%\end{minipage}
+%\end{figure}
+%
+%The protocol is simple and designed to handle $t < \frac{n}{3}$ Byzantine failures.
+%The parties stage an input for commit if they witness a Byzantine qourum ($\frac{n+t}{2}$) of \texttt{ECHO} messages and send out \texttt{READY} messages to all of the other parties.
+%Finally, each party waits for $2t + 1$ \texttt{READY} messages (at least 1 \texttt{READY} message from an honest party) and commits to the value.
 
 We use this protocol in our synchronous model in Figure~\ref{fig:prot:bracha_ours}.
 The real world execution of this protocol includes some set of honest parties running the protocol and pairwise authenticated synchronous channels $\F_{\msf{sync-chan},s,r}$ that are unique to each round (i.e. each such functionality is one-shot).
 The channels are described above in Figure~\ref{fig:functionality:channel}.
 
-\begin{figure}
+\begin{figure}[!htb]
 	\input{figures/prot_bracha_ours}
 	\caption{The Bracha broadcast protocol written in the UC framework with access to pairwise authenticated channel functionalities $\Fchan{s,r}$.}
 	\label{fig:prot:bracha_ours}
@@ -244,13 +250,13 @@ Instead, the environment sends parties on behalf of the corrupt dealers through 
 In this case, the simulator will never receive any leaked input from $\F_{bcast}$ but may still receive output from simulated honest parties.
 If an output is received, the simulator acts on behalf of the corrupt dealer, sends the input to $\F_{bcast}$, gets leaks from $\mathcal{W}_{sync}$, and executes the corresponding codeblock.
 
-\begin{figure}
+\begin{figure}[!htb]
 	\input{figures/sim_bracha_ours/sim.tex}
 	\caption{The simulator for the bracha protocol in the synchronos world.}
 	\label{fig:sim:bracha_ours}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[!htb]
 	\begin{subfigure}{\textwidth}
 	\input{figures/sim_bracha_ours/algo_simgetleaks}
 	\label{fig:algo:simgetleaks}
