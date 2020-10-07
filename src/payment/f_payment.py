@@ -13,16 +13,15 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
     It includes the ideal functionality of on-chain smart contract open/close payment channel + off-chain synchronous communication of signed payloads.
     '''
     def __init__(self, k, bits, sid, pid, channels, pump, poly, importargs):
+        # sid: pass in all needed intialized variables
         self.ssid = sid[0]
-        self.parties = sid[1]
-        self.n = len(self.parties)
-        self.round_upper_bound = 1
-        self.delta = sid[2] * self.round_upper_bound
+        self.n = sid[1] # number of parties, in uni/bi-directional is 2
+        self.delta = sid[2] # the basic unit of delay
 
-        self.balances[self.n]   # record all parties' balances
-        self.isOpen = False     # if there's a payment channel open
-        self.flag = 'NORMAL'    # {'NORMAL', 'CHALLANGE'}
-                                # 'NORMAL': all are honest
+        self.balances = [0] * self.n # record all parties' balances
+        self.flag = 'CLOSED'    # {'OPEN', 'CLOSED, 'CHALLANGE'}
+                                # 'OPEN': channel is open
+                                # 'CLOSED': channel is closed
                                 # 'CHALLANGE': enter into challenge period
         
         UCWrappedFunctionality.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
