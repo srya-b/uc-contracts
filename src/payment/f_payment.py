@@ -91,7 +91,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
             self.leak(leaked_msg, 0)
 
     def pay(self, _from, _to, amount):
-        if not self.isOpen: return # if there's no channel, cannot pay offchain
+        if self.flag == 'CLOSED': return # if there's no channel, cannot pay offchain
 
         delay = 1 # delay only 1 round because pay is supposed to be off-chain
         codeblock = (
@@ -108,7 +108,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         self.leak(leaked_msg, 0)
 
     def read_balance(self, _from):
-        if not self.isOpen: return # if there's no channel, cannot read balance
+        if self.flag == 'CLOSED': return # if there's no channel, cannot read balance
 
         amount = self.balances[_from]
         msg = (_from, 'balance: {}'.format(amount)) # msg format: (which party is gonna receive this message, the actual message)
