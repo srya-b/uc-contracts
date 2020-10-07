@@ -122,17 +122,19 @@ class Contract(UCWrappedFunctionality):
         leaked_msg = ('init', (_from, _amt))
         self.leak(leaked_msg, 0)
 
-
+    # smart contract logic
+    # Q: should the following action be scheduled for a delay?
     def recv_challenge(self, data, imp):
         _from = data['sender']
         _state = data['state']
         _sig = data['sig']
 
         assert self.flag == 'CHALLANGE'
+        assert self._current_time() <= self.deadline # ensure not due
+        assert _state['nonce'] >= self.nonce
         for p in range(self.n):
             assert self._check_sig(p, _sig[p], _state)
 
-        assert _state['nonce'] >= self.nonce
         self.nonce = _state['nonce']
         self.balances = _state['balances']
         self.flag = 'CLOSED'
@@ -154,8 +156,8 @@ class Contract(UCWrappedFunctionality):
             m = wait_for(self.channels['w2f']).msg
             assert m == ('OK',)
 
-            leaked_msg = ('challenge', (_from, _state, _sig))
-            self.leak(leaked_msg, 0)
+        leaked_msg = ('challenge', (_from, _state, _sig))
+        self.leak(leaked_msg, 0)
 
 
     def recv_pay(self, data, imp):
