@@ -159,21 +159,9 @@ class Contract(UCWrappedFunctionality):
         leaked_msg = ('challenge', (_from, _state, _sig))
         self.leak(leaked_msg, 0)
 
-
-    def recv_pay(self, data, imp):
-        _from = data['sender']
-        _to = data['receiver']
-        _nonce = data['nonce']
-        _amt = data['amount']
-        _state = data['state']
-        _sig = data['sig']
-
-        msg = {
-            'msg': 'pay',
-            'imp': imp,
-            'data': data
-        }
-
+    # offchain synchronous channel
+    # used for communication between parties, relaying `msg`
+    def offchain_channel(self, _from, _to, msg, imp):
         codeblock = (
             'schedule', 
             self.__send2p,
@@ -184,7 +172,7 @@ class Contract(UCWrappedFunctionality):
         m = wait_for(self.channels['w2f']).msg
         assert m == ('OK',)
 
-        leaked_msg = ('pay', (_from, _to, _amt))
+        leaked_msg = ('send', (_from, _to, _amt))
         self.leak(leaked_msg, 0)
 
 
@@ -195,9 +183,10 @@ class Contract(UCWrappedFunctionality):
         tokens = msg['imp']
         data = msg['data']
         sender = data['sender']
-        if command == 'pay':
+        if command == 'send': # united interface with synchronous channel
             # normal offchain payment
-            self.recv_pay(data, imp)
+            receiver = data['receiver']
+            self.offchain_channel(sender, receiver, msg, imp)
         elif command == 'challenge':
             # entering into challenge, receive challenge from P_{receiver}
             self.recv_challenge(data, imp)

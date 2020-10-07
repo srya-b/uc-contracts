@@ -102,7 +102,7 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         command = msg['msg']
         tokens = msg['imp']
         data = msg['data']
-        if command == 'pay':
+        if command == 'send':
             # normal offchain payment
             self.normal_offchain_payment(data)
         elif command == 'challenge':
@@ -180,7 +180,7 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         self.sigs[self.nonce][_from] = self._sign(state)
 
         msg = {
-            'msg': 'pay',
+            'msg': 'send', # united interface with synchronous channel
             'imp': imp,
             'data': {
                 'sender': _from,
