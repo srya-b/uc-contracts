@@ -19,10 +19,9 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         self.delta = sid[2] # the basic unit of delay
 
         self.balances = [0] * self.n # record all parties' balances
-        self.flag = 'CLOSED'    # {'OPEN', 'CLOSED, 'CHALLANGE'}
+        self.flag = 'CLOSED'    # {'OPEN', 'CLOSED'}
                                 # 'OPEN': channel is open
                                 # 'CLOSED': channel is closed
-                                # 'CHALLANGE': enter into challenge period
         
         UCWrappedFunctionality.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
 
@@ -46,19 +45,21 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         self.balances[_to] += _amount
 
     def __init(self, _from, _amount):
+        self.flag = 'OPEN'
         self.__deposit(_from, _amount)
         for i in range(self.n):
             msg = (i, 'channel open')
             self.write('f2p', msg)
 
     def __close(self):
+        self.flag = 'CLOSED'
         for i in range(self.n):
             self.__withdraw(i, self.balances[i])
             msg = (i, 'channel closed')
             self.write('f2p', msg)
 
     def init_channel(self, _from, amount):
-        if not self.isOpen:
+        if self.flag == 'CLOSED':
             delay = self.delta # on-chain communication delay
             codeblock = (
                 'schedule'
@@ -72,10 +73,9 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
 
             leaked_msg = 'leaked msg (i don know what is the format of leaked message is look like, so a placeholder here)'
             self.leak(leaked_msg, 0) # leak msg to the adversary because this part simulates the msg being sent to the synchronous channel in the real world
-            self.isOpen = True
 
     def close_channel(self, _from):
-        if self.isOpen:
+        if self.flag == 'OPEN':
             delay = self.delta # on-chain communication delay
             codeblock = (
                 'schedule'
@@ -87,9 +87,8 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
             m = wait_for(self.channels['w2f']).msg
             assert m == ('OK',)
 
-            leaked_msg = ('close', (_from))
+            leaked_msg = ('close channel', (_from))
             self.leak(leaked_msg, 0)
-            self.isOpen = False
 
     def pay(self, _from, _to, amount):
         if not self.isOpen: return # if there's no channel, cannot pay offchain
@@ -150,9 +149,9 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
 
     # p2f channel handler, handling message from parties
     def party_msg(sef, msg):
-        log.debug('Party message in payment {}'.format(msg))
+        log.debug('Party message in the ideal world {}'.format(msg))
         command = msg['msg']
-        tokens = msg['imp']
+        tokens = msg['imp'] # TODO: import tokens are skipped for now
         data = msg['data']
         if command == 'init':
             sender = data['sender']
