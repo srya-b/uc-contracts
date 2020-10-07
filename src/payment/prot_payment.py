@@ -127,49 +127,48 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
 
 
     def close_channel(self, _from, imp):
-        if not self.isOpen: return # if a channel doesnt exitst, then fail
+        if not self.flag == 'CLOSED': # could be either OPEN or CHALLENGE
+            if self.nonce == -1:
+                state = {'nonce': -1, 'balances': self.balances}
+                sig = [None] * self.n
+                sig[_from] = self._sign(state)
+            else
+                state = self.states[self.nonce]
+                sig = self.sigs[self.nonce]
 
-        if self.nonce == 0:
-            state = {'nonce': -1, 'balances': self.balances}
-            sig = [None] * self.n
-            sig[_from] = self._sign(state)
-        else
-            state = self.states[self.nonce-1]
-            sig = self.sigs[self.nonce-1]
-
-        msg = {
-            'msg': 'close',
-            'imp': imp,
-            'data': {
-                'sender': _from
-                'state': state
-                'sig': sig
+            msg = {
+                'msg': 'close',
+                'imp': imp,
+                'data': {
+                    'sender': _from
+                    'state': state
+                    'sig': sig
+                }
             }
-        }
-        self.write('p2f', msg)
+            self.write('p2f', msg)
 
 
     def init_channel(self, _from, imp):
-        if self.isOpen: return # if a channel is already open, then fail
-
-        msg = {
-            'msg': 'init',
-            'imp': imp,
-            'data': {
-                'sender': _from,
-                'amount': amount
+        if self.flag == 'CLOSED': 
+            msg = {
+                'msg': 'init',
+                'imp': imp,
+                'data': {
+                    'sender': _from,
+                    'amount': amount
+                }
             }
-        }
-        self.write('p2f', msg)
+            self.write('p2f', msg)
 
 
     def pay(self, _from, _to, amount, imp):
-        if not self.isOpen: return # if there's no channel, cannot pay offchain
+        if not self.flag == 'OPEN': return # if channel is not open, maybe CLOSED or CHALLENGE, cannot pay offchain
         if amount > self.balances[_from]: return # not enough balance
 
         self.balances[_from] -= amount
         self.balances[_to] += amount
 
+        self.nonce += 1
         state = {
             'nonce': self.nonce,
             'balances': self.balances
@@ -192,12 +191,11 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
             }
         }
         self.write('p2f', msg)
-        self.nonce += 1
         
 
     # env handler
     def env_msg(self, msg):
-        log.debug('Env/Receive message from Z in real world: {}'.format(msg))
+        log.debug('Prot/Receive message from Z in real world: {}'.format(msg))
         command = msg['msg']
         tokens = msg['imp']
         data = msg['data']
