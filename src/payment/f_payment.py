@@ -116,7 +116,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         # no need to leak to adversary because there's no communication via synchronous channel when reading balance
 
     def deposit(self, _from, amount):
-        if self.isOpen:
+        if self.flag == 'OPEN':
             delay = self.delta # on-chain communication delay
             codeblock = (
                 'schedule'
@@ -132,7 +132,7 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
             self.leak(leaked_msg, 0)
 
     def withdraw(self, _from, amount):
-        if self.isOpen:
+        if self.flag == 'CLOSED': # can withdraw only after channel is closed
             delay = self.delta # on-chain communication delay
             codeblock = (
                 'schedule'
