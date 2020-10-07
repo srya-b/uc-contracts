@@ -32,6 +32,7 @@ class Contract(UCWrappedFunctionality):
         return current_round
 
 
+    # smart contract logic
     def close_channel(data, imp):
         _from = data['sender']
         _state = data['state']
@@ -43,7 +44,8 @@ class Contract(UCWrappedFunctionality):
                 isHonest = self._check_sig(p, _sig[p], _state)
 
         if isHonest:
-            # means also receiver's signature
+            # means also have receiver's signature
+            # Q: should the following action be scheduled for a delay?
             self.flag = 'CLOSED'
             msg = {
                 'msg': 'close_channel',
@@ -62,11 +64,12 @@ class Contract(UCWrappedFunctionality):
                 m = wait_for(self.channels['w2f']).msg
                 assert m == ('OK',)
 
-                leaked_msg = ('close', (_from))
-                self.leak(leaked_msg, 0)
+            leaked_msg = ('close', (_from))
+            self.leak(leaked_msg, 0)
 
         else:
             # means only sender's signature
+            # Q: should the following action be scheduled for a delay?
             self.flag = 'CHALLANGE'
             self.deadline = self.current_round() + self.settlement
 
@@ -87,14 +90,16 @@ class Contract(UCWrappedFunctionality):
                 m = wait_for(self.channels['w2f']).msg
                 assert m == ('OK',)
 
-                leaked_msg = ('challenge', (_from))
-                self.leak(leaked_msg, 0)
+            leaked_msg = ('challenge', (_from))
+            self.leak(leaked_msg, 0)
 
 
+    # smart contract logic
     def init_channel(self, data, imp):
         _from = data['sender']
         _amt = data['amount']
 
+        # Q: should the following action be scheduled for a delay?
         self.flag = 'OPEN'
 
         msg = {
@@ -114,8 +119,8 @@ class Contract(UCWrappedFunctionality):
             m = wait_for(self.channels['w2f']).msg
             assert m == ('OK',)
 
-            leaked_msg = ('init', (_from, _amt))
-            self.leak(leaked_msg, 0)
+        leaked_msg = ('init', (_from, _amt))
+        self.leak(leaked_msg, 0)
 
 
     def recv_challenge(self, data, imp):
