@@ -34,14 +34,11 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         self.balances[_from] += _amount
 
     def __withdraw(self, _from, _amount):
-        if _amount <= self.balances[_from]:
-            self.balances[_from] -= _amount
+        if self.balances[_from] < _amount: return
+        self.balances[_from] -= _amount
 
     def __read(self):
-        bal = []
-        for i in range(self.n):
-            bal.append(self.balances[i])
-        return bal
+        return self.balances
 
     def __pay(self, _from, _to, _amount):
         if self.balances[_from] < _amount: return
@@ -49,15 +46,15 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         self.balances[_to] += _amount
 
     def __init(self, _from, _amount):
-        __deposit(_from, _amount)
+        self.__deposit(_from, _amount)
         for i in range(self.n):
-            msg = (i, 'channel init')
+            msg = (i, 'channel open')
             self.write('f2p', msg)
 
     def __close(self):
         for i in range(self.n):
-            __withdraw(i, self.balances[i])
-            msg = (i, 'channel close')
+            self.__withdraw(i, self.balances[i])
+            msg = (i, 'channel closed')
             self.write('f2p', msg)
 
     def init_channel(self, _from, amount):
