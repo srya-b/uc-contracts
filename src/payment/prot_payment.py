@@ -12,20 +12,19 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
     #def __init__(self, sid, pid, channels):
     def __init__(self, k, bits, sid, pid, channels, pump, poly, importargs):
         self.ssid = sid[0]
-        self.parties = sid[1]
-        self.delta = sid[2]
-        self.n = len(self.parties)
-        UCWrappedProtocol.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
+        self.n = sid[1] # number of parties, in uni/bi-directional is 2
+        self.delta = sid[2] # the basic unit of delay
 
-        self.id = # TODO: get id from sid or ?
-        self.nonce = 0
+        self.id = sid[3]
+        self.nonce = -1
         self.balances = [0] * self.n
         self.states = [] # (nonce) => {nonce, balances}
         self.sigs = [] # (nonce) => [None] * self.n
-        self.isOpen = False
-        self.flag = 'NORMAL'    # {'NORMAL', 'CHALLANGE'}
-                                # 'NORMAL': all are honest
+        self.flag = 'CLOSED'    # {'CLOSED', 'OPEN', 'CHALLANGE'}
+                                # 'CLOSED': channel closed
+                                # 'OPEN': channel open
                                 # 'CHALLANGE': enter into challenge period
+        UCWrappedProtocol.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
 
 
     def _sign(self, state):
