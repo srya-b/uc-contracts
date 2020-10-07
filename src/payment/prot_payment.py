@@ -35,7 +35,7 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
 
     def normal_offchain_payment(self, data):
         nonce = data['nonce']
-        assert nonce == self.nonce
+        assert nonce == self.nonce+1
 
         self.states.append(data['state'])
         self.sigs.append(data['sig'])
@@ -51,6 +51,8 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
 
 
     def react_challenge(self, data, imp):
+        self.flag = 'CHALLANGE'
+
         _s = data['state']
         _n = _s['nonce']
         _b = _s['balances']
@@ -58,12 +60,12 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         # basically P_recv doesnt need to check anything above
         # just sign send the latest state to challenge is fine
 
-        if self.nonce == 0:
-            state = {'nonce': -1, 'balances': self.balances}
+        if self.nonce == -1:
+            state = {'nonce': self.nonce, 'balances': self.balances}
             sig = data['sig']
         else
-            state = self.states[self.nonce-1]
-            sig = self.sigs[self.nonce-1]
+            state = self.states[self.nonce]
+            sig = self.sigs[self.nonce]
         sig[self.id] = self._sign(state)
 
         msg = {
@@ -79,18 +81,17 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
 
 
     def recv_close_channel(self, data):
-        self.nonce = 0
+        self.nonce = -1
         self.balances = [0] * self.n
-        self.states = {}
-        self.isOpen = False
-        self.flag = 'NORMAL'
-
+        self.states.clear()
+        self.sigs.clear()
+        self.flag = 'CLOSED'
 
     def recv_init_channel(self, data):
         s = data['sender']
         a = data['amount']
         self.balances[s] += amount
-        self.isOpen = True
+        self.flag = 'OPEN'
 
 
     # functionality handler
