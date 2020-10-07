@@ -6,28 +6,25 @@ log = logging.getLogger(__name__)
 class Contract(UCWrappedFunctionality):
     def __init__(self, k, bits, sid, pid, channels, pump, poly, importargs):
         self.ssid = sid[0]
-        self.round = sid[1]
+        self.n = sid[1]
         self.delta = sid[2]
-        UCWrappedFunctionality.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
-
-        self.on_chain_channel_id = 0 # not sure if it's the correct format
-        self.on_chain_channel_id = 1 # not sure if it's the correct format
-
-        self.settlement = self.delta * 2 # the challenge period
-        self.deadline = 0
-        self.nonce = 0
+        self.settlement = self.delta * sid[3] # the challenge period
+        
+        self.deadline = -1
+        self.nonce = -1
         self.balances = [0] * self.n
         self.flag = 'CLOSED'    # {'CLOSED', 'OPEN', 'CHALLANGE'}
                                 # 'CLOSED': channel closed
                                 # 'OPEN': channel open
                                 # 'CHALLANGE': enter into challenge period
+        UCWrappedFunctionality.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
 
 
     def __send2p(self, i, msg, imp):
         self.write('f2p', (i, msg), imp)
 
     def _check_sig(self, party, sig, state):
-        # TODO: check if party sign the state with signature sig
+        # TODO: check if `party` sign the `state` with signature `sig`
         return True or False
 
     def _current_time(self):
