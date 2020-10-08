@@ -8,15 +8,19 @@ class Contract(UCWrappedFunctionality):
         self.ssid = sid[0]
         self.n = sid[1]
         self.delta = sid[2]
-        self.settlement = self.delta * sid[3] # the challenge period
+        self.settlement = self.delta * 2 # the challenge period
         
         self.deadline = -1
         self.nonce = -1
-        self.balances = [0] * self.n
-        self.flag = 'CLOSED'    # {'CLOSED', 'OPEN', 'CHALLANGE'}
-                                # 'CLOSED': channel closed
-                                # 'OPEN': channel open
-                                # 'CHALLANGE': enter into challenge period
+
+        self.balances = sid[3]
+        self.flag = 'OPEN'
+        ## Following is for general case, above is for channel's already open
+        # self.balances = [0] * self.n
+        # self.flag = 'CLOSED'    # {'CLOSED', 'OPEN', 'CHALLANGE'}
+        #                         # 'CLOSED': channel closed
+        #                         # 'OPEN': channel open
+        #                         # 'CHALLANGE': enter into challenge period
         UCWrappedFunctionality.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
 
 

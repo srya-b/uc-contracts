@@ -18,10 +18,13 @@ class Syn_Payment_Functionality(UCWrappedFunctionality):
         self.n = sid[1] # number of parties, in uni/bi-directional is 2
         self.delta = sid[2] # the basic unit of delay
 
-        self.balances = [0] * self.n # record all parties' balances
-        self.flag = 'CLOSED'    # {'OPEN', 'CLOSED'}
-                                # 'OPEN': channel is open
-                                # 'CLOSED': channel is closed
+        self.balances = sid[3]
+        self.flag = 'OPEN'
+        ## Following is for general case, above is for channel's already open
+        # self.balances = [0] * self.n # record all parties' balances
+        # self.flag = 'CLOSED'    # {'OPEN', 'CLOSED'}
+        #                         # 'OPEN': channel is open
+        #                         # 'CLOSED': channel is closed
         
         UCWrappedFunctionality.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
 
