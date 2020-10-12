@@ -54,16 +54,7 @@ class Contract(UCWrappedFunctionality):
                 'data': data
             }
 
-            for _to in range(self.n):
-                codeblock = (
-                    'schedule',
-                    self.__send2p,
-                    (_to, msg, imp),
-                    self.delta
-                )
-                self.write('f2w', codeblock, imp)
-                m = wait_for(self.channels['w2f']).msg
-                assert m == ('OK',)
+            self.wrapper_contract(-1, msg, imp) # Broadcast
 
             leaked_msg = ('close', (_from))
             self.leak(leaked_msg, 0)
@@ -80,17 +71,8 @@ class Contract(UCWrappedFunctionality):
                 'data': data
             }
 
-            for _to in range(self.n):
-                codeblock = (
-                    'schedule',
-                    self.__send2p,
-                    (_to, msg, imp),
-                    self.delta
-                )
-                self.write('f2w', codeblock, imp)
-                m = wait_for(self.channels['w2f']).msg
-                assert m == ('OK',)
-
+            self.wrapper_contract(-1, msg, imp) # Broadcast
+            
             leaked_msg = ('challenge', (_from))
             self.leak(leaked_msg, 0)
 
@@ -109,16 +91,7 @@ class Contract(UCWrappedFunctionality):
             'data': data
         }
 
-        for _to in range(self.n):
-            codeblock = (
-                'schedule',
-                self.__send2p,
-                (_to, msg, imp),
-                self.delta
-            )
-            self.write('f2w', codeblock, imp)
-            m = wait_for(self.channels['w2f']).msg
-            assert m == ('OK',)
+        self.wrapper_contract(-1, msg, imp) # Broadcast
 
         leaked_msg = ('init', (_from, _amt))
         self.leak(leaked_msg, 0)
@@ -146,16 +119,7 @@ class Contract(UCWrappedFunctionality):
             'data': data
         }
 
-        for _to in range(self.n):
-            codeblock = (
-                'schedule',
-                self.__send2p,
-                (_to, msg, imp),
-                self.delta
-            )
-            self.write('f2w', codeblock, imp)
-            m = wait_for(self.channels['w2f']).msg
-            assert m == ('OK',)
+        self.wrapper_contract(-1, msg, imp) # Broadcast
 
         leaked_msg = ('challenge', (_from, _state, _sig))
         self.leak(leaked_msg, 0)
@@ -215,21 +179,18 @@ class Contract(UCWrappedFunctionality):
     def party_msg(self, msg):
         log.debug('Contract/Receive msg from P in real world: {}'.format(msg))
         command = msg['msg']
-        tokens = msg['imp']
+        imp = msg['imp']
         data = msg['data']
         sender = data['sender']
         if command == 'send': # united interface with synchronous channel
             # normal offchain payment
             receiver = data['receiver']
             self.offchain_channel(sender, receiver, msg, imp)
-        elif command == 'challenge':
-            # entering into challenge, receive challenge from P_{receiver}
-            self.recv_challenge(data, imp)
         # === ^ offchain operations === v onchain operations
-        elif command == 'init':
-            self.init_channel(data, imp)
-        elif command == 'close':
-            self.close_channel(data, imp)
+        elif command == 'challenge' or \
+             command == 'init' or \
+             command == 'close':
+            self.wrapper_contract(sender, msg, imp)
         # elif command == 'deposit':
         #     pass
         # elif command == 'withdraw':
