@@ -24,9 +24,6 @@ class Contract(UCWrappedFunctionality):
         UCWrappedFunctionality.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
 
 
-    def __send2p(self, i, msg, imp):
-        self.write('f2p', (i, msg), imp)
-
     def _check_sig(self, party, sig, state):
         # TODO: check if `party` sign the `state` with signature `sig`
         return True or False
@@ -179,6 +176,40 @@ class Contract(UCWrappedFunctionality):
         leaked_msg = ('send', (_from, _to, _amt))
         self.leak(leaked_msg, 0)
 
+    # onchain synchronous channel
+    # used to simulate onchain mining txs
+    def wrapper_contract(self, sender, msg, imp):
+        if sender > 0: # sender is parties
+            codeblock = (
+                'schedule',
+                self.__send2c,
+                (msg, imp),
+                self.delta
+            )
+            self.write('f2w', codeblock, imp)
+            m = wait_for(self.channels['w2f']).msg
+            assert m == ('OK',)
+        elif sender == -1: # sender is contract, and this is broadcast
+            for _to in range(self.n):
+                codeblock = (
+                    'schedule',
+                    self.__send2p,
+                    (_to, msg, imp),
+                    1
+                )
+                self.write('f2w', codeblock, imp)
+                m = wait_for(self.channels['w2f']).msg
+                assert m == ('OK',)
+        else:
+            return
+        #Q: do we leak message here? or leak in the actual codeblock execution
+        #Q: how do we handle `imp` tokens?
+
+    def __send2p(self, i, msg, imp):
+        self.write('f2p', (i, msg), imp)
+
+    def __send2c(self, msg, imp):
+        self.write('w2f', (msg), imp)
 
     # p2f handler
     def party_msg(self, msg):
@@ -213,4 +244,20 @@ class Contract(UCWrappedFunctionality):
         self.pump.write("dump")
 
     def wrapper_msg(self, msg):
-        self.pump_write("dump")
+        log.debug('Contract/Receive msg from Wrapper: {}'.format(msg))
+        command = msg['msg']
+        imp = msg['imp']
+        data = msg['data']
+        if command == 'challenge':
+            # entering into challenge, receive challenge from P_{receiver}
+            self.recv_challenge(data, imp)
+        elif command == 'init':
+            self.init_channel(data, imp)
+        elif command == 'close':
+            self.close_channel(data, imp)
+        # elif command == 'deposit':
+        #     pass
+        # elif command == 'withdraw':
+        #     pass
+        else:
+            self.pump.write("dump")
