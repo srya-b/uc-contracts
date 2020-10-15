@@ -2,50 +2,26 @@
 
 \begin{renumerate}
 
-  \item $idealdelay = idealdelay - 1$
-  
-  \item If $idealdelay = 0$:
-   
-  \qquad \Send $(\texttt{delay}, 1 \token) \rightarrow \mathcal{W}_{sync}$
+  	\item $\msf{idealdelay} \minuseq 1$
+  	
+  	\item If $\msf{idealdelay} = 0$:
+  	 
+  		\quad \Send $(\texttt{delay}, 1 \token) \rightarrow \mathcal{W}_{sync}$
 
-  \qquad $idealdelay = 1$
+  		\quad $\msf{idealdelay} = 1$
 
-  \item \Send $(\texttt{poll},) \rightarrow \mathcal{W}_{sync}'$
-  
-  \item $msg \leftarrow$ wait for ouput from some simulated ITM.
+  	\item \Send $(\texttt{poll},) \rightarrow \mathcal{W}_{sync}'$
+ 
+  	\item If output $m$ from party $P_i'$:
 
-  \item Execute $\msf{SimGetLeaks}$
+			\quad Call $\msf{SimGetLeaks}$
 
-\item Match $msg$ with:
+			\quad Call \msf{SimPartyOutput}(m, $P_i'$)
+		
+		Else if $m$ from $\mathcal{A}'$:
 
--- \OnInput (m) from $P_i'$:
-     
-   \qquad call \msf{SimPartyOutput}(m, $P_i'$)
+			\quad Send $m \rightarrow \mathcal{Z}$
 
--- \OnInput (m) from $\mathcal{A}'$:
-   
-   \qquad \Send $m \rightarrow \mathcal{Z}$
-   
 \end{renumerate}
-
-%Simulate (\texttt{poll}) $\rightarrow \mathcal{W}'$
-%
-%Store $leaks \leftarrow \msf{SimGetLeaks}$ for $\mathcal{Z}$
-%
-%Check for input:
-%
-%-- \OnInput (m) from $P_i'$:
-%
-%	\qquad \If no input from $\mathcal{D}$ from $\F_{bcast}$:
-%
-%		\qqquad Add \{\Send (m) to $P_i$\} to $\mathcal{W}$.
-%
-%		\qqquad $idealdelay = idealdelay + 1$
-%
-%	\qquad Execute output for $p_i$ in $\mathcal{W}$.
-%
-%-- \OnInput (m) from $\mathcal{A}'$:
-%
-%	\qquad \Send $(m) \rightarrow \mathcal{Z}$
 
 \end{bbox}

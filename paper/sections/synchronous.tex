@@ -218,37 +218,47 @@ The channels are described above in Figure~\ref{fig:functionality:channel}.
 	\label{fig:prot:bracha_ours}
 \end{figure}
 
-\paragraph{Bracha Simulator}
-Realizing the broadcast functionality with the Bracha's broadcast protocol requires a simulator that can satisfies
-\[ \text{EXEC}_{\mathcal{F_{\msf{bcast}}},\mathcal{S},\mathcal{Z}} \approx \text{EXEC}_{\Pi_{\msf{Bracha}},\mathcal{D},\mathcal{Z}} \]
-for all $\mathcal{Z}$.
+\subsection{Simulator for Bracha}
+The simulator in Figure~\ref{fig:sim:bracha_ours} looks more complicated then it actually is.
+The main part to understand in this simulator is how it interacts with $\mathcal{W}_{sync}$.
+In fact, it seems that any simulator in a world with our synchronous wrapper would need to do similar things.
 
-First, we describe the simulator at a high level.
-The simulator internally runs a copy of the real world environment with its own synchronous wrapper $\mathcal{W}_{sync}'$.
-For every ideal party $\phi_i$ in the ideal world the simulator creates a party $\pi_i$ in its simulation.
-Finally it simulates the pairwise channels that are used throughout the execution.
+The first improtant part of the simulator is the $idealqueue$ and $idealdelay$.
+The simulator uses these two variables to maintain a copy of the what the \msf{runqueue} and $delay$ look like in the ideal world wrapper.
+It's important to know this inforation so that delay can be added to the ideal world wrapper when it reaches zero. 
+Doing so prevents the environment from forcing the execution of some codeblock before the simulator wants it to.
 
-As expected, the simulator forwards all messages from $\mathcal{Z}$ to any corrupted parties $p_i$ and vice versa.
-On every activation, the simulator requests leaks from the ideal world wrapper.
-It checks for newly schedules code blocks and maintain and internal copy of the run queue and $delay$ variable from the ideal world wrapper $\mathcal{W}_{sync}$
-If the dealer is honest, the eventually fetch the dealer's leaked input from the wrapper. 
-It replays the honest dealer's input and emulates any subsequent activations and state changes.
+\paragraph{Leaks}
+The first thing the simulator must do is handle leaks from the synchronous wrapper. 
+In our model, all leaked information goes to the wrapper and is stored in a \msf{leakbuffer}.
+In order to receive the the leaks in a timely manner and ensure that the environment doesn't control when the simulator asks for leaks, it asks for leaks every time it's activated. 
+There are only two types of leaks in the ideal world: $\F_{bcast}$ leaking the dealer's input and the wrapper leaking new scheduled codeblocks.
+On receving the dealer's input the simulator simulates this input for it's simulated $\mathcal{D}'$ and simulates all the subsequent activations.
+All subsequent ``schedule'' leaks come in order of party PID so we record the $rnd$, $idx$ for each party.
 
-Finally, the simulator asks $\mathcal{W}_{sync}'$ for new leaks and does the following:
-\begin{enumerate}
-	\item It stores the leaks and returns them to the environment when asked for it.
-	\item If $n$ new codeblocks have been scheduled in the simulation, it adds $n$ delay to the ideal world wrapper. The purpose of adding $delay$ to the ideal world is to ensure that the environment can't force output being delivered to a party in the ideal world before output is delivered in the simulation.
-\end{enumerate}
+The dealer might be corrupt, and the environment never gives it input. 
+Instead, the environment could start sending messages to other parites in the protocol. 
+In this case, when a simulated party commits to a value, the simulator knows the dealer is corrupt and instructs it to give input to the ideal functionality in the ideal world.
 
-When $\mathcal{Z}$ sends \texttt{poll} to $\mathcal{W}_{sync}$ the simulator is also activated with a \texttt{poll} message.
-The simulator forwards this message to its internal wrapper and emulates any further activations of state changes.
-It requests leaks from $\mathcal{W}_{sync}'$ and repeats the steps outlines above.
-Finally, if any simulated party $\pi_i$ outputs a value, the simulator executes the corresponding codeblock for the ideal party $\phi_i$.
+\paragraph{Poll from the wrapper.}
+The environment polls the wrapper in order to force some progress to be made. 
+In a scenario where an adversary refuses to deliver any messages or execute any codeblocks in the protocol, the protocol can not guarantee liveness any more.
+When \Wsync is activated with a \msf{poll} message, it activates the adversary.
+This ensures that the simulator in the real world is has enough activations to simulate a \msf{poll} message internally in its simulation of the real world.
 
-One case to handle is if the dealer is corrupt and never gives input to the ideal functionality.
-Instead, the environment sends parties on behalf of the corrupt dealers through the simulator.
-In this case, the simulator will never receive any leaked input from $\F_{bcast}$ but may still receive output from simulated honest parties.
-If an output is received, the simulator acts on behalf of the corrupt dealer, sends the input to $\F_{bcast}$, gets leaks from $\mathcal{W}_{sync}$, and executes the corresponding codeblock.
+When a \msf{poll} is received from \Wsync, decrements its own $idealdelay$ like it is in the warpper, and it adds some delay if the delay is now 0 (why, explained above).
+Next, it simulates a \msf{poll} internally, and checks for output from one of the simulated parties.
+
+\paragraph{Output from a simulated Party}
+In Bracha broadcast, the environment only sees output from the parties if:
+\begin{itemize}
+	\item The party is corrupt and all of it's inputs from the functionality are sent to the environment through the adversary.
+	\item The protocol has completed and the party outputs some value that it has committed to.
+\end{itemize}
+Therefore, when the simulator sees output from an internal corrupt party it forwards it to the environment.
+When an honest simulated party $P_i'$ outputs a committed value, the simulator executes the code block in the ideal world wrapper corresponding to $P_i$.
+If no such codeblock exists (i.e. the dealer is corrupt and hasn't given input to the ideal functionality), the simulator gives input to the corrupt dealer and then executes the codeblock to deliver output to $P_i$.
+
 
 \begin{figure}[!htb]
 	\input{figures/sim_bracha_ours/sim.tex}
@@ -258,14 +268,19 @@ If an output is received, the simulator acts on behalf of the corrupt dealer, se
 
 \begin{figure}[!htb]
 	\begin{subfigure}{\textwidth}
-	\input{figures/sim_bracha_ours/algo_simgetleaks}
-	\label{fig:algo:simgetleaks}
-	\caption{Function to get leaks from the simulated real world and update the delay of the ideal world if new codebloks have been schedules in the simulated wrapper, $\mathcal{W}_{sync}'$.}
+		\input{figures/sim_bracha_ours/algo_simgetleaks}
+		\label{fig:algo:simgetleaks}
+		\caption{Function to get leaks from the simulated real world and update the delay of the ideal world if new codebloks have been schedules in the simulated wrapper, $\mathcal{W}_{sync}'$.}
 	\end{subfigure}
 	\newline
 	\begin{subfigure}{\textwidth}
-	\input{figures/sim_bracha_ours/algo_poll}
-	\label{fig:algo:poll}
-	\caption{Function that forwards a (\texttt{poll}) message to the simulated wrapper and waits for a message back from a simulated party or the adversary. If an output is given from a party and the fnuctionality, $\F_{bcast}$ functionality did not leak an input, the dealer is corrupt. Therefore, the simulator gives input to $\F_{bcast}$ and delivers that party's output.}
+		\input{figures/sim_bracha_ours/algo_poll}
+		\label{fig:algo:poll}
+		\caption{Function that forwards a (\texttt{poll}) message to the simulated wrapper and waits for a message back from a simulated party or the adversary. If an output is given from a party and the fnuctionality, $\F_{bcast}$ functionality did not leak an input, the dealer is corrupt. Therefore, the simulator gives input to $\F_{bcast}$ and delivers that party's output.}
+	\end{subfigure}
+	\newline
+	\begin{subfigure}{\textwidth}
+		\input{figures/sim_bracha_ours/algo_simpartyout}
+		\caption{This function handles a simulated party $P_i$' giving output to the simulator. The only time parties output is if they are corrupt or they have committed to a value. If a value is received by $P_i$, the simulator must ensure that the ideal party $P_i$ does the same. So, it executes the codeblock associated or, if the dealer is dishonest, tells it to give input and then executes the codeblock for $P_i$}
 	\end{subfigure}
 \end{figure}
