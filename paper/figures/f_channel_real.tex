@@ -1,0 +1,10 @@
+\begin{bbox}[title={$\F_{\msf{sync-chain}}(p_s, p_r, r, \Delta)$}]
+
+\OnInput \inmsg{send}{msg $d \token$} from $p_s$:
+	\begin{renumerate}
+	\item \Send (\msf{Leak}, (\msf{Send}, $msg$, $p_s$, $p_r$)) $\rightarrow \mathcal{W}_{sync}$
+ 	\item Expect $\msf{OK} \leftarrow \mathcal{W}_{sync}$
+	\item \Send (\msf{schedule}, $\{\Send msg \rightarrow p_i\}$) $\rightarrow \mathcal{W}_{async}$
+	\item Expect $\msf{OK} \leftarrow \mathcal{W}_{sync}$
+	\end{renumerate}
+\end{bbox}

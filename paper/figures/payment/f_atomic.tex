@@ -1,0 +1,84 @@
+\begin{bbox}[title={$\F_{\msf{abc}} (C, P_s, P_r, \Delta)$}]
+
+Initialize $buf = \{\}$
+
+\vspace{2mm} \hrule \vspace{2mm}
+
+\OnInput \inmsg{bcast}{msg} from $P_i$:
+	\begin{renumerate}
+		\item Append $(msg, P_i)$ to $buf$
+		\item For $p_i$ in $P_s,P_r$:
+		\begin{renumerate}
+			\item \msf{codeblock} = \{
+			
+				\quad Send $buf \rightarrow p_i$
+
+			\}
+			\item Send (schedule, \msf{codeblock}, $\Delta$) $\rightarrow \mathcal{W}_{sync}$
+		\end{renumerate}
+	\end{renumerate}
+\end{bbox}
+
+\begin{bbox}[title={$\mathcal{C}_{pay}(P_s,P_r, \msf{balances}, \Delta)$}]
+
+Intialize $T_{settlement} := 2 \Delta$, $T_{deadline} := 0$, $\msf{nonce} := 0$,
+
+
+$\msf{state} := (\msf{balances}[P_s], \msf{balances}[P_r], \msf{nonce})$, $\msf{FLAG} := \msf{OFFCHAIN}$
+
+\vspace{2mm} \hrule \vspace{2mm}
+
+\OnInput \inmsg{close}{\msf{state'}}{$\msf{sig}_s$}{$\msf{sig}_r$} from $P_i$:
+	\begin{renumerate}
+		\item Assert $\msf{flag} = \msf{OFFCHAIN}$
+		\item Assert $\msf{CheckSig}(P_s,\msf{sig}_s, \msf{state}')$
+		
+		\item $(b_s, b_r, n) \leftarrow \msf{state}'$
+
+		\item Set $\msf{nonce} = n$, $\msf{state} = \msf{state}'$
+
+		If $\msf{CheckSig}(P_r, \msf{sig}_r, \msf{state}')$:
+		\begin{renumerate}
+			\item Set $\msf{flag} = \msf{Closed}$
+			\item Send (\msf{Closed}, \msf{state}') $\rightarrow \F_{\msf{abc}}$ 
+		\end{renumerate}
+
+		Else:
+		\begin{renumerate}
+			\item Set $\msf{flag} = \msf{UnCoopClose}$ 
+			\item Set $T_{deadline} = T_{now} + T_{settleent}$
+			\item Send (\msf{UnCoopClose}, \msf{state}', $T_{deadline}$) $\rightarrow \F_{\msf{abc}}$
+		\end{renumerate}
+		
+	\end{renumerate}
+
+\OnInput \inmsg{challenge}{\msf{state}'}{$\msf{sig}_s$}{$\msf{sig}_r$} from $P_i$:
+	\begin{renumerate}
+		\item Assert $\msf{flag} = \msf{UnCoopClose}$
+
+		Assert $\msf{CheckSig}(P_s, \msf{sig}_s, \msf{state}')$
+
+		Assert $\msf{CheckSig}(P_r, \msf{sig}_r, \msf{state}')$
+		\item $(b_s, b_r, n) \leftarrow \msf{state}'$
+		\item Assert $n > \msf{nonce}$
+
+		\item Set $\msf{flag} = \msf{Closed}$
+		
+		Set $\msf{state} = \msf{state}'$
+		\item Send (\msf{Closed}, \msf{state}') $\rightarrow \F_{\msf{abc}}$
+	\end{renumerate}
+\end{bbox}
+
+\begin{bbox}[title={$\F_{\msf{off-chain-chan}}(P_s, P_r)$}]
+
+\OnInput \inmsg{send}{msg} from $P_s$:
+	\begin{renumerate}
+			\item \msf{codeblock} = \{
+			
+				\quad Send msg $\rightarrow P_r$
+
+			\}
+			\item Send (schedule, \msf{codeblock}, 1) $\rightarrow \mathcal{W}_{sync}$
+	\end{renumerate}
+
+\end{bbox}

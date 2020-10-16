@@ -1,0 +1,27 @@
+\begin{bbox}[title={$\mathcal{W}_{contract} (\mathcal{P}=P_1,...,P_n, \mathcal{C}, \Delta)$}]
+
+\underline{Incoming messages from parties:}
+\vspace{2mm}
+
+\OnInput \inmsg{msg} from $P_i$:
+	\begin{renumerate}
+		\item In $O(\Delta)$ rounds:
+			
+			\quad \Send (msg) $\rightarrow \mathcal{C}$
+		\item \Leak (msg)
+	\end{renumerate}
+
+\underline{Outgoing from $\mathcal{C}$}
+\vspace{2mm}
+
+\OnInput \inmsg{{\bf Broadcast} msg} from $\mathcal{C}$:
+	\begin{renumerate}
+		\item \Leak (msg)
+		\item For $p_i$ in $\mathcal{P}$:
+		\begin{renumerate}
+			\item In $O(1)$ rounds:
+
+			\quad \Send (msg) $\rightarrow p_i$
+		\end{renumerate}
+	\end{renumerate}
+\end{bbox}

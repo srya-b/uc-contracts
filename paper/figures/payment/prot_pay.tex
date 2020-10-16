@@ -1,0 +1,65 @@
+\begin{bbox}[title={$\Pi_{\msf{pay}} (P_s, P_r, b_s, b_r)$}]
+
+Initialize $\msf{state} := (b_s, b_r, 0)$, $\msf{nonce} := 0$, $\msf{flag} := \msf{OPEN}$
+
+$\sigma_{sender} = \bot$
+
+\vspace{2mm} \hrule \vspace{2mm}
+
+\underline{Sender $P_s$}:
+
+\OnInput \inmsg{pay}{$v$} from $\mathcal{Z}$:
+	\begin{renumerate}
+	\item \Require $b_s \geq v$
+	\item $b_s \minuseq v$; $b_r \pluseq v$; $\msf{nonce} \pluseq 1$
+	\item $\msf{state} = (b_s, b_r, \msf{nonce})$
+	\end{renumerate} 
+	\quad {\bf Send} $(\msf{pay}, \msf{state}, \sigma) \rightarrow \F_{\msf{chan}}$
+
+\OnInput \inmsg{\msf{Close}}{\msf{state}'} from $\F_{contract}$
+	\begin{renumerate}
+		\item Set $\msf{flag} = \msf{CLOSE}$
+		\item Set $\msf{state} = \msf{state}'$
+	\end{renumerate}
+
+\
+
+\underline{Receiver $P_r$}:
+
+\OnInput \inmsg{pay}{\msf{state}'}{$\sigma_{sender}'$} from $\F_{chan}$
+	\begin{renumerate}
+		\item \Require $\msf{flag} = \msf{OPEN}$
+		\item $(b_s', b_r', \msf{nonce}') \leftarrow \msf{state}'$
+		\item \Require $b_s' \geq 0$ \\
+			  \Require $\msf{nonce'} = \msf{nonce} + 1$
+
+		\item $v \leftarrow b_s - b_s'$
+		\item \Require $\msf{CheckSig}(P_s, \sigma_{sender}, \msf{state}')$ \\
+			  \Require $b_s \geq v$
+
+		\item Set $\msf{state}' = \msf{state}$, $\sigma_{sender} = \sigma_{sender}'$, $\msf{nonce} = \msf{nonce}'$
+	\end{renumerate}
+
+\OnInput \inmsg{\msf{UnCoopClose}}{\msf{state}'}{$T_{deadline}$} from $\F_{chan}$:
+	\begin{renumerate}
+		\item \Require $\msf{flag} = \msf{OPEN}$
+		\item $(b_s', b_r', \msf{nonce}') \leftarrow \msf{state}'$
+		\item If $\msf{nonce}' < \msf{nonce}$:
+
+			\quad Send $(\msf{challenge}, \msf{state}, \sigma_{sender}) \rightarrow \F_{contract}$
+
+		\item Set $\msf{flag} = \msf{CLOSE}$
+	\end{renumerate}
+
+\
+
+\underline{All $P_i$:}
+
+\OnInput \inmsg{close} from $\mathcal{Z}$:
+	\begin{renumerate}
+		\item \Require $\msf{flag} = \msf{OPEN}$
+		\item Set $\msf{flag} = \msf{CLOSE}$
+		\item Send $(\msf{close}, \msf{state}, \sigma_{sender}) \rightarrow \F_{\msf{contract}}$
+	\end{renumerate}
+
+\end{bbox}
