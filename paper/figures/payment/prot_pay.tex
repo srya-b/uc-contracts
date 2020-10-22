@@ -13,8 +13,9 @@ $\sigma_{sender} = \bot$
 	\item \Require $b_s \geq v$
 	\item $b_s \minuseq v$; $b_r \pluseq v$; $\msf{nonce} \pluseq 1$
 	\item $\msf{state} = (b_s, b_r, \msf{nonce})$
+	\item $OK \leftarrow $ \{ \Send $(\msf{pay}, \msf{state}, \sigma) \rightarrow \F_{\msf{chan}}$\}
 	\end{renumerate} 
-	\quad {\bf Send} $(\msf{pay}, \msf{state}, \sigma) \rightarrow \F_{\msf{chan}}$
+	\quad \Send $OK \rightarrow \mathcal{Z}$	
 
 \OnInput \inmsg{\msf{Close}}{\msf{state}'} from $\F_{contract}$
 	\begin{renumerate}
@@ -59,7 +60,8 @@ $\sigma_{sender} = \bot$
 	\begin{renumerate}
 		\item \Require $\msf{flag} = \msf{OPEN}$
 		\item Set $\msf{flag} = \msf{CLOSE}$
-		\item Send $(\msf{close}, \msf{state}, \sigma_{sender}) \rightarrow \F_{\msf{contract}}$
+		\item $OK \leftarrow $ \{ Send $(\msf{close}, \msf{state}, \sigma_{sender}) \rightarrow \F_{\msf{contract}}$ \}
 	\end{renumerate}
+	\quad \Send $OK \rightarrow \mathcal{Z}$
 
 \end{bbox}

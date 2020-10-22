@@ -4,6 +4,7 @@
 \newcommand{\nonce}{{\color{Blue} \msf{nonce} }}
 \newcommand{\state}{{\color{Blue} \msf{state} }}
 \newcommand{\simleaks}{{\color{Blue} \msf{leaks} }}
+\newcommand{\flag}{{\color{Blue} \msf{flag} }}
 
 \begin{bbox}[title={$\mathcal{S}_{pay}(P_s, P_r, b_r, b_s)$}]
 
@@ -11,6 +12,7 @@ Simulate real world parties $P_s', P_r'$, dummy adversary $\mathcal{D}'$, wrappe
 functionality $\F_{contract}$.
 
 Initialize $\state = (b_s, b_r, 0)$, $\nonce = 0$, $\simleaks = \emptyset$, $\idealdelay=0$, $\idealqueue = \emptyset$
+$\flag = \msf{OPEN}$
 
 \underline{On every activation:}
 	\begin{renumerate}
@@ -33,7 +35,14 @@ Initialize $\state = (b_s, b_r, 0)$, $\nonce = 0$, $\simleaks = \emptyset$, $\id
 				\item Save $rnd$, $idx$ for both $P_r$ and $P_s$ in the following (schedule) 
 				leaks into \idealqueue. Add $\idealdelay \pluseq 2$.
 
+				\item \Assert $b_s = b_s'$ and $b_r = b_r'$
+
 				\item Simulate (close) $\rightarrow P_i'$
+			\end{renumerate}
+
+			\item For all other (schedule) leaks:
+			\begin{renumerate}
+				\item Increment \idealdelay and save $rnd$, $idx$ into \idealqueue.
 			\end{renumerate}
 		\end{renumerate}
 
@@ -42,5 +51,15 @@ Initialize $\state = (b_s, b_r, 0)$, $\nonce = 0$, $\simleaks = \emptyset$, $\id
 	\end{renumerate}
 
 \vspace{2mm} \hrule \vspace{2mm}
+
+\OnInput \inmsg{{\em crupt} $P_i$}{msg} from $\mathcal{Z}$:
+	\begin{renumerate}
+
+		\item If $(\msf{close}, \msf{state}', \sigma_{sender}') \leftarrow$ (msg):
+
+			\quad Simulate 
+
+		\item Simulate ({\em crupt} $P_i$', msg) $\rightarrow \mathcal{A}'$
+	\end{renumerate}
 
 \end{bbox}
