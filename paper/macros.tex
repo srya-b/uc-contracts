@@ -42,7 +42,7 @@
 %\newenvironment{renumerate}{\begin{enumerate}[before=\setlength{\baselineskip}{20pt},itemsep=-2ex,topsep=0pt]}{\end{enumerate}}
 \newenvironment{renumerate}{\begin{enumerate}[nosep]}{\end{enumerate}}
 %\newenvironment{ritemize}{\begin{itemize}[before=\setlength{\baselineskip}{20pt},itemsep=-2ex,topsep=0pt]}{\end{itemize}}
-\newenvironment{ritemize}{\begin{itemize}[nosep]}{\end{itemize}}
+\newenvironment{ritemize}{\begin{itemize}[nosep] \renewcommand\labelitemi{--}}{\end{itemize}}
 
 \makeatletter
 \newcommand{\inmsg}[1]{%
@@ -61,7 +61,11 @@
 \newcommand{\Buffer}{\textbf{Buffer}~}
 \newcommand{\Send}{\emph{Send}~}
 \newcommand{\Output}{\emph{Output}~}
+<<<<<<< HEAD
 \newcommand{\Leak}{\emph{Leak}~}
+=======
+\newcommand{\Leak}{\textbf{Leak}~}
+>>>>>>> e4c87b1609c67f4981685c1c21a536977b953f14
 \newcommand{\Eventually}{\textbf{Eventually}~}
 \newcommand{\In}{\textbf{in}~}
 %\newcommand{\If}{\textbf{If}~}
@@ -82,4 +86,8 @@
 
 \newcommand*\token{~\circled{t}}
 
+<<<<<<< HEAD
 \DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+=======
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+>>>>>>> e4c87b1609c67f4981685c1c21a536977b953f14
