@@ -222,11 +222,145 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         self.write('p2z', 'OK')
 
 
+class Signature_Functionality(UCWrappedFunctionality):
+    '''
+    Ideal Functionality of Signing signature
+    '''
+    def __init__(self, k, bits, sid, pid, channels, pump, poly, importargs):
+        # sid: pass in all needed intialized variables
+        self.ssid = sid[0]
+        self.n = sid[1] # number of parties, in uni/bi-directional is 2
+
+        self.history = {} # (party, sid history): 1/0
+        self.pair = {} # {party: verification key}
+        self.records = {} # (m, σ, v): 1/0
+        
+        UCWrappedFunctionality.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
+
+
+    def verify(self, data):
+        leak_msg = ('verify', (data))
+        self.leak(leak_msg)
+
+    def sign(self, data):
+        leak_msg = ('sign', (data))
+        self.leak(leak_msg)
+
+    def keygen(self, data):
+        leak_msg = ('keygen', (data))
+        self.leak(leak_msg)
+
+
+    def party_msg(sef, msg):
+        log.debug('F_signature::Party message: {}'.format(msg))
+        command = msg['msg']
+        tokens = msg['imp'] # TODO: import tokens are skipped for now
+        data = msg['data']
+        if command == 'keygen':
+            sender = data['sender']
+            sid = data['sid']
+            if (sender, sid) not in self.history:
+                keygen(data)
+        elif command == 'sign':
+            sender = data['sender']
+            sid = data['sid']
+            m = data['message']
+            if (sender, sid) in self.history[sender]:
+                sign(data)
+        elif command == 'verify':
+            sender = data['sender']
+            sid = data['sid']
+            m = data['message']
+            sigma = data['signature']
+            v = data['key']
+            if (sender, sid) in self.history[sender]:
+                verify(data)
+        else:
+            log.debug('F_signature::Command not found: {}'.format(command))
+            self.pump.write("pump")
+
+
+    # w2f channel handler, handling message from wrapper
+    def wrapper_msg(self, msg):
+        self.pump.write("dump")
+
+
+    def recv_verified(self, data):
+        sender = data['sender']
+        sid = data['sid']
+        m = data['message']
+        sigma = data['signature']
+        k = data['key']
+        v = self.pair[sender]
+
+        if k == v and (m, sigma, v) in self.records and self.records[(m, sigma, v)] == 1:
+            f = 1
+        elif k == v and (m, sigma, v) not in self.records:
+            f = 0
+            self.records[(m, sigma, v)] = 0
+        elif (m, sigma, k) in self.records:
+            f = self.records[(m, sigma, k)]
+        else:
+            f = -1
+            self.records[(m, sigma, k)] = f
+
+        codeblock = (sender, (sender, sid, m, f))
+        self.write('f2p', codeblock)
+        
+
+    def recv_signature(self, data):
+        sender = data['sender']
+        sid = data['sid']
+        m = data['message']
+        sigma = data['signature']
+
+        v = self.pair[sender]
+        if (m, sigma, v) in self.records:
+            self.write('f2p', 'error', (sender, data))
+            self.pump.write("dump")
+        else:
+            self.write('f2p', 'signature', (sender, data))
+            self.records[(m, sigma, v)] = 1
+
+
+    def recv_verification_key(self, data):
+        sender = data['sender']
+        sid = data['sid']
+        v_key = data['v']
+
+        codeblock = ('verification key', sender, data)
+        self.write('f2p', codeblock)
+
+        self.pair[sender] = v_key # set the (party, v key) pair for current sid
+        self.history[(sender,sid)] = 1 # add (sender, sid) into history
+
+
+    # a2f channel handler, handling message from adversary
+    def adv_msg(self, msg):
+        log.debug('F_signature::Adversary message: {}'.format(msg))
+        command = msg['msg']
+        tokens = msg['imp'] # TODO: import tokens are skipped for now
+        data = msg['data']
+        if command == 'verification key':
+            recv_verification_key(data)
+        elif command == 'signature':
+            recv_signature(data)
+        elif command == 'verified':
+            recv_verified(data)
+        else:
+            self.pump.write("dump")
+
+    # e2f channel handler, handling message from environment
+    def env_msg(self, msg):
+        self.pump.write("dump")
+
+
 from uc.itm import ProtocolWrapper, WrappedProtocolWrapper
 from uc.adversary import DummyWrappedAdversary
 from uc.syn_ours import Syn_FWrapper, Syn_Channel
 from uc.execuc import execWrappedUC
 from uc.utils import z_get_leaks
+
 
 def env1(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     delta = 3
