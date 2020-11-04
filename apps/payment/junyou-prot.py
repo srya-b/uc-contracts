@@ -284,8 +284,7 @@ class Signature_Functionality(UCWrappedFunctionality):
         sid = data['sid']
         v_key = data['v']
 
-        codeblock = (sender, msg)
-        self.write('f2p', codeblock)
+        self.write('f2p', (sender, msg))
 
         self.pair[sender] = v_key # set the (party, v key) pair for current sid
         self.history[(sender,sid)] = 1 # add (sender, sid) into history
