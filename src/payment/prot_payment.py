@@ -256,8 +256,31 @@ class Signature_Functionality(UCWrappedFunctionality):
         self.leak(leak_msg)
 
     def sign(self, data):
-        leak_msg = ('sign', (data))
-        self.leak(leak_msg)
+        msg = ('sign', (data))
+        self.write('f2a', msg)
+        msg = wait_for(self.channels['a2f']).msg # wait for data from adversary
+
+        command = msg['msg']
+        tokens = msg['imp'] # TODO: import tokens are skipped for now
+        data = msg['data']
+
+        assert command == 'signature'
+
+        sender = data['sender']
+        sid = data['sid']
+        m = data['message']
+        sigma = data['signature']
+
+        v = self.pair[sender]
+        if (m, sigma, v) in self.records and self.records[(m, sigma, v)] == 0:
+            msg = (sender, 'error', data)
+            self.write('f2p', msg)
+            self.pump.write("dump")
+        else:
+            msg = (sender, 'signature', data)
+            self.write('f2p', msg)
+            self.records[(m, sigma, v)] = 1
+
 
     def keygen(self, data):
         msg = ('keygen', (data))
@@ -338,30 +361,13 @@ class Signature_Functionality(UCWrappedFunctionality):
         self.write('f2p', codeblock)
 
 
-    def recv_signature(self, data):
-        sender = data['sender']
-        sid = data['sid']
-        m = data['message']
-        sigma = data['signature']
-
-        v = self.pair[sender]
-        if (m, sigma, v) in self.records:
-            self.write('f2p', 'error', (sender, data))
-            self.pump.write("dump")
-        else:
-            self.write('f2p', 'signature', (sender, data))
-            self.records[(m, sigma, v)] = 1
-
-
     # a2f channel handler, handling message from adversary
     def adv_msg(self, msg):
         log.debug('F_signature::Adversary message: {}'.format(msg))
         command = msg['msg']
         tokens = msg['imp'] # TODO: import tokens are skipped for now
         data = msg['data']
-        if command == 'signature':
-            recv_signature(data)
-        elif command == 'verified':
+        if command == 'verified':
             recv_verified(data)
         else:
             self.pump.write("dump")
