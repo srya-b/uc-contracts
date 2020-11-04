@@ -311,12 +311,12 @@ class Signature_Functionality(UCWrappedFunctionality):
 
         v = self.pair[sender]
         if (m, sigma, v) in self.records and self.records[(m, sigma, v)] == 0:
-            msg = (sender, 'error', data)
-            self.write('f2p', msg)
+            buf = (sender, 'error', data)
+            self.write('f2p', buf)
             self.pump.write("dump")
         else:
-            msg = (sender, 'signature', data)
-            self.write('f2p', msg)
+            buf = (sender, 'signature', data)
+            self.write('f2p', buf)
             self.records[(m, sigma, v)] = 1
 
 
