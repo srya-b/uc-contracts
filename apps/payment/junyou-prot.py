@@ -238,9 +238,47 @@ class Signature_Functionality(UCWrappedFunctionality):
         UCWrappedFunctionality.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
 
 
+    def _check(m, sigma, v):
+        for key, value in self.records.items():
+            if m == key[0] and v == key[2] and value != 1:
+                return True
+        return False
+
     def verify(self, data):
-        leak_msg = ('verify', (data))
-        self.leak(leak_msg)
+        sigma = data['signature']
+        k = data['key']
+
+        msg = ('verify', (data))
+        self.write('f2a', msg)
+        msg = wait_for(self.channels['a2f']).msg # wait for data from adversary
+
+        command = msg['msg']
+        tokens = msg['imp'] # TODO: import tokens are skipped for now
+        data = msg['data']
+
+        assert command == 'verified'
+
+        sender = data['sender']
+        sid = data['sid']
+        m = data['message']
+        phi = data['value'] # can only to 0 or 1
+
+        v = self.pair[sender]
+
+        if k == v and (m, sigma, v) in self.records and self.records[(m, sigma, v)] == 1:
+            f = 1
+        elif k == v and _check(m, sigma, v):
+            f = 0
+            self.records[(m, sigma, v)] = 0
+        elif (m, sigma, k) in self.records:
+            f = self.records[(m, sigma, k)]
+        else:
+            f = phi
+            self.records[(m, sigma, k)] = f
+
+        buf = (sender, 'verified', sid, m, f)
+        self.write('f2p', buf)
+
 
     def sign(self, data):
         msg = ('sign', (data))
@@ -311,7 +349,7 @@ class Signature_Functionality(UCWrappedFunctionality):
             sid = data['sid']
             m = data['message']
             sigma = data['signature']
-            v = data['key']
+            k = data['key']
             if (sender, sid) in self.history[sender]:
                 verify(data)
         else:
@@ -323,40 +361,9 @@ class Signature_Functionality(UCWrappedFunctionality):
     def wrapper_msg(self, msg):
         self.pump.write("dump")
 
-
-    def recv_verified(self, data):
-        sender = data['sender']
-        sid = data['sid']
-        m = data['message']
-        sigma = data['signature']
-        k = data['key']
-        v = self.pair[sender]
-
-        if k == v and (m, sigma, v) in self.records and self.records[(m, sigma, v)] == 1:
-            f = 1
-        elif k == v and (m, sigma, v) not in self.records:
-            f = 0
-            self.records[(m, sigma, v)] = 0
-        elif (m, sigma, k) in self.records:
-            f = self.records[(m, sigma, k)]
-        else:
-            f = -1
-            self.records[(m, sigma, k)] = f
-
-        codeblock = (sender, (sender, sid, m, f))
-        self.write('f2p', codeblock)
-
-
     # a2f channel handler, handling message from adversary
     def adv_msg(self, msg):
-        log.debug('F_signature::Adversary message: {}'.format(msg))
-        command = msg['msg']
-        tokens = msg['imp'] # TODO: import tokens are skipped for now
-        data = msg['data']
-        if command == 'verified':
-            recv_verified(data)
-        else:
-            self.pump.write("dump")
+        self.pump.write("dump")
 
     # e2f channel handler, handling message from environment
     def env_msg(self, msg):
