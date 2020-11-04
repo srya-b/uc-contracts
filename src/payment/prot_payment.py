@@ -260,8 +260,25 @@ class Signature_Functionality(UCWrappedFunctionality):
         self.leak(leak_msg)
 
     def keygen(self, data):
-        leak_msg = ('keygen', (data))
-        self.leak(leak_msg)
+        msg = ('keygen', (data))
+        self.write('f2a', msg)
+        msg = wait_for(self.channels['a2f']).msg # wait for data from adversary
+
+        command = msg['msg']
+        tokens = msg['imp'] # TODO: import tokens are skipped for now
+        data = msg['data']
+
+        assert command == 'verification key'
+
+        sender = data['sender']
+        sid = data['sid']
+        v_key = data['v']
+
+        codeblock = (sender, msg)
+        self.write('f2p', codeblock)
+
+        self.pair[sender] = v_key # set the (party, v key) pair for current sid
+        self.history[(sender,sid)] = 1 # add (sender, sid) into history
 
 
     def party_msg(sef, msg):
@@ -319,7 +336,7 @@ class Signature_Functionality(UCWrappedFunctionality):
 
         codeblock = (sender, (sender, sid, m, f))
         self.write('f2p', codeblock)
-        
+
 
     def recv_signature(self, data):
         sender = data['sender']
@@ -336,27 +353,13 @@ class Signature_Functionality(UCWrappedFunctionality):
             self.records[(m, sigma, v)] = 1
 
 
-    def recv_verification_key(self, data):
-        sender = data['sender']
-        sid = data['sid']
-        v_key = data['v']
-
-        codeblock = ('verification key', sender, data)
-        self.write('f2p', codeblock)
-
-        self.pair[sender] = v_key # set the (party, v key) pair for current sid
-        self.history[(sender,sid)] = 1 # add (sender, sid) into history
-
-
     # a2f channel handler, handling message from adversary
     def adv_msg(self, msg):
         log.debug('F_signature::Adversary message: {}'.format(msg))
         command = msg['msg']
         tokens = msg['imp'] # TODO: import tokens are skipped for now
         data = msg['data']
-        if command == 'verification key':
-            recv_verification_key(data)
-        elif command == 'signature':
+        if command == 'signature':
             recv_signature(data)
         elif command == 'verified':
             recv_verified(data)
