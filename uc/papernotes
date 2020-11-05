@@ -1,0 +1,8 @@
+two kinds of case studies
+1. extending UC with additional network models (case study of extending UC with new components) -> most papers give a framework added not just some ideal functionalities
+2. actually doing an application
+
+The easy UC examples don't include any network guarantees
+
+
+Jan: appealing story that crypto is hard and huge commitment for having an easy application for this UC paper

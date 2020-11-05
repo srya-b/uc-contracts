@@ -1,0 +1,20 @@
+When a VAL is received at a player, we can't send ECHO to everyone immediately otherwise we override the message that's already in F_bd-sec
+the todo list checks ONE F_bd-sec per activation and only sends relevant information to that party.
+
+Round 1
+=======
+Dealer (1) VAL 	--> p1
+				--> p2
+				--> p3
+
+bd-sec (D-->1): VAL
+bd-sec (D-->2): VAL
+bd-sec (D-->3): VAL
+
+Round 2
+=======
+output p1:	poll bd-sec (D --> 1) ==> receive VAL(m)
+			* modify TODO to send ECHO to party i on activation i (skipping self because it is redundant
+output p1: ECHO --> p2
+
+bd-sec (1 --> 2): 
