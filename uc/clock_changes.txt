@@ -1,0 +1,8 @@
+g_ledger
+========
+the ledger remains largely the same
+when delaying transactions, the delay is the on-chain rounds
+when writing output, the output should be written in O(1) rounds to the parties (a.k.a. available next round) aking to F_state doing this -- for now immediate output
+tick: the tick is still processed immediately, there is no O(1) delay when writing to other turing machines
+send transaction: same thing, there's not waiting here O(1)
+
