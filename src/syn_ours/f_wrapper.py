@@ -74,6 +74,9 @@ class Syn_FWrapper(UCWrapper):
     def party_clock_round(self, sender):
         self.write( 'w2p', (sender, self.curr_round))
 
+    def func_clock_round(self):
+        self.write( 'w2f', self.curr_round )
+
     def print_todo(self):
         p_dict = {}
         for k in self.todo:
@@ -172,6 +175,8 @@ class Syn_FWrapper(UCWrapper):
             self.fschedule(sender, msg[1], msg[2], msg[3], imp)
         elif msg[0] == 'leak':
             self.leak(sender, msg[1], imp)
+        elif msg[0] == 'clock-round':
+            self.write( 'f2p', ('round', self.curr_round) )
         else:
             self.pump.write("dump")
 
