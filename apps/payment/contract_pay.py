@@ -4,14 +4,14 @@ import logging
 log = logging.getLogger(__name__)
 
 class Contract_Pay(UCWrappedFunctionality):
-    def __init__(self, k, bits, sid, pid, channels, pump, poly, importargs):    
+    def __init__(self, k, bits, crupt, sid, pid, channels, pump, poly, importargs):    
         self.ssid = sid[0]
         self.P_s = sid[1]
         self.P_r = sid[2]
         self.b_s = sid[3]
         self.b_r = sid[4]
         self.delta = sid[5]
-        UCWrappedFunctionality.__init__(self, k, buts, crupt, sid, pid, channels, poly, pump, importargs)
+        UCWrappedFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
         self.leakbuffer = None
         self.flag = 'OffChain'
         self.nonce = 0
@@ -34,9 +34,11 @@ class Contract_Pay(UCWrappedFunctionality):
                 self.nonce = _nonce
                 self.state = _state
                 if _sender is self.P_r:
+                    print('The receiver is sending a close')
                     self.flag = "Closed"
                     self.broadcast( ("Closed", self.state), 0 )
                 else:
+                    print('The sender is sending a clsoe')
                     self.flag = "UnCoopClose"
                     self.T_deadline = self.clock_round() + self.T_settle
                     self.broadcast( ("UnCoopClose", self.state, self.T_deadline), 0)
@@ -56,7 +58,7 @@ class Contract_Pay(UCWrappedFunctionality):
         else:
             self.pump.write('')
 
-    def route_party_msg(sender, msg, imp):
+    def route_party_msg(self, sender, msg, imp):
         if msg[0] == 'close':
             _, _state, _sig = msg
             self.close(sender, _state, _sig)
@@ -73,23 +75,36 @@ class Contract_Pay(UCWrappedFunctionality):
         
         self.write( 'f2w',
             ('schedule',
-            self.route_party_msg,
+            'route_party_msg',
             (_sender, msg, imp),
             self.delta),
             0
         )
         assert wait_for(self.channels['w2f']).msg == ('OK',)
-        self.leak(msg)
+        self.leak(msg, 0)
         self.pump.write('dump')
-    
+
+    def wrapper_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        
+        if msg[0] == 'exec':
+            _,name,args = msg
+            f = getattr(self, name)
+            f(*args)
+        else:
+            self.pump.write('')
+
+
     def send_to(self, to, msg, imp):
         self.write('f2p', (to, msg), imp)
 
     def broadcast(self, msg, imp):
-        self.leak(msg)
+        print('\n broadcast \n')
+        self.leak(msg, 0)
         self.write( 'f2w',
             ('schedule',
-            self.send_to,
+            'send_to',
             ((self.sid, self.P_s), msg, imp),
             1),
             0
@@ -97,13 +112,13 @@ class Contract_Pay(UCWrappedFunctionality):
         assert wait_for(self.channels['w2f']).msg == ('OK',)
         self.write('f2w',
             ('schedule',
-            self.send_to,
+            'send_to',
             ((self.sid, self.P_r), msg, imp),
             1),
             0
         )
         assert wait_for(self.channels['w2f']).msg == ('OK',)
-        self.leak(('bcast', msg))
+        self.leak(('bcast', msg), 0)
         self.pump.write('dump')
 
 

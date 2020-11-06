@@ -81,8 +81,9 @@ class Syn_FWrapper(UCWrapper):
         p_dict = {}
         for k in self.todo:
             o = []
-            for f,args in self.todo[k]:
-                o.append((f.__name__, args))
+            for sender, ch, f,args in self.todo[k]:
+                #o.append((f.__name__, args))
+                o.append((f, args))
             p_dict[k] = o
         print('\n\033[1m', str(p_dict), '\033[0m\n')
 
@@ -91,14 +92,14 @@ class Syn_FWrapper(UCWrapper):
         # add to the runqueue
         if self.curr_round+delta not in self.todo:
             self.todo[self.curr_round + delta] = []
-        self.todo[self.curr_round + delta].append( (f,args) )
+        self.todo[self.curr_round + delta].append( (sender, 'w2f', f,args) )
         self.total_queue_ever += 1
         log.debug('total_queue_ever: {}'.format(self.total_queue_ever))
         
         # leaks the schedule
         idx = len(self.todo[self.curr_round + delta])-1
         r = self.curr_round + delta
-        self.leaks.append( (sender, ('schedule', r, idx, f.__name__), 0) )
+        self.leaks.append( (sender, ('schedule', r, idx, f), 0) )
 
         self.print_todo()
         # add to the delay and return control to sender
@@ -110,18 +111,17 @@ class Syn_FWrapper(UCWrapper):
         # add to runqueue
         if self.curr_round+delta not in self.todo:
             self.todo[self.curr_round + delta] = []
-        self.todo[self.curr_round + delta].append( (f,args) )
+        self.todo[self.curr_round + delta].append( (sender, 'w2p', f,args) )
         self.total_queue_ever += 1
         log.debug('total_queue_ever: {}'.format(self.total_queue_ever))
 
         # leak the schedule
         idx = len(self.todo[self.curr_round + delta])-1
         r = self.curr_round + delta
-        self.leaks.append( (sender, ('schedule', r, idx, f.__name__), 0) )
+        self.leaks.append( (sender, ('schedule', r, idx, f), 0) )
     
         # add to delay and return control to sender
         self.delay += 1
-        #self.w2p.write( (sender, ('OK',)) )
         self.write('w2p', (sender, ('OK',)) )
 
     def adv_delay(self, t, imp):
@@ -130,9 +130,9 @@ class Syn_FWrapper(UCWrapper):
         self.write('w2a', "OK" )
 
     def adv_execute(self, r, i):
-        f,args = self.todo[r].pop(i)
+        sender, ch, f,args = self.todo[r].pop(i)
         self.print_todo()
-        f(*args)
+        self.write( ch, (sender, ('exec', f, args)) )
 
     def next_round(self):
         rounds = self.todo.keys()
@@ -141,9 +141,10 @@ class Syn_FWrapper(UCWrapper):
                 return r
         return self.curr_round
 
-    def leak(self, sender, msg, imp):
+    def leak(self, rch, sender, msg, imp):
         log.debug("Leaking information, sender={}, msg={}".format(sender, msg))
         self.leaks.append( (sender, msg, imp) )
+        self.write( rch, (sender, ('OK',)) ) 
 
     def poll(self, imp):
         self.assertimp(imp, 1)
@@ -174,10 +175,11 @@ class Syn_FWrapper(UCWrapper):
         if msg[0] == 'schedule':
             self.fschedule(sender, msg[1], msg[2], msg[3], imp)
         elif msg[0] == 'leak':
-            self.leak(sender, msg[1], imp)
+            self.leak( 'w2f', sender, msg[1], imp)
         elif msg[0] == 'clock-round':
-            self.write( 'f2p', ('round', self.curr_round) )
+            self.write( 'w2f', (sender, (('round', self.curr_round))) )
         else:
+            print('dump')
             self.pump.write("dump")
 
     # TODO revisit this to see if adversary can delay callme actions
@@ -199,7 +201,7 @@ class Syn_FWrapper(UCWrapper):
         elif msg[0] == 'callme':
             self.party_callme(sender)
         elif msg[0] == 'leak':
-            self.leak(sender, msg, imp)
+            self.leak( 'w2p', sender, msg, imp)
         else:
             #dump.dump()
             self.pump.write("dump")

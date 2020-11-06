@@ -133,8 +133,8 @@ class ITM:
 
 
     def write(self, ch, msg, imp=0):
-        print('imp', imp, 'impflag', self.impflag)
-        self.printstate()
+        #print('imp', imp, 'impflag', self.impflag)
+        #self.printstate()
         if self.impflag:
             if self.imp_in - self.imp_out + self.marked >= imp:
                 self.imp_out += imp
@@ -298,6 +298,8 @@ class UCWrappedFunctionality(ITM):
     def leak(self, msg, imp):
         #self.channels['f2w'].write( ('leak', msg), imp)
         self.write('f2w', ('leak',msg), imp)
+        m = wait_for(self.channels['w2f']).msg
+        assert m == ('OK',)
 
 class UCWrappedProtocol(ITM):
     def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
@@ -809,6 +811,7 @@ class WrappedFunctionalityWrapper(FunctionalityWrapper):
             return _2pid[sid,tag]
 
     def wrapper_msg(self, m):
+        print('wrapper message', m)
         ((sid,tag),msg) = m.msg
         imp = m.imp
         fid = self.getFID(self.w2fid, sid, tag)

@@ -2,7 +2,7 @@ from uc.utils import waits
 import logging
 import gevent
 
-def env1(k, static, z2p, z2f, z2a, z2w, a2z, p2a, f2z, w2z, pump):
+def env1(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     delta = 3
     n = 3
     sid = ('one', 1, 2, 10, 10, delta)
@@ -27,6 +27,18 @@ def env1(k, static, z2p, z2f, z2a, z2w, a2z, p2a, f2z, w2z, pump):
     z2p.write( ((sid,1), ('close', (6, 14, 1), '')) )
     waits(pump)
 
+    z2a.write( ('A2W', ('exec', 4, 0), 0) )
+    waits(pump)
+
+    for _ in range(4):
+        z2w.write( ('poll',), 1 )
+        waits(pump)
+
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+
+    return transcript
+
 from uc.itm import wrappedPartyWrapper
 from uc.adversary import DummyWrappedAdversary
 from contract_pay import Contract_Pay
@@ -42,3 +54,7 @@ t1 = execWrappedUC(
     DummyWrappedAdversary,
     None
 )
+
+print('\ntransacript')
+for i in t1:
+    print(i)
