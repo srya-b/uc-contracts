@@ -191,8 +191,6 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         self.write('p2f', msg)
         
 
-    def env_msg(self, msg):
-
     # env handler
     def env_msg(self, msg):
         log.debug('Prot/Receive message from Z in real world: {}'.format(msg))

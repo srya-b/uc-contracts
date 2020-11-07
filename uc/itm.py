@@ -212,6 +212,9 @@ class UCFunctionality(ITM):
     def is_honest(self, sid, pid):
         return (sid,pid) in self.crupt
 
+    def is_dishonest(self, sid, pid):
+        return not self.is_honest(sid, pid)
+
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
 
@@ -462,7 +465,6 @@ class PartyWrapper(ITM):
             while True:
                 r = gevent.wait(objects=[pp2_],count=1)
                 m = r[0].read()
-                print('translate')
                 pp2_.reset('pp2_ translate reset')
                 p2_.write( ((sid,pid), m.msg), m.imp )
         gevent.spawn(_translate)

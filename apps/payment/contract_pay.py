@@ -3,7 +3,7 @@ from uc.utils import wait_for
 import logging
 log = logging.getLogger(__name__)
 
-class Contract_Pay(UCWrappedFunctionality):
+class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump, poly, importargs):    
         self.ssid = sid[0]
         self.P_s = sid[1]
@@ -34,11 +34,9 @@ class Contract_Pay(UCWrappedFunctionality):
                 self.nonce = _nonce
                 self.state = _state
                 if _sender is self.P_r:
-                    print('The receiver is sending a close')
                     self.flag = "Closed"
                     self.broadcast( ("Closed", self.state), 0 )
                 else:
-                    print('The sender is sending a clsoe')
                     self.flag = "UnCoopClose"
                     self.T_deadline = self.clock_round() + self.T_settle
                     self.broadcast( ("UnCoopClose", self.state, self.T_deadline), 0)
@@ -72,7 +70,10 @@ class Contract_Pay(UCWrappedFunctionality):
         msg = d.msg
         imp = d.imp
         (_sid, _sender),msg = msg
-        
+       
+        if msg[0] == 'bcast':
+            self.broadcast( 
+
         self.write( 'f2w',
             ('schedule',
             'route_party_msg',

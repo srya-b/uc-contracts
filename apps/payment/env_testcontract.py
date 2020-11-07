@@ -41,14 +41,14 @@ def env1(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
 
 from uc.itm import wrappedPartyWrapper
 from uc.adversary import DummyWrappedAdversary
-from contract_pay import Contract_Pay
+from contract_pay import Contract_Pay_and_bcast_and_channel
 from uc.syn_ours import Syn_FWrapper
 from uc.execuc import execWrappedUC
 
 t1 = execWrappedUC(
     128,
     env1,
-    [('F_contract', Contract_Pay)],
+    [('F_contract', Contract_Pay_and_bcast_and_channel)],
     wrappedPartyWrapper('F_contract'),
     Syn_FWrapper,
     DummyWrappedAdversary,
