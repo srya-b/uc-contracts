@@ -12,243 +12,89 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
     #def __init__(self, sid, pid, channels):
     def __init__(self, k, bits, sid, pid, channels, pump, poly, importargs):
         self.ssid = sid[0]
-        self.n = sid[1] # number of parties, in uni/bi-directional is 2
-        self.delta = sid[2] # the basic unit of delay
+        self.P_s = sid[1]
+        self.P_r = sid[2]
+        self.b_s = sid[3]
+        self.b_r = sid[4]
+        self.delta = sid[5]
 
-        self.id = sid[4]
-        self.nonce = -1
-        self.states = [] # (nonce) => {nonce, balances}
-        self.sigs = [] # (nonce) => [None] * self.n
-
-        self.balances = sid[3]
-        self.flag = 'OPEN'
         UCWrappedProtocol.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs)
 
-
-    def _sign(self, state):
-        # TODO
-        # use it's private key to sign the state s
-        return signed_state
-
-
-    def normal_offchain_payment(self, data):
-        nonce = data['nonce']
-        assert nonce == self.nonce+1
-
-        self.states.append(data['state'])
-        self.sigs.append(data['sig'])
-        self.nonce += 1
-
-        s = data['sender']
-        r = data['receiver']
-        a = data['amount']
-        assert r == self.id
-        assert a <= self.balances[s]
-        self.balances[r] += a
-        self.balances[s] -= a
-
-
-    def react_challenge(self, data, imp):
-        self.flag = 'CHALLANGE'
-
-        _s = data['state']
-        _n = _s['nonce']
-        _b = _s['balances']
-        _sig = data['sig']
-        # basically P_recv doesnt need to check anything above
-        # just sign send the latest state to challenge is fine
-
-        if self.nonce == -1:
-            state = {'nonce': self.nonce, 'balances': self.balances}
-            sig = data['sig']
-        else
-            state = self.states[self.nonce]
-            sig = self.sigs[self.nonce]
-        sig[self.id] = self._sign(state)
-
-        msg = {
-            'msg': 'challenge',
-            'imp': imp,
-            'data': {
-                'sender': self.id,
-                'states': state,
-                'sig': sig
-            }
-        }
-        self.write('p2f', msg)
-
-
-    def recv_close_channel(self, data):
-        self.nonce = -1
-        self.balances = [0] * self.n
-        self.states.clear()
-        self.sigs.clear()
-        self.flag = 'CLOSED'
-
-    def recv_init_channel(self, data):
-        s = data['sender']
-        a = data['amount']
-        self.balances[s] += amount
+        self.nonce = 0
+        self.state = (self.b_s, self.b_r, self.nonce)
+        #self.states = [] # (nonce) => {nonce, balances}
+        #self.sigs = [] # (nonce) => [None] * self.n
         self.flag = 'OPEN'
 
 
-    # functionality handler
-    # receive msg from the smart contract ideal functionality in the real world
-    # b/c it's in a hybrid model
-    def func_msg(self, msg):
-        log.debug('Protocol/Receive msg from F in real world: {}'.format(msg))
-        command = msg['msg']
-        tokens = msg['imp']
-        data = msg['data']
-        if command == 'send':
-            # normal offchain payment
-            self.normal_offchain_payment(data)
-        elif command == 'challenge':
-            # entering into challenge
-            self.react_challenge(data, tokens)
-        elif command == 'init_channel':
-            self.recv_init_channel(data)
-        elif command == 'close_channel':
-            self.recv_close_channel(data)
-        else:
-            self.pump.write("dump")
-
-
-    # wrapper handler
-    def wrapper_msg(self, msg):
-        self.pump.write("dump")
-
-
-    # adv handler
-    def adv_msg(self, msg):
-        self.pump.write("dump")
-
-
-    def close_channel(self, _from, imp):
-        if not self.flag == 'CLOSED': # could be either OPEN or CHALLENGE
-            if self.nonce == -1:
-                state = {'nonce': -1, 'balances': self.balances}
-                sig = [None] * self.n
-                sig[_from] = self._sign(state)
-            else
-                state = self.states[self.nonce]
-                sig = self.sigs[self.nonce]
-
-            msg = {
-                'msg': 'close',
-                'imp': imp,
-                'data': {
-                    'sender': _from
-                    'state': state
-                    'sig': sig
-                }
-            }
-            self.write('p2f', msg)
-
-
-    def init_channel(self, _from, imp):
-        if self.flag == 'CLOSED': 
-            msg = {
-                'msg': 'init',
-                'imp': imp,
-                'data': {
-                    'sender': _from,
-                    'amount': amount
-                }
-            }
-            self.write('p2f', msg)
-
-
-    def pay(self, _from, _to, amount, imp):
-        if not self.flag == 'OPEN': return # if channel is not open, maybe CLOSED or CHALLENGE, cannot pay offchain
-        if amount > self.balances[_from]: return # not enough balance
-
-        self.balances[_from] -= amount
-        self.balances[_to] += amount
-
-        self.nonce += 1
-        state = {
-            'nonce': self.nonce,
-            'balances': self.balances
-        }
-        self.states.append(state)
-
-        self.sigs.append([None] * self.n)
-        self.sigs[self.nonce][_from] = self._sign(state)
-
-        msg = {
-            'msg': 'send', # united interface with synchronous channel
-            'imp': imp,
-            'data': {
-                'sender': _from,
-                'receiver': _to,
-                'amount': amount,
-                'nonce': self.nonce,
-                'state': self.states[self.nonce]
-                'sig': self.sigs[self.nonce]
-            }
-        }
-        self.write('p2f', msg)
-        
-
-    def env_msg(self, msg):
-
-    # env handler
-    def env_msg(self, msg):
-        log.debug('Prot/Receive message from Z in real world: {}'.format(msg))
-        command = msg['msg']
-        tokens = msg['imp']
-        data = msg['data']
-        if command == 'pay':
-            # Z tells P_i to pay another P_j
-            sender = data['sender']
-            assert sender = self.id
-            receiver = data['receiver']
-            amount = data['amount']
-            self.pay(sender, receiver, amount, tokens)
-        elif command == 'read':
-            # Z tells P_i to read its own balance
-            self.write('p2z', self.balances[self.id])
-        elif command == 'init':
-            # Z tells P_i to init a channel
-            sender = data['sender']
-            amount = data['amount']
-            init_channel(sender, amount, tokens)
-        elif command == 'close':
-            # Z tells P_i to close a channel
-            sender = data['sender']
-            close_channel(sender, tokens)
-        else:
-            self.pump.write("dump")
-            return
+    def pay(self, v):
+        if self.b_s >= v:
+            self.b_s -= v
+            self.b_r += v
+            self.nonce += 1
+            self.state = (self.b_s, self.b_r, self.nonce)
+            self.write('p2f', ((self.sid, 'F_contract'), ("send", self.P_r, ("pay", self.state, ''), 0)) )
+            assert wait_for(self.channels['f2p']).msg[1] == 'OK'
         self.write('p2z', 'OK')
 
+    def close(self):
+        if self.flag == "OPEN":
+            self.flag = "CLOSE"
+            self.write('p2f', ((self.sid, 'F_contract'), ('close', self.state, '')))
+            assert wait_for(self.channels['f2p']).msg[1] == 'OK'
+        self.write('p2z', 'OK')
+        
 
-from uc.itm import ProtocolWrapper, WrappedProtocolWrapper
-from uc.adversary import DummyWrappedAdversary
-from uc.syn_ours import Syn_FWrapper, Syn_Channel
-from uc.execuc import execWrappedUC
-from uc.utils import z_get_leaks
+    def env_msg(self, d):
+        msg = d.msg
+        imp = d.imp
 
-def env1(static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
-    delta = 3
-    n = 3
-    #sid = ('one', (1,2,3), delta)
-    sid = ('one', tuple(range(1,n+1)), delta)
-    static.write( ('sid', sid) )
+        if msg[0] == "pay" and self.pid == self.P_s:
+            _, v = msg
+            self.pay(v)
+        elif msg[0] == "close":
+            self.close()
+        elif msg[0] == "balance":
+            if self.pid == self.P_s: self.write('p2z', ('balance', self.b_s))
+            else: self.write('p2z', ('balance', self.b_r))
+        else:
+            self.pump.write('')
 
-    z2p.write( ((sid,1), ('input', 2)), n*(4*n + 1) )
-    #wait_for(p2z)
-    waits(pump, p2z)
+    def recv_pay(self, _state, _sig):
+        _b_s, _b_r, _nonce = _state
+        if self.flag == "OPEN" and _b_s < self.b_s and _b_r >= self.b_r and _nonce == self.nonce + 1:
+            # TODO cheksig
+            v = self.b_s - _b_s
+            self.state = _state
+            self.b_s = _b_s
+            self.b_r = _b_r
+            self.nonce = _nonce
+            self.write('p2z', ("pay", v))
+        else: self.pump.write('')
 
-    def channel_id(fro, to, r):
-        s = ('one', (sid,fro), (sid,to), r, delta)
-        return (s,'F_chan')
+    def recv_uncoopclose(self, _state, _deadline):
+        if self.flag == "OPEN":
+            _b_s, _b_r, _nonce = _state
+            if _nonce < self.nonce:
+                print('uncoopclose')
+                self.write('p2f', ((self.sid, 'F_contract'), ('challenge', self.state, '')))
+                assert wait_for(self.channels['f2p']).msg[1] == 'OK'
+            self.flag = "CLOSE"
+        self.pump.write('')
 
-    z2a.write( ('A2W', ('get-leaks',)) )
-    msgs = waits(pump, a2z)
-    print('\033[91m [Leaks] \033[0m', '\n'.join(str(m) for m in msgs.msg))
+    def func_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        (sender, msg) = msg
+        if msg[0] == "pay" and self.pid == self.P_r:
+            _, _state, _sig = msg
+            self.recv_pay(_state, _sig)
+        elif msg[0] == "UnCoopClose" and self.pid == self.P_r:
+            _, _state, _deadline = msg
+            self.recv_uncoopclose(_state, _deadline)
+        else: self.pump.write('')
 
 
-if __name__ == '__main__':
-    execWrappedUC(env1, [('F_chan',Syn_Channel)], WrappedProtocolWrapper, Syn_FWrapper, Syn_Bracha_Protocol, DummyWrappedAdversary)
+
+
+

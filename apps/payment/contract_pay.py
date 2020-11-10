@@ -61,7 +61,7 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
             _, _state, _sig = msg
             self.close(sender, _state, _sig)
         elif msg[0] == 'challenge':
-            _, _state, _sid = msg
+            _, _state, _sig = msg
             self.challenge(sender, _state, _sig)
         else:
             self.pump.write('dump')
@@ -71,19 +71,29 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
         imp = d.imp
         (_sid, _sender),msg = msg
        
-        if msg[0] == 'bcast':
-            self.broadcast( 
-
-        self.write( 'f2w',
-            ('schedule',
-            'route_party_msg',
-            (_sender, msg, imp),
-            self.delta),
-            0
-        )
-        assert wait_for(self.channels['w2f']).msg == ('OK',)
-        self.leak(msg, 0)
-        self.pump.write('dump')
+        if _sender not in (self.P_s, self.P_r): self.pump.write('')
+        if msg[0] == "broadcast":
+            _, _msg, _imp = msg
+            self.broadcast(_msg, _imp)
+        elif msg[0] == "send":
+            _, _to, _msg, _imp = msg
+            if imp >= _imp:
+                self.send_to(_to, _msg, _imp)
+            #else: self.pump.write('')
+            self.write('f2p', ((_sid,_sender), 'OK'))
+        else:
+            print('scheduling', msg)
+            self.write( 'f2w',
+                ('schedule',
+                'route_party_msg',
+                (_sender, msg, imp),
+                self.delta),
+                0
+            )
+            assert wait_for(self.channels['w2f']).msg == ('OK',)
+            self.leak(msg, 0)
+            self.write('f2p', ((_sid,_sender), 'OK'))
+            #self.pump.write('dump')
 
     def wrapper_msg(self, d):
         msg = d.msg
@@ -97,28 +107,40 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
             self.pump.write('')
 
 
-    def send_to(self, to, msg, imp):
+    def process_send_to(self, to, msg, imp):
         self.write('f2p', (to, msg), imp)
+
+    def send_to(self, to, msg, imp):
+        self.write('f2w',
+            ('schedule', 'process_send_to',
+            ((self.sid, to), msg, imp),
+            1),
+            0
+        )
+        assert wait_for(self.channels['w2f']).msg == ('OK',)
+
 
     def broadcast(self, msg, imp):
         print('\n broadcast \n')
         self.leak(msg, 0)
-        self.write( 'f2w',
-            ('schedule',
-            'send_to',
-            ((self.sid, self.P_s), msg, imp),
-            1),
-            0
-        )
-        assert wait_for(self.channels['w2f']).msg == ('OK',)
-        self.write('f2w',
-            ('schedule',
-            'send_to',
-            ((self.sid, self.P_r), msg, imp),
-            1),
-            0
-        )
-        assert wait_for(self.channels['w2f']).msg == ('OK',)
+        #self.write( 'f2w',
+        #    ('schedule',
+        #    'send_to',
+        #    ((self.sid, self.P_s), msg, imp),
+        #    1),
+        #    0
+        #)
+        #assert wait_for(self.channels['w2f']).msg == ('OK',)
+        self.send_to( self.P_s, msg, imp)
+        #self.write('f2w',
+        #    ('schedule',
+        #    'send_to',
+        #    ((self.sid, self.P_r), msg, imp),
+        #    1),
+        #    0
+        #)
+        #assert wait_for(self.channels['w2f']).msg == ('OK',)
+        self.send_to( self.P_r, msg, imp)
         self.leak(('bcast', msg), 0)
         self.pump.write('dump')
 
