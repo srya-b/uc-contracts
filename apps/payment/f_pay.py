@@ -36,13 +36,6 @@ class F_Pay(UCWrappedFunctionality):
     def process_close(self):
         if self.flag == "OPEN":
             self.flag = "CLOSE"
-            msg = ('close', self.b_s, self.b_r)
-            self.write( 'f2w',
-                ('schedule', 'send_to', (self.P_s, msg, 0), 1), 0)
-            assert wait_for(self.channels['w2f']).msg == ('OK',)
-            self.write( 'f2w',
-                ('schedule', 'send_to', (self.P_r, msg, 0), 1), 0)
-            assert wait_for(self.channels['w2f']).msg == ('OK',)
         self.pump.write('')
 
     def close(self, sender):
@@ -54,6 +47,17 @@ class F_Pay(UCWrappedFunctionality):
             self.write('f2w', ('schedule', 'process_close', (), self.r * self.delta), 0)
             assert wait_for(self.channels['w2f']).msg == ('OK',)
             self.write('f2p', ((self.sid, self.P_s), 'OK') )
+
+    def settle():
+        if self.flag == "CLOSE":
+            msg = ('close', self.b_s, self.b_r)
+            self.write( 'f2w',
+                ('schedule', 'send_to', (self.P_s, msg, 0), 1), 0)
+            assert wait_for(self.channels['w2f']).msg == ('OK',)
+            self.write( 'f2w',
+                ('schedule', 'send_to', (self.P_r, msg, 0), 1), 0)
+            assert wait_for(self.channels['w2f']).msg == ('OK',)
+        self.pump.write('')
 
     def party_msg(self, d):
         msg = d.msg
@@ -69,6 +73,8 @@ class F_Pay(UCWrappedFunctionality):
         elif msg[0] == 'balance':
             if sender == self.P_s: self.write('f2p', ((_sid, sender), ('balance',self.b_s)))
             else: self.write('f2p', ((_sid, sender), ('balance',self.b_r)))
+        elif msg[0] == 'settle':
+            self.settle()
         else:
             self.pump.wirte('')
 
@@ -82,6 +88,6 @@ class F_Pay(UCWrappedFunctionality):
             f = getattr(self, name)
             f(*args)
         else:
-            self.pumpp.write('')
+            self.pump.write('')
 
 
