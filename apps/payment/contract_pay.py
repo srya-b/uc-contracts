@@ -33,7 +33,7 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
             if _nonce >= self.nonce and _b_s + _b_r == self.b_s + self.b_r and _b_r >= self.b_r:
                 self.nonce = _nonce
                 self.state = _state
-                if _sender is self.P_r:
+                if _sender == self.P_r:
                     self.flag = "Closed"
                     self.broadcast( ("Closed", self.state), 0 )
                 else:
@@ -44,7 +44,7 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
             self.pump.write('')
 
     def challenge(self, _sender, _state, _sig):
-        if _sender is self.P_r and self.flag is "UnCoopClose" and self.check_sig(_sig, _state):
+        if _sender == self.P_r and self.flag == "UnCoopClose" and self.check_sig(_sig, _state):
             _b_s, _b_r, _nonce = _state
             if _nonce >= self.nonce:
                 self.flag = "Closed"
