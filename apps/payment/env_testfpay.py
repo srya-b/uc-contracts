@@ -64,11 +64,32 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     waits(pump)
     z2w.write( ('poll',), 1 )
     waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
    
-    z2a.write( ('A2W', ('exec', 13, 1), 0) )
+    z2p.write( ((sid, P_r), ('settle',)) )
     waits(pump)
-    z2a.write( ('A2W', ('exec', 13, 0), 0) )
+    # z2a.write( ('A2W', ('exec', 13, 1), 0) )
+    # waits(pump)
+    # z2a.write( ('A2W', ('exec', 13, 0), 0) )
+    # waits(pump)
+
+    z2w.write( ('poll',), 1 )
     waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+
+
 
     return transcript
 

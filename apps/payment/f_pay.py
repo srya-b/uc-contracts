@@ -48,7 +48,7 @@ class F_Pay(UCWrappedFunctionality):
             assert wait_for(self.channels['w2f']).msg == ('OK',)
             self.write('f2p', ((self.sid, self.P_s), 'OK') )
 
-    def settle():
+    def settle(self):
         if self.flag == "CLOSE":
             msg = ('close', self.b_s, self.b_r)
             self.write( 'f2w',
@@ -76,7 +76,7 @@ class F_Pay(UCWrappedFunctionality):
         elif msg[0] == 'settle':
             self.settle()
         else:
-            self.pump.wirte('')
+            self.pump.write('')
 
 
     def wrapper_msg(self, d):
