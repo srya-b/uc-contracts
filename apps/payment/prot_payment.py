@@ -1,15 +1,9 @@
 from uc.itm import UCWrappedProtocol, MSG
-from uc.syn_ours import Syn_Channel
-from math import ceil, floor
 from uc.utils import wait_for, waits
-from collections import defaultdict
-from numpy.polynomial.polynomial import Polynomial
 import logging
-
 log = logging.getLogger(__name__)
 
-class Syn_Payment_Protocol(UCWrappedProtocol):
-    #def __init__(self, sid, pid, channels):
+class Prot_Pay(UCWrappedProtocol):
     def __init__(self, k, bits, sid, pid, channels, pump, poly, importargs):
         self.ssid = sid[0]
         self.P_s = sid[1]
@@ -27,13 +21,16 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
         self.flag = 'OPEN'
 
 
+    def check_sig(self, _sig, _state, _signer):
+        return True
+
     def pay(self, v):
         if self.b_s >= v:
             self.b_s -= v
             self.b_r += v
             self.nonce += 1
             self.state = (self.b_s, self.b_r, self.nonce)
-            self.write('p2f', ((self.sid, 'F_contract'), ("send", self.P_r, ("pay", self.state, ''), 0)) )
+            self.write('p2f', ((self.sid, 'F_contract'), ("send", self.P_r, ("pay", self.state, 'P_s sig'), 0)) )
             assert wait_for(self.channels['f2p']).msg[1] == 'OK'
         self.write('p2z', 'OK')
 
@@ -62,8 +59,7 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
 
     def recv_pay(self, _state, _sig):
         _b_s, _b_r, _nonce = _state
-        if self.flag == "OPEN" and _b_s < self.b_s and _b_r >= self.b_r and _nonce == self.nonce + 1:
-            # TODO cheksig
+        if self.flag == "OPEN" and _b_s <= self.b_s and _b_s >= 0 and _b_r >= self.b_r and _nonce == self.nonce + 1 and self.check_sig(_sig, _state, self.P_s):
             v = self.b_s - _b_s
             self.state = _state
             self.b_s = _b_s
