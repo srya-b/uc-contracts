@@ -47,12 +47,10 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
         if _sender == self.P_r and self.flag == "UnCoopClose" and self.check_sig(_sig, _state, _sender):
             _b_s, _b_r, _nonce = _state
             if _nonce >= self.nonce:
-                self.flag = "Closed"
                 self.state = _state
                 self.nonce = _nonce
-                self.broadcast( ("closed", self.state), 0 )
-            else:
-                self.pump.write('')
+            self.flag = "Closed"
+            self.broadcast( ("closed", self.state), 0 )
         else:
             self.pump.write('')
 
