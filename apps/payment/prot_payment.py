@@ -71,10 +71,9 @@ class Prot_Pay(UCWrappedProtocol):
     def recv_uncoopclose(self, _state, _deadline):
         if self.flag == "OPEN":
             _b_s, _b_r, _nonce = _state
-            if _nonce < self.nonce:
-                print('uncoopclose')
-                self.write('p2f', ((self.sid, 'F_contract'), ('challenge', self.state, '')))
-                assert wait_for(self.channels['f2p']).msg[1] == 'OK'
+            print('always recognize as an uncoopclose')
+            self.write('p2f', ((self.sid, 'F_contract'), ('challenge', self.state, 'P_r sig')))
+            assert wait_for(self.channels['f2p']).msg[1] == 'OK'
             self.flag = "CLOSE"
         self.pump.write('')
 
@@ -88,6 +87,9 @@ class Prot_Pay(UCWrappedProtocol):
         elif msg[0] == "UnCoopClose" and self.pid == self.P_r:
             _, _state, _deadline = msg
             self.recv_uncoopclose(_state, _deadline)
+        elif msg[0] == "closed":
+            _, _state = msg
+            self.write('p2z', ('closed', _state))
         else: self.pump.write('')
 
 
