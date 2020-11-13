@@ -50,7 +50,7 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
                 self.flag = "Closed"
                 self.state = _state
                 self.nonce = _nonce
-                self.broadcsat( ("Closed", self.state), 0 )
+                self.broadcast( ("Closed", self.state), 0 )
             else:
                 self.pump.write('')
         else:

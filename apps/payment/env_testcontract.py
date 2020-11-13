@@ -24,18 +24,22 @@ def env1(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     g1 = gevent.spawn(_a2z)
     g2 = gevent.spawn(_p2z)
 
-    z2p.write( ((sid,1), ('close', (6, 14, 1), '')) )
+    z2p.write( ((sid,1), ('close', (6, 14, 1), 'P_S sig')) )
     waits(pump)
 
     z2a.write( ('A2W', ('exec', 4, 0), 0) )
     waits(pump)
 
-    for _ in range(4):
+    for _ in range(5):
         z2w.write( ('poll',), 1 )
         waits(pump)
 
-    z2w.write( ('poll',), 1 )
+    z2p.write( ((sid,2), ('challenge', (7, 13, 2), 'P_r sig')) )
     waits(pump)
+
+    for _ in range(7):
+        z2w.write( ('poll',), 1 )
+        waits(pump)
 
     return transcript
 
