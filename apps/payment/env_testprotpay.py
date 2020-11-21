@@ -60,19 +60,14 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     z2p.write( ((sid, P_s), ('close',)) )
     waits(pump)
 
-    z2w.write( ('poll',), 1 )
-    waits(pump)
-    z2w.write( ('poll',), 1 )
-    waits(pump)
-    z2w.write( ('poll',), 1 )
-    waits(pump)
-    z2w.write( ('poll',), 1 )
-    waits(pump)
+    for _ in range(18):
+        z2w.write( ('poll',), 1 )
+        waits(pump)
    
-    z2a.write( ('A2W', ('exec', 13, 1), 0) )
-    waits(pump)
-    z2a.write( ('A2W', ('exec', 13, 0), 0) )
-    waits(pump)
+    # z2a.write( ('A2W', ('exec', 13, 1), 0) )
+    # waits(pump)
+    # z2a.write( ('A2W', ('exec', 13, 0), 0) )
+    # waits(pump)
 
     # z2w.write( ('poll',), 1 )
     # waits(pump)
@@ -82,17 +77,18 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     return transcript
 
 
-from uc.itm import wrappedPartyWrapper
+from uc.itm import wrappedPartyWrapper, wrappedProtocolWrapper
 from uc.adversary import DummyWrappedAdversary
-from f_pay import F_Pay
+from contract_pay import Contract_Pay_and_bcast_and_channel
+from prot_payment import Prot_Pay
 from uc.syn_ours import Syn_FWrapper
 from uc.execuc import execWrappedUC
 
 t1 = execWrappedUC(
     128,
     env,
-    [('F_pay', F_Pay)],
-    wrappedPartyWrapper('F_pay'),
+    [('F_contract', Contract_Pay_and_bcast_and_channel)],
+    wrappedProtocolWrapper(Prot_Pay),
     Syn_FWrapper,
     DummyWrappedAdversary,
     None

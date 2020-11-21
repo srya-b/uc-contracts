@@ -46,14 +46,15 @@ class F_Pay(UCWrappedFunctionality):
         self.pump.write('')
 
     def close(self, sender):
-        if sender == self.P_r or self.is_honest(self.sid, self.P_s):
+        if sender == self.P_r:
             self.write('f2w', ('schedule', 'process_close', (), self.delta), 0)
             assert wait_for(self.channels['w2f']).msg == ('OK',)
             self.write( 'f2p', ((self.sid, sender), 'OK') )
-        else:
+        else: # sender == self.P_s
             self.write('f2w', ('schedule', 'process_close', (), self.r * self.delta), 0)
             assert wait_for(self.channels['w2f']).msg == ('OK',)
             self.write('f2p', ((self.sid, self.P_s), 'OK') )
+
 
     def party_msg(self, d):
         msg = d.msg
@@ -70,7 +71,7 @@ class F_Pay(UCWrappedFunctionality):
             if sender == self.P_s: self.write('f2p', ((_sid, sender), ('balance',self.b_s)))
             else: self.write('f2p', ((_sid, sender), ('balance',self.b_r)))
         else:
-            self.pump.wirte('')
+            self.pump.write('')
 
 
     def wrapper_msg(self, d):
@@ -82,6 +83,6 @@ class F_Pay(UCWrappedFunctionality):
             f = getattr(self, name)
             f(*args)
         else:
-            self.pumpp.write('')
+            self.pump.write('')
 
 
