@@ -24,16 +24,16 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
         rnd = wait_for(self.channels['w2f']).msg[1]
         return rnd
 
-    def check_sig(self, _sig, _state):
+    def check_sig(self, _sig, _state, _signer):
         return True
     
     def close(self, _sender, _state, _sig):
-        if self.flag == "OffChain" and self.check_sig(_sig, _state):
+        if self.flag == "OffChain" and self.check_sig(_sig, _state, _sender):
             _b_s, _b_r, _nonce = _state
             if _nonce >= self.nonce and _b_s + _b_r == self.b_s + self.b_r and _b_r >= self.b_r:
                 self.nonce = _nonce
                 self.state = _state
-                if _sender is self.P_r:
+                if _sender == self.P_r:
                     self.flag = "Closed"
                     #self.broadcast( ("Closed", self.state), 0 )
                 else:
@@ -44,15 +44,13 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
             self.pump.write('')
 
     def challenge(self, _sender, _state, _sig):
-        if _sender is self.P_r and self.flag is "UnCoopClose" and self.check_sig(_sig, _state):
+        if _sender == self.P_r and self.flag == "UnCoopClose" and self.check_sig(_sig, _state, _sender):
             _b_s, _b_r, _nonce = _state
             if _nonce >= self.nonce:
-                self.flag = "Closed"
                 self.state = _state
                 self.nonce = _nonce
-                self.broadcsat( ("Closed", self.state), 0 )
-            else:
-                self.pump.write('')
+            self.flag = "Closed"
+            self.broadcast( ("closed", self.state), 0 )
         else:
             self.pump.write('')
 
@@ -88,7 +86,6 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
             _, _to, _msg, _imp = msg
             if imp >= _imp:
                 self.send_to(_to, _msg, _imp)
-            #else: self.pump.write('')
             self.write('f2p', ((_sid,_sender), 'OK'))
         else:
             print('scheduling', msg)
@@ -102,7 +99,7 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
             assert wait_for(self.channels['w2f']).msg == ('OK',)
             self.leak(msg, 0)
             self.write('f2p', ((_sid,_sender), 'OK'))
-            #self.pump.write('dump')
+
 
     def wrapper_msg(self, d):
         msg = d.msg
@@ -127,28 +124,12 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
             0
         )
         assert wait_for(self.channels['w2f']).msg == ('OK',)
-
+        self.leak(('send', msg), 0)
 
     def broadcast(self, msg, imp):
         print('\n broadcast \n')
         self.leak(msg, 0)
-        #self.write( 'f2w',
-        #    ('schedule',
-        #    'send_to',
-        #    ((self.sid, self.P_s), msg, imp),
-        #    1),
-        #    0
-        #)
-        #assert wait_for(self.channels['w2f']).msg == ('OK',)
         self.send_to( self.P_s, msg, imp)
-        #self.write('f2w',
-        #    ('schedule',
-        #    'send_to',
-        #    ((self.sid, self.P_r), msg, imp),
-        #    1),
-        #    0
-        #)
-        #assert wait_for(self.channels['w2f']).msg == ('OK',)
         self.send_to( self.P_r, msg, imp)
         self.leak(('bcast', msg), 0)
         self.pump.write('dump')

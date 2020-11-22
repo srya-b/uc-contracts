@@ -63,6 +63,7 @@ class F_Pay(UCWrappedFunctionality):
             )
             self.write('f2p', ((self.sid, self.P_s), 'OK') )
 
+
     def party_msg(self, d):
         msg = d.msg
         imp = d.imp
@@ -78,7 +79,7 @@ class F_Pay(UCWrappedFunctionality):
             if sender == self.P_s: self.write('f2p', ((_sid, sender), ('balance',self.b_s)))
             else: self.write('f2p', ((_sid, sender), ('balance',self.b_r)))
         else:
-            self.pump.wirte('')
+            self.pump.write('')
 
 
     def wrapper_msg(self, d):
@@ -90,6 +91,6 @@ class F_Pay(UCWrappedFunctionality):
             f = getattr(self, name)
             f(*args)
         else:
-            self.pumpp.write('')
+            self.pump.write('')
 
 
