@@ -26,8 +26,10 @@ class F_Pay(UCWrappedFunctionality):
 
     def pay(self, v):
         self.leak( ("pay", v), 0 )
-        self.write('f2w',  ('schedule', 'process_pay', (v,), 1), 0)
-        assert wait_for(self.channels['w2f']).msg == ('OK',)
+        self.write_and_wait_expect(
+            ch='f2w', msg=('schedule', 'process_pay', (v,), 1),
+            read='w2f', expect=('OK',)
+        )
         self.write( 'f2p', ((self.sid, self.P_s), 'OK') )
 
     def send_to(self, to, msg, imp):
@@ -37,22 +39,28 @@ class F_Pay(UCWrappedFunctionality):
         if self.flag == "OPEN":
             self.flag = "CLOSE"
             msg = ('close', self.b_s, self.b_r)
-            self.write( 'f2w',
-                ('schedule', 'send_to', (self.P_s, msg, 0), 1), 0)
-            assert wait_for(self.channels['w2f']).msg == ('OK',)
-            self.write( 'f2w',
-                ('schedule', 'send_to', (self.P_r, msg, 0), 1), 0)
-            assert wait_for(self.channels['w2f']).msg == ('OK',)
+            self.write_and_wait_expect(
+                ch='f2w', msg=('schedule', 'send_to', (self.P_s, msg, 0), 1),
+                read='w2f', expect=('OK',)
+            )
+            self.write_and_wait_expect(
+                ch='f2w', msg=('schedule', 'send_to', (self.P_r, msg, 0), 1),
+                read='w2f', expect=('OK',)
+            )
         self.pump.write('')
 
     def close(self, sender):
         if sender == self.P_r or self.is_honest(self.sid, self.P_s):
-            self.write('f2w', ('schedule', 'process_close', (), self.delta), 0)
-            assert wait_for(self.channels['w2f']).msg == ('OK',)
+            self.write_and_wait_expect(
+                ch='f2w', msg=('schedule', 'process_close', (), self.delta),
+                read='w2f', expect=('OK',)
+            )
             self.write( 'f2p', ((self.sid, sender), 'OK') )
         else:
-            self.write('f2w', ('schedule', 'process_close', (), self.r * self.delta), 0)
-            assert wait_for(self.channels['w2f']).msg == ('OK',)
+            self.write_and_wait_expect(
+                ch='f2w',  msg=('schedule', 'process_close', (), self.r * self.delta),
+                read='w2f', expect=('OK',)
+            )
             self.write('f2p', ((self.sid, self.P_s), 'OK') )
 
     def party_msg(self, d):

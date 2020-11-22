@@ -94,7 +94,3 @@ class Syn_Payment_Protocol(UCWrappedProtocol):
             self.recv_uncoopclose(_state, _deadline)
         else: self.pump.write('')
 
-
-
-
-

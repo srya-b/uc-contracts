@@ -133,8 +133,6 @@ class ITM:
 
 
     def write(self, ch, msg, imp=0):
-        #print('imp', imp, 'impflag', self.impflag)
-        #self.printstate()
         if self.impflag:
             if self.imp_in - self.imp_out + self.marked >= imp:
                 self.imp_out += imp
@@ -144,6 +142,19 @@ class ITM:
                 #raise Exception("out of import")
         else:
             self.channels[ch].write(msg, 0)
+
+    def read(self, ch=None):
+        return wait_for(self.channels[ch])
+
+    def write_and_wait_for(self, ch=None, msg=None, imp=0, read=None):
+        self.write(ch, msg, imp)
+        m = self.read(read)
+        return m
+
+    def write_and_wait_expect(self, ch=None, msg=None, imp=0, read=None, expect=None):
+        m = self.write_and_wait_for(ch, msg, imp, read)
+        assert m.msg == expect
+        return m
 
     def sample(self, n):
         r = ""

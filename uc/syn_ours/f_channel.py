@@ -21,7 +21,9 @@ class Syn_Channel(UCWrappedFunctionality):
 
     def party_send(self, sender, msg, imp):
         if sender == self.sender:
-            self.write( 'f2w', ('schedule', self.send_message, (msg,imp), self.delta), 0)
+            print('\n\nParty send.', 'msg:', msg)
+            #self.write( 'f2w', ('schedule', self.send_message, (msg,imp), self.delta), 0)
+            self.write('f2w', ('schedule', 'send_message', (msg, imp), self.delta), 0)
             assert wait_for(self.channels['w2f']).msg == ('OK',)
             self.leak( msg )
             self.write('f2p', (self.sender, 'OK'))
@@ -50,5 +52,14 @@ class Syn_Channel(UCWrappedFunctionality):
             self.pump.write("dump")
     def env_msg(self, msg):
         self.pump.write("dump")
-    def wrapper_msg(self, msg):
-        self.pump_write("dump")
+
+    def wrapper_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+
+        if msg[0] == 'exec':
+            _, name, args = msg
+            f = getattr(self, name)
+            f(*args)
+        else:
+            self.pump.write("dump")

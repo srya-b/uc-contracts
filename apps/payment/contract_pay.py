@@ -35,7 +35,7 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
                 self.state = _state
                 if _sender is self.P_r:
                     self.flag = "Closed"
-                    self.broadcast( ("Closed", self.state), 0 )
+                    #self.broadcast( ("Closed", self.state), 0 )
                 else:
                     self.flag = "UnCoopClose"
                     self.T_deadline = self.clock_round() + self.T_settle
@@ -56,6 +56,13 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
         else:
             self.pump.write('')
 
+    def settle(self):
+        if self.flag == "UnCoopClose" and self.T_deadline < self.clock_round():
+            self.flag = "Closed"
+            self.broadcast( ("Closed", self.state), 0)
+        else:
+            self.pump.write('')
+
     def route_party_msg(self, sender, msg, imp):
         if msg[0] == 'close':
             _, _state, _sig = msg
@@ -63,6 +70,8 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
         elif msg[0] == 'challenge':
             _, _state, _sig = msg
             self.challenge(sender, _state, _sig)
+        elif msg[0] == 'settle':
+            self.settle()
         else:
             self.pump.write('dump')
 

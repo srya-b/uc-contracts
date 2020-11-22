@@ -26,38 +26,47 @@ Initialize $\msf{flag} := \msf{OPEN}$
 
 \OnInput \inmsg{close} from $P_i$:
 	\begin{renumerate}	
-		\item If $P_i = P_r$ or ($P_i = P_s$ and $P_s$ is honest):
-			\begin{renumerate}
+		%\item If $P_i = P_r$ or ($P_i = P_s$ and $P_s$ is honest):
+		%	\begin{renumerate}
 			\item In $O(\Delta)$ rounds:  
 
 			\qquad \Require $\msf{flag} = \msf{OPEN}$
 
 			\qquad Set $\msf{flag} = \msf{CLOSE}$
 
-			\qquad In $O(1)$ rounds:  Send $(\msf{close}, b_r, b_s) \rightarrow P_s$
+			%\qquad In $O(1)$ rounds:  Send $(\msf{close}, b_r, b_s) \rightarrow P_s$
 
-			\qquad In $O(1)$ rounds: Send $(\msf{close}, b_r, b_s) \rightarrow P_r$
+			%\qquad In $O(1)$ rounds: Send $(\msf{close}, b_r, b_s) \rightarrow P_r$
 
-			\end{renumerate}
+		%	\end{renumerate}
 
-		Else:
-		\begin{renumerate}
-			\item In $O(k \times \Delta)$ rounds:
+		%Else:
+		%\begin{renumerate}
+		%	\item In $O(k \times \Delta)$ rounds:
 
-			\qquad \Require $\msf{flag} = \msf{OPEN}$
-			
-			\qquad Set $\msf{flag} = \msf{CLOSE}$
+		%	\qquad \Require $\msf{flag} = \msf{OPEN}$
+		%	
+		%	\qquad Set $\msf{flag} = \msf{CLOSE}$
 
-			\qquad In $O(1)$ rounds:  Send $(\msf{close}, b_r, b_s) \rightarrow P_s$
+		%	\qquad In $O(1)$ rounds:  Send $(\msf{close}, b_r, b_s) \rightarrow P_s$
 
-			\qquad In $O(1)$ rounds:  Send $(\msf{close}, b_r, b_s) \rightarrow P_r$
+		%	\qquad In $O(1)$ rounds:  Send $(\msf{close}, b_r, b_s) \rightarrow P_r$
 
-		\end{renumerate}
+		%\end{renumerate}
 		
 		\item Leak $(\msf{close}, b_r, b_s, P_i)$
 
 		\item Send $OK \rightarrow P_i$
 		
 	\end{renumerate}
+
+\OnInput \inmsg{settle} from $P_i$:
+
+	\begin{renumerate}
+		\item In $O(k \times \Delta)$ round:
+			
+
+
+	\end{renumerate}	
 
 \end{bbox}
