@@ -94,3 +94,295 @@ class F_Pay(UCWrappedFunctionality):
             self.pump.write('')
 
 
+
+from uc.execuc import createWrappedUC
+from contract_pay import Contract_Pay_and_bcast_and_channel
+from uc.itm import wrappedProtocolWrapper
+from uc.syn_ours import Syn_FWrapper
+from uc.adversary import DummyWrappedAdversary
+
+def Payment_Simulator(prot):
+    def f(k, bits, crupt, sid, pid, channels, pump, poly, importargs):
+        return Payment_Simulator(k, bits, crupt, sid, pid, channels, pump, prot, poly, importargs)
+    return f
+
+class Payment_Simulator(ITM):
+    '''
+    k: security param
+    bits: random bits
+    crupt: currupted parties
+    sid: session id
+    pid: process id
+    channels: channels communicating with each other ITMs
+    pump: write-back to environment
+    prot: protocol that is run internally in the simulator
+    poly: import
+    importargs: import arguments
+    '''
+    def __init__(self, k, bits, crupt, sid, pid, channels, pump, prot, poly, importargs):
+        self.crupt = crupt
+        self.prot = prot
+        self.ssid = sid[0]
+        self.P_s = sid[1]
+        self.P_r = sid[2]
+        self.b_s = sid[3]
+        self.b_r = sid[4]
+        self.delta = sid[5]
+
+        # Maintain a copy of the ideal world wrapper queue
+        self.ideal_queue = {}
+        self.ideal_delay = 0
+        # Maintain a list of leaks that should be pulled back to environment
+        self.sim_leaks = []
+        # Maintain a queue to see which (rnd, idx) should be exec
+        # This queue is updated whenever get_leak from wrapper
+        self.sim_run_queue = {}
+
+        # internal state for the simulated world
+        self.nonce = 0
+        self.state = (self.b_s, self.b_r, self.nonce)
+        self.balances = sid[3]
+        self.flag = 'OPEN'
+        self.states = [] # (nonce) => {nonce, balances}
+        self.sigs = [] # (nonce) => [None] * self.n
+
+        self.log = logging.getLogger("\033[1mPayment_Simulator\033[0m")
+
+        '''
+        Outside handlers in the ideal world
+        -----------------------------------
+        Z (environment):   environment in the ideal world
+        P (dummy parties): controlled by Z, so they are dummy
+        W (wrapper):       wrapper in the ideal world
+        F (functionality): ideal functionality
+        '''
+        handlers = {
+            channels['p2a']: self.party_msg,
+            channels['z2a']: self.env_msg,
+            channels['w2a']: self.wrapper_msg,
+            channels['f2a']: self.func_msg,
+        }
+
+        ITM.__init__(self, k, bits, sid, pid, channels, handlers, poly, pump, importargs)
+
+        # Spawn internal real world (local to the simulator)
+        self.sim_channels, static, _pump = createWrappedUC(
+            k,
+            [('F_contract', Contract_Pay_and_bcast_and_channel)],
+            wrappedProtocolWrapper(prot), # internal simulated protocol
+            Syn_FWrapper,
+            DummyWrappedAdversary,
+            None
+        )
+
+        # Forward the same 'sid' to the simulation
+        # TODO forward crupt parties as well
+        # TODO possibly wait to do the `static.write` below until execuc.py
+        #   tells us who the crupted parties are
+        self.sim_sid = (sid[0], sid[1], sid[2])
+        self.sim_pump = _pump
+        static.write(
+            (('sid', self.sim_sid), ('crupt', *[x for x in self.crupt]))
+        )
+
+        self.handlers.update({
+            self.sim_channels['p2z']: self.sim_party_msg,
+            self.sim_channels['a2z']: self.sim_adv_msg,
+            self.sim_channels['f2z']: self.sim_func_msg,
+            self.sim_channels['w2z']: self.sim_wrapper_msg,
+        })
+
+    '''
+    On each activation should be called:
+        Grab leaks from the ideal world wrapper and
+        react to any schedule messages by adding to internal delay
+        and talks to simulation if dealer input is seen.
+    '''
+    def get_ideal_wrapper_leaks(self):
+        # grab leaks from the ideal world wrapper
+        self.channels['a2w'].write( ('get-leaks',) )
+        m = wait_for( self.channels['w2a'] )
+        msg = m.msg
+
+        n = 0
+        for leak in msg:
+            # self.tick(1) => no tick now
+            sender,msg,imp = leak
+            if msg[0] == 'pay':
+                # update idealqueue & increase idealdelay by 1
+                self.ideal_delay += 1
+                self.ideal_queue.append(leak)
+
+                # check if needed to run
+                v = msg[1]
+                if v > self.b_s: continue
+
+                # update nonce & state
+                self.nonce += 1
+                self.b_s -= v
+                self.b_r += v
+                state = (self.b_s, self.b_r, self.nonce)
+
+                self.log.debug('\033[94m Simulation begins: pay\033[0m')
+                m = self.sim_write_and_wait(
+                    'z2p',
+                    ((self.sim_sid,self.P_s),msg),
+                    imp,
+                    'a2z', 'p2z'
+                )
+                assert m.msg[1] == 'OK', str(m.msg)
+                self.log.debug('\033[94m Simulation ends: pay\033[0m')
+            elif msg[0] == 'close':
+                # update idealqueue & increase idealdelay by 2
+                self.ideal_delay += 2
+                self.ideal_queue.append(leak)
+                #assert check b_s, b_r == b_s_close, b_r_close
+
+                self.log.debug('\033[94m Simulation begins: pay\033[0m')
+                m = self.sim_write_and_wait(
+                    'z2p',
+                    ((self.sim_sid,self.P_s), msg),
+                    imp,
+                    'a2z', 'p2z'
+                )
+                assert m.msg[1] == 'OK', str(m.msg)
+                m = self.sim_write_and_wait(
+                    'z2p',
+                    ((self.sim_sid,self.P_r), msg),
+                    imp,
+                    'a2z', 'p2z'
+                )
+                assert m.msg[1] == 'OK', str(m.msg)
+                self.log.debug('\033[94m Simulation ends: pay\033[0m')
+            elif msg[0] == 'schedule':
+                # some new codeblocks scheduled in simulated wrapper
+                self.ideal_delay += 1
+                self.ideal_queue.append(leak)
+
+                # update run_queue
+                rnd, idx = msg[1], msg[2]
+                self.run_queue.append((rnd, idx))
+            else: raise Exception("new kind of leak " + str(msg))
+
+        self.sim_get_leaks()
+
+    '''
+    Entrypoints:
+    - wrapper_poll: wrapper delivers "poll" message to the simulator
+    - env_get_leaks: environment asks the adverasry for latest leaks
+    - env_delay: environment tells the adversary to add delay to the codeblock
+    - env_exec: environment tells the adversary to execute a code block
+    '''
+    def wrapper_poll(self):
+        # The ideal wrapper decreased its delay, so we do the same
+        self.ideal_delay -= 1
+        if self.ideal_delay == 0:
+            self.write_and_wait_expect(
+                ch='a2w', msg=('delay', 1),
+                read='w2a', expect=('OK',)
+            )
+            self.ideal_delay += 1
+
+
+        # simulate the 'poll' call
+        r,m = self.sim_poll()
+
+        self.log.debug('\t\t\033[94m poll Simulation finished\033[0m')
+        if r == self.sim_channels['p2z']:
+            # If we got output from the party, it outputed a committed value (or bot)
+            # tell the ideal wrapper to execute the corresponding codeblock
+            self.sim_get_leaks()
+            self.sim_party_output(m)
+        elif r == self.sim_channels['a2z']:
+            # Forward any crupt party output to the environment
+            self.write( 'a2z', m.msg )
+        else:
+            # Something was executed from the wrapper in the simulation, we already
+            # got the leaks above
+            self.pump.write( 'dump' )
+            #self.write('a2z', ('poll',))
+
+    '''
+    env_get_leaks:
+        Process leaks from the simulated wrapper. sim_get_leaks will handle how 
+        to process the leaks. Return the leaks saved in the leak buffer and empty
+        it.
+    '''
+    def env_get_leaks(self):
+        self.sim_get_leaks()
+        leaks = list(self.sim_leaks)
+        self.sim_leaks = []
+        self.write('a2z', ('W2A', leaks), 0)
+
+    def env_delay(self, d, imp):
+        # first send this to the emulated wrapper
+        self.sim_channels['z2a'].write( ('A2W', ('delay', d), 0))
+        assert waits(self.sim_pump, self.sim_channels['a2z']).msg[1] == 'OK'
+
+        # now send it to the ideal world wrapper
+        self.write( 'a2w', ('delay',d), imp)
+        assert waits(self.pump, self.channels['w2a']).msg == 'OK'
+        # update our copy of the ideal delay
+        self.internal_delay += d
+
+        #self.pump.write("dump")
+        self.write('a2z', ('W2A', 'OK'))
+
+
+    '''
+    Sim related functions
+    '''
+    def sim_write_and_wait(self, ch, msg, imp, *waiters):
+        self.sim_channels[ch].write( msg, imp )
+        return waits(self.sim_pump, *[self.sim_channels[w] for w in waiters])
+
+    def sim_poll(self):
+        # simulate the 'poll' call
+        # self.tick(1) -> TODO: no tick now
+        self.log.debug('\t\t\033[94m wrapper_poll Simulation beginning\033[0m')
+        self.sim_channels['z2w'].write( ('poll',), 0)
+        r = gevent.wait(objects=[self.sim_pump, self.sim_channels['a2z'], self.sim_channels['p2z']], count=1)[0]
+        # here we use gevent.wait instead of waits is that we need to know not only the message but the corresponding internal channel
+        m = r.read()
+        r.reset()
+        return r,m
+
+    '''
+    sim_get_leaks:
+        Function will get leaks from the simulated wrapper. If there are 'n' new codeblocks
+        scheduled (simulated wrapper delay has increased by 'n'), add the same delay to the
+        ideal world wrapper. Since a delay of 'n' requires 'n+1' polls to execute the next 
+        codeblock (see wrapper code) eventually the ideal world gets to 0 so add a delay
+        of 1 when that happens. Finally store the leaks in the "leak buffer" since we
+        consumed them when checking for leaks.
+    '''
+    def sim_get_leaks(self):
+        # Ask for leaks from the simulated wrapper
+        self.log.debug('sim_get_leaks asking for leaks from internal wrapper')
+        # self.tick(1) => TODO
+        leaks = self.sim_write_and_wait(
+            'z2a',
+            ('A2W', ('get-leaks',), 0),
+            0,
+            'a2z'
+        )
+        self.log.debug('\n\t sim_get_leaks = {} \n'.format(leaks))
+
+        # TODO added a tag
+        _,leaks = leaks.msg
+        n = 0
+        if len(leaks):
+            # check and count new "schedules" in simulated wrapper
+            for x in leaks:
+                _from,msg,imp = x
+                if msg[0] == 'schedule':
+                    n += 1
+
+        # self.tick(1) => TODO
+        # add delay from new "schedules" in simulated wrapper to ideal-world wrapper
+        self.log.debug('Add n={} delay to ideal world wrapper'.format(n))
+        self.internal_delay += n
+        self.write('a2w', ('delay',n), n)
+        m = waits(self.pump, self.channels['w2a']);
+        assert m.msg == "OK", str(m.msg)
+        self.sim_leaks.extend(leaks)
