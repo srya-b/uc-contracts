@@ -136,7 +136,7 @@ class Payment_Simulator(ITM):
         self.sim_leaks = []
         # Maintain a queue to see which (rnd, idx) should be exec
         # This queue is updated whenever get_leak from wrapper
-        self.sim_run_queue = {}
+        self.run_queue = {}
 
         # internal state for the simulated world
         self.nonce = 0
@@ -179,7 +179,7 @@ class Payment_Simulator(ITM):
         # TODO forward crupt parties as well
         # TODO possibly wait to do the `static.write` below until execuc.py
         #   tells us who the crupted parties are
-        self.sim_sid = (sid[0], sid[1], sid[2])
+        self.sim_sid = self.sid
         self.sim_pump = _pump
         static.write(
             (('sid', self.sim_sid), ('crupt', *[x for x in self.crupt]))
@@ -207,12 +207,13 @@ class Payment_Simulator(ITM):
         n = 0
         while leaks:
             leak = leaks.pop(0)
-            print('get_ideal_wrapper_leaks: {}'.format(leak))
+            print('get_ideal_wrapper_leaks:: leaks: {}'.format(leaks))
+            print('get_ideal_wrapper_leaks:: current leak: {}'.format(leak))
             sender,msg,imp = leak
             # self.tick(1) => no tick now
             if msg[0] == 'pay':
                 # update idealqueue & increase idealdelay by 1
-                update_queue(leaks, msg, 1)
+                self.update_queue(leaks, msg, 1)
 
                 v = msg[1]
                 if v <= self.b_s:
@@ -234,7 +235,7 @@ class Payment_Simulator(ITM):
 
             elif msg[0] == 'close':
                 # update idealqueue & increase idealdelay by 2
-                update_queue(leaks, msg, 2)
+                self.update_queue(leaks, msg, 2)
 
                 self.log.debug('\033[94m Simulation begins: pay\033[0m')
                 m = self.sim_write_and_wait(
@@ -248,7 +249,7 @@ class Payment_Simulator(ITM):
 
             elif msg[0] == 'schedule':
                 # some new codeblocks scheduled in simulated wrapper
-                update_queue(leaks, msg, 1)
+                self.update_queue(None, msg, 1)
 
             else: raise Exception("new kind of leak " + str(msg))
 
@@ -259,8 +260,8 @@ class Payment_Simulator(ITM):
     '''
     def update_queue(self, leaks, msg, n):
         self.ideal_delay += n
-        for _ in range(n):
-            scheduled_block = leaks.pop(0)
+        if leaks == None:
+            scheduled_block = msg
             command, rnd, idx, f = scheduled_block
             assert command == 'schedule'
             if rnd not in self.ideal_queue:
@@ -269,9 +270,22 @@ class Payment_Simulator(ITM):
             if msg not in self.run_queue:
                 self.run_queue[msg] = []
             self.run_queue[msg].append((rnd, idx))
-            # run_queue: {'codeblock': [(rnd, idx), (rnd, idx)]}
-            # mapping of codeblock to list of (rnd, idx)
-            # should maintiain the index, exec first on if there's more than one
+        else:
+            for _ in range(n):
+                leak = leaks.pop(0)
+                sender, scheduled_block, imp = leak
+                print('update_queue:: leak: {}'.format(leak))
+                command, rnd, idx, f = scheduled_block
+                assert command == 'schedule'
+                if rnd not in self.ideal_queue:
+                    self.ideal_queue[rnd] = []
+                self.ideal_queue[rnd].append(msg)
+                if msg not in self.run_queue:
+                    self.run_queue[msg] = []
+                self.run_queue[msg].append((rnd, idx))
+                # run_queue: {'codeblock': [(rnd, idx), (rnd, idx)]}
+                # mapping of codeblock to list of (rnd, idx)
+                # should maintiain the index, exec first on if there's more than one
 
     '''
     Entrypoints:
@@ -282,6 +296,7 @@ class Payment_Simulator(ITM):
     '''
     def wrapper_poll(self):
         # The ideal wrapper decreased its delay, so we do the same
+        print('wrapper_poll:: ideal_delay: {}'.format(self.ideal_delay))
         self.ideal_delay -= 1
         if self.ideal_delay == 0:
             self.write_and_wait_expect(
@@ -330,7 +345,7 @@ class Payment_Simulator(ITM):
         self.write( 'a2w', ('delay',d), imp)
         assert waits(self.pump, self.channels['w2a']).msg == 'OK'
         # update our copy of the ideal delay
-        self.internal_delay += d
+        self.ideal_delay += d
 
         #self.pump.write("dump")
         self.write('a2z', ('W2A', 'OK'))
@@ -371,7 +386,7 @@ class Payment_Simulator(ITM):
         # simulate the 'poll' call
         # self.tick(1) -> TODO: no tick now
         self.log.debug('\t\t\033[94m wrapper_poll Simulation beginning\033[0m')
-        self.sim_channels['z2w'].write( ('poll',), 0)
+        self.sim_channels['z2w'].write( ('poll',), 1)
         r = gevent.wait(objects=[self.sim_pump, self.sim_channels['a2z'], self.sim_channels['p2z']], count=1)[0]
         # here we use gevent.wait instead of waits is that we need to know not only the message but the corresponding internal channel
         m = r.read()
@@ -413,7 +428,7 @@ class Payment_Simulator(ITM):
         # add delay from new "schedules" in simulated wrapper to ideal-world wrapper
         self.log.debug('Add n={} delay to ideal world wrapper'.format(n))
         # TODO: check if we really need to increament wrapper delay by n
-        self.internal_delay += n
+        self.ideal_delay += n
         self.write('a2w', ('delay',n), n)
         m = waits(self.pump, self.channels['w2a']);
         assert m.msg == "OK", str(m.msg)
