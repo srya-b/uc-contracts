@@ -84,7 +84,8 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
 
 from uc.itm import wrappedPartyWrapper
 from uc.adversary import DummyWrappedAdversary
-from f_pay import F_Pay
+from f_pay import F_Pay, payment_simulator, Payment_Simulator
+from prot_payment import Prot_Pay
 from uc.syn_ours import Syn_FWrapper
 from uc.execuc import execWrappedUC
 
@@ -94,7 +95,7 @@ t1 = execWrappedUC(
     [('F_pay', F_Pay)],
     wrappedPartyWrapper('F_pay'),
     Syn_FWrapper,
-    DummyWrappedAdversary,
+    payment_simulator(Prot_Pay),
     None
 )
 
