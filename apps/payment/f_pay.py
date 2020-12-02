@@ -292,12 +292,12 @@ class Payment_Simulator(ITM):
 
         # simulate the 'poll' call
         r,m = self.sim_poll()
+        self.sim_get_leaks()
 
         self.log.debug('\t\t\033[94m poll Simulation finished\033[0m')
         if r == self.sim_channels['p2z']:
             # If we got output from the party, it outputed a committed value (or bot)
             # tell the ideal wrapper to execute the corresponding codeblock
-            self.sim_get_leaks()
             self.sim_party_output(m)
         elif r == self.sim_channels['a2z']:
             # Forward any crupt party output to the environment
@@ -333,6 +333,30 @@ class Payment_Simulator(ITM):
 
         #self.pump.write("dump")
         self.write('a2z', ('W2A', 'OK'))
+
+    '''
+    Env exec:
+        Pass exec to the simulated wrapper and check for the outcome of that 
+        execute with sim_get_leaks. Handle the output the same as above function
+    '''
+    def env_exec(self, rnd, idx):
+        # pass the exec onto the internel wrapper and check for output by some party
+        # self.tick(1) => TODO: no tick now
+        self.sim_write_and_wait(
+            'z2a',
+            ('A2W', ('exec', rnd, idx), 0),
+            0, #imp
+            'a2z', 'p2z', self.sim_pump
+        )
+        self.sim_get_leaks()
+        if r == self.sim_channels['p2z']:
+            print('env_exec::p2z output')
+            self.sim_party_output(m)
+        elif r == self.sim_channels['a2z']:
+            print('env_exec::a2z output')
+            self.write( 'a2z', m.msg )
+        else:
+            self.pump.write("dump")
 
 
     '''
@@ -393,3 +417,60 @@ class Payment_Simulator(ITM):
         m = waits(self.pump, self.channels['w2a']);
         assert m.msg == "OK", str(m.msg)
         self.sim_leaks.extend(leaks)
+
+
+    '''
+    Handlers
+    '''
+    def env_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        self.get_ideal_wrapper_leaks()
+
+        if msg[0] == 'A2F':
+            t,msg,iprime = msg
+            self.channels['a2f'].write( msg, iprime )
+
+        elif msg[0] == 'A2P':
+            _,(to,m),iprime = msg
+            if self.is_honest(*to):#ishonest(*to):
+                raise Exception("Environment send message to A for honest party")
+            else:
+                self.sim_channels['z2a'].write( msg , iprime )
+
+        elif msg[0] == 'A2W':
+            t,msg,iprime = msg
+            if msg[0] == 'get-leaks':
+                self.env_get_leaks()
+            elif msg[0] == 'exec':
+                self.env_exec(msg[1], msg[2])
+            elif msg[0] == 'delay':
+                self.env_delay(msg[1], imp)
+            else:
+                self.channels['a2w'].write(msg, imp)
+        else:
+            self.pump.write("dump")
+
+    def wrapper_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        self.get_ideal_wrapper_leaks()
+        if msg[0] == 'poll':
+            self.wrapper_poll()
+        else:
+            self.channels['a2z'].write( ('W2A', msg), imp )
+
+    def func_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        self.get_ideal_wrapper_leaks()
+        self.channels['a2z'].write( ('F2A', msg), imp )
+
+    '''
+    Helper functions
+    '''
+    def is_dishonest(self, sid, pid):
+        return (sid, pid) in self.crupt
+
+    def is_honest(self, sid, pid):
+        return not self.is_dishonest(sid, pid)
