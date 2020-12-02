@@ -142,6 +142,7 @@ class Payment_Simulator(ITM):
         self.nonce = 0
         self.state = (self.b_s, self.b_r, self.nonce)
         self.flag = 'OPEN'
+        self.first_close = True
         self.states = [] # (nonce) => {nonce, balances}
         self.sigs = [] # (nonce) => [None] * self.n
 
@@ -256,7 +257,7 @@ class Payment_Simulator(ITM):
     '''
     update ideal_queue & run_queue
     '''
-    def update_queue(leaks, msg, n):
+    def update_queue(self, leaks, msg, n):
         self.ideal_delay += n
         for _ in range(n):
             scheduled_block = leaks.pop(0)
@@ -418,6 +419,79 @@ class Payment_Simulator(ITM):
         assert m.msg == "OK", str(m.msg)
         self.sim_leaks.extend(leaks)
 
+    def sim_party_output(self, m):
+        # If we got output from the party, it outputed a msg to
+        # tell the ideal wrapper to execute the corresponding codeblock
+        fro,msg = m.msg
+        _sid,_pid = fro
+        self.log.debug('\033[91m sim_party_output:: pid={}, msg={}\033[0m'.format(_pid,msg))
+
+        if self.is_dishonest(_sid,_pid):
+            # self.tick(1) => no tick now
+            # forward this output to the environment
+            self.write('a2z', ('P2A', msg) )
+            # don't do anything else since corrupt output in the ideal world doesn't get delivered
+            return
+
+        elif msg[0] = 'pay' and fro == self.P_r: # receiver receives 'pay'
+            if self.ishonest(_sid, self.P_s):
+                rnd, idx = get_rnd_idx_and_update(msg)
+                self.write_and_wait_expect(
+                    ch='a2w', msg=(('exec', rnd, idx), 1),
+                    read='w2a', expect=('OK',)
+                )
+            else:
+                # TODO: when P_s is corrupt
+                pass
+
+        elif msg[0] == 'close':
+            if self.first_close:
+                self.first_close = False
+                rnd, idx = get_rnd_idx_and_update(msg)
+                if rnd != None and idx != None:
+                    self.write_and_wait_expect(
+                        ch='a2w', msg=(('exec', rnd, idx), 1),
+                        read='w2a', expect=('OK',)
+                    )
+                else: # implies a corrupt party => Q: why?
+                    pass
+            else:
+                rnd, idx = get_rnd_idx_and_update(msg)
+                self.write_and_wait_expect(
+                    ch='a2w', msg=(('exec', rnd, idx), 1),
+                    read='w2a', expect=('OK',)
+                )
+
+    '''
+    search corresponding (rnd, idx) based on the message `m` in `ideal_queue`,
+    and at the same time updating the mapping `run_queue`
+    '''
+    def get_rnd_idx_and_update(self, m):
+        # get (rnd, idx) from the first matched msg `m`
+        try:
+            rnd, idx = self.run_queue[m].pop(0)
+        except:
+            print('get_rnd_idx_and_update:: no such msg exists')
+            return None, None
+
+        # update `ideal_queue`
+        del(self.ideal_queue[rnd][idx])
+
+        # update `run_queue` mapping
+        # run_queue = {
+        #     'msg_a': [(rnd1, idx1), (rnd2, idx2), ...],
+        #     'msg_b': [(rnd1, idx1), (rnd2, idx2), ...],
+        #     ...
+        # }
+        for key, values in run_queue.items():
+            if len(values) == 0: # no (rnd, idx) for a specific msg
+                del(run_queue[key])
+            for index, pair in enumarate(values):
+                _rnd, _idx = pair
+                if _rnd == rnd:
+                    run_queue[key][index] = (_rnd, _idx-1) # due to .pop(0)
+
+        return rnd, idx
 
     '''
     Handlers
