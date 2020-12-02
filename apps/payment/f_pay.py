@@ -101,7 +101,7 @@ from uc.itm import wrappedProtocolWrapper
 from uc.syn_ours import Syn_FWrapper
 from uc.adversary import DummyWrappedAdversary
 
-def Payment_Simulator(prot):
+def payment_simulator(prot):
     def f(k, bits, crupt, sid, pid, channels, pump, poly, importargs):
         return Payment_Simulator(k, bits, crupt, sid, pid, channels, pump, prot, poly, importargs)
     return f
@@ -266,7 +266,7 @@ class Payment_Simulator(ITM):
             if rnd not in self.ideal_queue:
                 self.ideal_queue[rnd] = []
             self.ideal_queue[rnd].append(msg)
-            if msg is not in self.run_queue:
+            if msg not in self.run_queue:
                 self.run_queue[msg] = []
             self.run_queue[msg].append((rnd, idx))
             # run_queue: {'codeblock': [(rnd, idx), (rnd, idx)]}
@@ -433,7 +433,7 @@ class Payment_Simulator(ITM):
             # don't do anything else since corrupt output in the ideal world doesn't get delivered
             return
 
-        elif msg[0] = 'pay' and fro == self.P_r: # receiver receives 'pay'
+        elif msg[0] == 'pay' and fro == self.P_r: # receiver receives 'pay'
             if self.ishonest(_sid, self.P_s):
                 rnd, idx = get_rnd_idx_and_update(msg)
                 self.write_and_wait_expect(
