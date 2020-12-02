@@ -540,6 +540,31 @@ class Payment_Simulator(ITM):
         self.get_ideal_wrapper_leaks()
         self.channels['a2z'].write( ('F2A', msg), imp )
 
+    ''' Forward crupt party output to the environment '''
+    def party_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        #self.channels['a2z'].write( msg, imp)
+        self.pump.write('dump')
+
+    ''' Same reason as below '''
+    def sim_party_msg(self, d):
+        self.pump.write("dump")
+
+    ''' Simulated adversary should never write to the simulator on it's own.
+        Simulator will activate simulation and wait for the adversary manually.
+    '''
+    def sim_adv_msg(self, d):
+        self.write( 'a2z', d.msg )
+
+    ''' Functionality writing to the environment. Should't happen '''
+    def sim_func_msg(self, d):
+        self.pump.write("dump")
+
+    ''' The simulated wrapper writing to the enviroment. Shouldn't happen '''
+    def sim_wrapper_msg(self, d):
+        self.pump.write("dump")
+
     '''
     Helper functions
     '''
