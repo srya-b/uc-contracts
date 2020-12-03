@@ -454,9 +454,8 @@ class Payment_Simulator(ITM):
         elif msg[0] == 'pay' and _pid == self.P_r: # receiver receives 'pay'
             if self.is_honest(_sid, self.P_s):
                 rnd, idx = self.get_rnd_idx_and_update(msg)
-                self.write_and_wait_expect(
-                    ch='a2w', msg=(('exec', rnd, idx), 1),
-                    read='w2a', expect=('OK',)
+                self.write_and_wait_for(
+                    ch='a2w', msg=(('exec', rnd, idx), 1), read='w2a'
                 )
             else:
                 # TODO: when P_s is corrupt
@@ -467,17 +466,15 @@ class Payment_Simulator(ITM):
                 self.first_close = False
                 rnd, idx = self.get_rnd_idx_and_update(msg)
                 if rnd != None and idx != None:
-                    self.write_and_wait_expect(
-                        ch='a2w', msg=(('exec', rnd, idx), 1),
-                        read='w2a', expect=('OK',)
+                    self.write_and_wait_for(
+                        ch='a2w', msg=(('exec', rnd, idx), 1), read='w2a'
                     )
                 else: # implies a corrupt party => Q: why?
                     pass
             else:
                 rnd, idx = self.get_rnd_idx_and_update(msg)
-                self.write_and_wait_expect(
-                    ch='a2w', msg=(('exec', rnd, idx), 1),
-                    read='w2a', expect=('OK',)
+                self.write_and_wait_for(
+                    ch='a2w', msg=(('exec', rnd, idx), 1), read='w2a'
                 )
         else:
             print('sim_party_output:: from: {}, msg: {}'.format(fro, msg))
@@ -549,6 +546,7 @@ class Payment_Simulator(ITM):
     def wrapper_msg(self, d):
         msg = d.msg
         imp = d.imp
+        print('====== {}, {}'.format(msg, imp))
         self.get_ideal_wrapper_leaks()
         if msg[0] == 'poll':
             self.wrapper_poll()
