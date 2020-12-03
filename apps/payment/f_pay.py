@@ -172,7 +172,8 @@ class Payment_Simulator(ITM):
             wrappedProtocolWrapper(prot), # internal simulated protocol
             Syn_FWrapper,
             DummyWrappedAdversary,
-            None
+            None,
+            importargs={'ctx': self.ctx, 'impflag':False}
         )
 
         # Forward the same 'sid' to the simulation
@@ -251,7 +252,8 @@ class Payment_Simulator(ITM):
                 # some new codeblocks scheduled in simulated wrapper
                 self.update_queue(None, msg, 1)
 
-            else: raise Exception("new kind of leak " + str(msg))
+            else:
+                self.pump.write('')
 
         self.sim_get_leaks()
 
@@ -300,7 +302,7 @@ class Payment_Simulator(ITM):
         self.ideal_delay -= 1
         if self.ideal_delay == 0:
             self.write_and_wait_expect(
-                ch='a2w', msg=('delay', 1),
+                ch='a2w', msg=('delay', 1), imp=1,
                 read='w2a', expect=('OK',)
             )
             self.ideal_delay += 1
@@ -339,7 +341,7 @@ class Payment_Simulator(ITM):
     def env_delay(self, d, imp):
         # first send this to the emulated wrapper
         self.sim_channels['z2a'].write( ('A2W', ('delay', d), 0))
-        assert waits(self.sim_channels['a2z']).msg[1] == 'OK'
+        assert waits(self.sim_channels['a2z']).msg[1] == ('OK',)
 
         # now send it to the ideal world wrapper
         self.write( 'a2w', ('delay',d), imp)
@@ -386,7 +388,7 @@ class Payment_Simulator(ITM):
         # simulate the 'poll' call
         # self.tick(1) -> TODO: no tick now
         self.log.debug('\t\t\033[94m wrapper_poll Simulation beginning\033[0m')
-        self.sim_channels['z2w'].write( ('poll',), 1)
+        self.sim_channels['z2w'].write( ('poll',), 1) # need to give enough import tokens
         r = gevent.wait(objects=[self.sim_pump, self.sim_channels['a2z'], self.sim_channels['p2z']], count=1)[0]
         # here we use gevent.wait instead of waits is that we need to know not only the message but the corresponding internal channel
         m = r.read()
@@ -431,7 +433,7 @@ class Payment_Simulator(ITM):
         self.ideal_delay += n
         self.write('a2w', ('delay',n), n)
         m = waits(self.pump, self.channels['w2a']);
-        assert m.msg == "OK", str(m.msg)
+        assert m.msg == ('OK',), str(m.msg)
         self.sim_leaks.extend(leaks)
 
     def sim_party_output(self, m):
@@ -448,9 +450,10 @@ class Payment_Simulator(ITM):
             # don't do anything else since corrupt output in the ideal world doesn't get delivered
             return
 
-        elif msg[0] == 'pay' and fro == self.P_r: # receiver receives 'pay'
-            if self.ishonest(_sid, self.P_s):
-                rnd, idx = get_rnd_idx_and_update(msg)
+        # self.P_r and self.P_s is just the pid
+        elif msg[0] == 'pay' and _pid == self.P_r: # receiver receives 'pay'
+            if self.is_honest(_sid, self.P_s):
+                rnd, idx = self.get_rnd_idx_and_update(msg)
                 self.write_and_wait_expect(
                     ch='a2w', msg=(('exec', rnd, idx), 1),
                     read='w2a', expect=('OK',)
@@ -462,7 +465,7 @@ class Payment_Simulator(ITM):
         elif msg[0] == 'close':
             if self.first_close:
                 self.first_close = False
-                rnd, idx = get_rnd_idx_and_update(msg)
+                rnd, idx = self.get_rnd_idx_and_update(msg)
                 if rnd != None and idx != None:
                     self.write_and_wait_expect(
                         ch='a2w', msg=(('exec', rnd, idx), 1),
@@ -471,11 +474,14 @@ class Payment_Simulator(ITM):
                 else: # implies a corrupt party => Q: why?
                     pass
             else:
-                rnd, idx = get_rnd_idx_and_update(msg)
+                rnd, idx = self.get_rnd_idx_and_update(msg)
                 self.write_and_wait_expect(
                     ch='a2w', msg=(('exec', rnd, idx), 1),
                     read='w2a', expect=('OK',)
                 )
+        else:
+            print('sim_party_output:: from: {}, msg: {}'.format(fro, msg))
+            self.pump.write('')
 
     '''
     search corresponding (rnd, idx) based on the message `m` in `ideal_queue`,
@@ -498,13 +504,13 @@ class Payment_Simulator(ITM):
         #     'msg_b': [(rnd1, idx1), (rnd2, idx2), ...],
         #     ...
         # }
-        for key, values in run_queue.items():
+        for key, values in self.run_queue.items():
             if len(values) == 0: # no (rnd, idx) for a specific msg
-                del(run_queue[key])
-            for index, pair in enumarate(values):
+                continue
+            for index, pair in enumerate(values):
                 _rnd, _idx = pair
                 if _rnd == rnd:
-                    run_queue[key][index] = (_rnd, _idx-1) # due to .pop(0)
+                    self.run_queue[key][index] = (_rnd, _idx-1) # due to .pop(0)
 
         return rnd, idx
 
