@@ -138,8 +138,8 @@ class ITM:
                 self.imp_out += imp
                 self.channels[ch].write(msg, imp)
             else:
+                # self.printstate() => this can print the import state out
                 raise WriteImportError((self.sid,self.pid), msg, imp)
-                #raise Exception("out of import")
         else:
             self.channels[ch].write(msg, 0)
 
@@ -153,7 +153,7 @@ class ITM:
 
     def write_and_wait_expect(self, ch=None, msg=None, imp=0, read=None, expect=None):
         m = self.write_and_wait_for(ch, msg, imp, read)
-        assert m.msg == expect
+        assert m.msg == expect, 'Expected: {}, Received: {}'.format(expect, m.msg)
         return m
 
     def sample(self, n):
@@ -596,7 +596,7 @@ class ProtocolWrapper(ITM):
         msg = d.msg
         imp = d.imp
         (fro, ((sid,pid), msg)) = msg
-        print('func message ot adversary')
+        print('func message ot adversary, msg: {}'.format(msg))
         if self.is_dishonest(sid,pid):
             self.write('p2a', ((sid,pid), msg), 0)#imp)
         else:
