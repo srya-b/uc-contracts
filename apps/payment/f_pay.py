@@ -442,6 +442,8 @@ class Payment_Simulator(ITM):
         fro,msg = m.msg
         _sid,_pid = fro
         self.log.debug('\033[91m sim_party_output:: pid={}, msg={}\033[0m'.format(_pid,msg))
+        self.log.debug('\033[91m sim_party_output:: ideal_queue={}\033[0m'.format(self.ideal_queue))
+        self.log.debug('\033[91m sim_party_output:: run_queue={}\033[0m'.format(self.run_queue))
 
         if self.is_dishonest(_sid,_pid):
             # self.tick(1) => no tick now
@@ -454,8 +456,9 @@ class Payment_Simulator(ITM):
         elif msg[0] == 'pay' and _pid == self.P_r: # receiver receives 'pay'
             if self.is_honest(_sid, self.P_s):
                 rnd, idx = self.get_rnd_idx_and_update(msg)
-                self.write_and_wait_for(
-                    ch='a2w', msg=(('exec', rnd, idx), 1), read='w2a'
+                self.write(
+                    'a2w',
+                    (('exec', rnd, idx), 1)
                 )
             else:
                 # TODO: when P_s is corrupt
@@ -466,15 +469,17 @@ class Payment_Simulator(ITM):
                 self.first_close = False
                 rnd, idx = self.get_rnd_idx_and_update(msg)
                 if rnd != None and idx != None:
-                    self.write_and_wait_for(
-                        ch='a2w', msg=(('exec', rnd, idx), 1), read='w2a'
+                    self.write(
+                        'a2w',
+                        (('exec', rnd, idx), 1)
                     )
                 else: # implies a corrupt party => Q: why?
                     pass
             else:
                 rnd, idx = self.get_rnd_idx_and_update(msg)
-                self.write_and_wait_for(
-                    ch='a2w', msg=(('exec', rnd, idx), 1), read='w2a'
+                self.write(
+                    'a2w',
+                    (('exec', rnd, idx), 1)
                 )
         else:
             print('sim_party_output:: from: {}, msg: {}'.format(fro, msg))
