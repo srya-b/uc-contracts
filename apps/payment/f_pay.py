@@ -208,9 +208,10 @@ class Payment_Simulator(ITM):
         n = 0
         while leaks:
             leak = leaks.pop(0)
-            print('get_ideal_wrapper_leaks:: leaks: {}'.format(leaks))
-            print('get_ideal_wrapper_leaks:: current leak: {}'.format(leak))
+            print('\nget_ideal_wrapper_leaks:: leaks: {}'.format(leaks))
+            print('get_ideal_wrapper_leaks:: current leak: {}\n'.format(leak))
             sender,msg,imp = leak
+            print('get_ideal_wrapper_leaks:: msg: {}\n'.format(msg))
             # self.tick(1) => no tick now
             if msg[0] == 'pay':
                 # update idealqueue & increase idealdelay by 1
@@ -238,7 +239,7 @@ class Payment_Simulator(ITM):
                 # update idealqueue & increase idealdelay by 2
                 self.update_queue(leaks, msg, 2)
 
-                self.log.debug('\033[94m Simulation begins: pay\033[0m')
+                self.log.debug('\033[94m Simulation begins: close\033[0m')
                 m = self.sim_write_and_wait(
                     'z2p',
                     ((self.sim_sid, sender), msg),
@@ -246,7 +247,7 @@ class Payment_Simulator(ITM):
                     'a2z', 'p2z'
                 )
                 assert m.msg[1] == 'OK', str(m.msg)
-                self.log.debug('\033[94m Simulation ends: pay\033[0m')
+                self.log.debug('\033[94m Simulation ends: close\033[0m')
 
             elif msg[0] == 'schedule':
                 # some new codeblocks scheduled in simulated wrapper
@@ -262,7 +263,7 @@ class Payment_Simulator(ITM):
     '''
     def update_queue(self, leaks, msg, n):
         self.ideal_delay += n
-        if leaks == None:
+        if not leaks:
             scheduled_block = msg
             print('update_queue:: codeblock: {}'.format(scheduled_block))
             command, rnd, idx, f = scheduled_block
@@ -277,6 +278,7 @@ class Payment_Simulator(ITM):
             for _ in range(n):
                 leak = leaks.pop(0)
                 sender, scheduled_block, imp = leak
+                print('update_queue:: msg: {}'.format(msg))
                 print('update_queue:: leak: {}'.format(leak))
                 print('update_queue:: codeblock: {}'.format(scheduled_block))
                 command, rnd, idx, f = scheduled_block
@@ -287,6 +289,7 @@ class Payment_Simulator(ITM):
                 if msg not in self.run_queue:
                     self.run_queue[msg] = []
                 self.run_queue[msg].append((rnd, idx))
+                print('\n ideal_queue: {} \n run_queue: {} \n'.format(self.ideal_queue, self.run_queue))
                 # run_queue: {'codeblock': [(rnd, idx), (rnd, idx)]}
                 # mapping of codeblock to list of (rnd, idx)
                 # should maintiain the index, exec first on if there's more than one
@@ -458,7 +461,6 @@ class Payment_Simulator(ITM):
         elif msg[0] == 'pay' and _pid == self.P_r: # receiver receives 'pay'
             if self.is_honest(_sid, self.P_s):
                 rnd, idx = self.get_rnd_idx_and_update(msg)
-                print('sim_party_output:: rnd: {}, idx: {}'.format(rnd, idx))
                 self.write(
                     'a2w',
                     ('exec', rnd, idx)
@@ -501,6 +503,7 @@ class Payment_Simulator(ITM):
             return None, None
 
         # update `ideal_queue`
+        print('\nget_rnd_idx_and_update:: {}, {}\n'.format(rnd, idx))
         del(self.ideal_queue[rnd][idx])
 
         # update `run_queue` mapping
@@ -554,7 +557,6 @@ class Payment_Simulator(ITM):
     def wrapper_msg(self, d):
         msg = d.msg
         imp = d.imp
-        print('====== {}, {}'.format(msg, imp))
         self.get_ideal_wrapper_leaks()
         if msg[0] == 'poll':
             self.wrapper_poll()
