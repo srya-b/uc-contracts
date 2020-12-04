@@ -461,7 +461,7 @@ class Payment_Simulator(ITM):
                 print('sim_party_output:: rnd: {}, idx: {}'.format(rnd, idx))
                 self.write(
                     'a2w',
-                    (('exec', rnd, idx), 1)
+                    ('exec', rnd, idx)
                 )
             else:
                 # TODO: when P_s is corrupt
@@ -474,7 +474,7 @@ class Payment_Simulator(ITM):
                 if rnd != None and idx != None:
                     self.write(
                         'a2w',
-                        (('exec', rnd, idx), 1)
+                        ('exec', rnd, idx)
                     )
                 else: # implies a corrupt party => Q: why?
                     pass
@@ -482,7 +482,7 @@ class Payment_Simulator(ITM):
                 rnd, idx = self.get_rnd_idx_and_update(msg)
                 self.write(
                     'a2w',
-                    (('exec', rnd, idx), 1)
+                    ('exec', rnd, idx)
                 )
         else:
             print('sim_party_output:: from: {}, msg: {}'.format(fro, msg))
