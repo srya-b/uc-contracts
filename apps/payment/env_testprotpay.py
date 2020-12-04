@@ -43,21 +43,21 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     z2w.write( ('poll',), 1 )
     waits(pump)
 
-    # z2p.write( ((sid,P_s), ('balance',)) )
-    # waits(pump)
+    z2p.write( ((sid,P_s), ('balance',)) )
+    waits(pump)
 
-    # # shoul fail
-    # z2p.write( ((sid, P_s), ('pay', 10)) )
-    # waits(pump)
+    # shoul fail
+    z2p.write( ((sid, P_s), ('pay', 10)) )
+    waits(pump)
 
-    # z2w.write( ('poll',), 1 )
-    # waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
 
-    # z2w.write( ('poll',), 1 )
-    # waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
 
-    # z2p.write( ((sid, P_s), ('balance',)) )
-    # waits(pump)
+    z2p.write( ((sid, P_s), ('balance',)) )
+    waits(pump)
 
     # # close operation
     # z2p.write( ((sid, P_s), ('close',)) )
