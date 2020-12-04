@@ -11,10 +11,14 @@ class F_Pay(UCWrappedFunctionality):
         self.b_s = sid[3]
         self.b_r = sid[4]
         self.delta = sid[5]
+        self.crupt = crupt
         self.r = 3
         UCWrappedFunctionality.__init__(self, k, buts, crupt, sid, pid, channels, poly, pump, importargs)
 
         self.flag = "OPEN"
+
+    def is_honest(self, sid, sender):
+        return True
 
     def process_pay(self, v):
         if self.flag == "OPEN" and self.b_s >= v:
