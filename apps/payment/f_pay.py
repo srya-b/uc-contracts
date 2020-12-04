@@ -264,6 +264,7 @@ class Payment_Simulator(ITM):
         self.ideal_delay += n
         if leaks == None:
             scheduled_block = msg
+            print('update_queue:: codeblock: {}'.format(scheduled_block))
             command, rnd, idx, f = scheduled_block
             assert command == 'schedule'
             if rnd not in self.ideal_queue:
@@ -277,6 +278,7 @@ class Payment_Simulator(ITM):
                 leak = leaks.pop(0)
                 sender, scheduled_block, imp = leak
                 print('update_queue:: leak: {}'.format(leak))
+                print('update_queue:: codeblock: {}'.format(scheduled_block))
                 command, rnd, idx, f = scheduled_block
                 assert command == 'schedule'
                 if rnd not in self.ideal_queue:
@@ -456,6 +458,7 @@ class Payment_Simulator(ITM):
         elif msg[0] == 'pay' and _pid == self.P_r: # receiver receives 'pay'
             if self.is_honest(_sid, self.P_s):
                 rnd, idx = self.get_rnd_idx_and_update(msg)
+                print('sim_party_output:: rnd: {}, idx: {}'.format(rnd, idx))
                 self.write(
                     'a2w',
                     (('exec', rnd, idx), 1)
