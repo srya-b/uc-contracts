@@ -3,7 +3,7 @@
 \newcommand{\idealdelay}{{\color{Blue} \msf{idealdelay} }}
 \newcommand{\nonce}{{\color{Blue} \msf{nonce} }}
 \newcommand{\state}{{\color{Blue} \msf{state} }}
-\newcommand{\simleaks}{{\color{Blue} \msf{leaks} }}
+\newcommand{\simleaks}{{\color{Blue} \msf{simleaks} }}
 \newcommand{\flag}{{\color{Blue} \msf{flag} }}
 
 \begin{bbox}[title={$\mathcal{S}_{pay}(P_s, P_r, b_r, b_s)$}]
@@ -14,7 +14,7 @@ functionality $\F_{contract}$.
 Initialize $\state = (b_s, b_r, 0)$, $\nonce = 0$, $\simleaks = \emptyset$, $\idealdelay=0$, $\idealqueue = \emptyset$
 $\flag = \msf{OPEN}$
 
-\underline{On every activation:}
+\underline{On every input activation:}
 	\begin{renumerate}
 		\item $leaks \leftarrow \{ \Send (\msf{getleaks}) \rightarrow \mathcal{W}_{sync}\}$
 		%\item $output = []$
@@ -42,7 +42,7 @@ $\flag = \msf{OPEN}$
 
 			\item For all other (schedule) leaks:
 			\begin{renumerate}
-				\item Increment \idealdelay and save $rnd$, $idx$ into \idealqueue.
+				\item Increment \idealdelay and save $rnd$, $idx$ into \idealqueue and increment \idealdelay.
 			\end{renumerate}
 		\end{renumerate}
 
@@ -54,12 +54,41 @@ $\flag = \msf{OPEN}$
 
 \OnInput \inmsg{{\em crupt} $P_i$}{msg} from $\mathcal{Z}$:
 	\begin{renumerate}
-
-		\item If $(\msf{close}, \msf{state}', \sigma_{sender}') \leftarrow$ (msg):
-
-			\quad Simulate 
-
 		\item Simulate ({\em crupt} $P_i$', msg) $\rightarrow \mathcal{A}'$
+	\end{renumerate}
+
+
+\OnInput \inmsg{\msf{get-leaks}} from $\mathcal{Z}$:
+	\begin{renumerate}
+		\item \Send $\simleaks \rightarrow \mathcal{Z}$ 
+		\item Clear \simleaks
+	\end{renumerate}
+
+\OnInput \inmsg{\msf{poll}} from $\Wsync$:
+	\begin{renumerate}
+		\item Execute \msf{poll}.
+	\end{renumerate}
+
+\OnInput \inmsg{\msf{delay}}{$d \token$} from $\mathcal{Z}$:
+	\begin{renumerate}
+		\item Simulate (\msf{delay}, $d \token$) $\rightarrow \Wsync' $
+		\item $\idealdelay \pluseq d$
+		\item $OK \leftarrow \{ \Send (\msf{delay}, d \token) \rightarrow \Wsync \}$
+		\item $\Send OK \rightarrow \mathcal{Z}$
+	\end{renumerate}
+
+\OnInput \inmsg{\msf{exec}}{rnd}{idx} from $\mathcal{Z}$:
+	\begin{renumerate}
+		\item Simulate $(\msf{exec}, rnd, idx) \rightarrow \Wsync$
+		\item If output $m$ from some simulated party $P_i'$:
+				
+			\quad Execute $\msf{SimGetLeaks}$
+
+			\quad Execute $\msf{SimPartyOutput(m, P_i')}$
+
+		\item Else if output $m$ from simulated $\mathcal{D}'$:
+			
+			\quad \Send $m \rightarrow \mathcal{Z}$
 	\end{renumerate}
 
 \end{bbox}
