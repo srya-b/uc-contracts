@@ -29,12 +29,15 @@ class F_Pay(UCWrappedFunctionality):
             self.pump.write('')
 
     def pay(self, v):
-        self.leak( ("pay", v), 0 )
-        self.write_and_wait_expect(
-            ch='f2w', msg=('schedule', 'process_pay', (v,), 1),
-            read='w2f', expect=('OK',)
-        )
-        self.write( 'f2p', ((self.sid, self.P_s), 'OK') )
+        if self.flag == "OPEN" and self.b_s >= v:
+            self.leak( ("pay", v), 0 )
+            self.write_and_wait_expect(
+                ch='f2w', msg=('schedule', 'process_pay', (v,), 1),
+                read='w2f', expect=('OK',)
+            )
+            self.write( 'f2p', ((self.sid, self.P_s), 'OK') )
+        else:
+            self.pump.write('')
 
     def send_to(self, to, msg, imp):
         self.write('f2p', ((self.sid, to), msg), imp)

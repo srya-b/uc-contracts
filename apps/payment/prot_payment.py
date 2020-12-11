@@ -32,7 +32,9 @@ class Prot_Pay(UCWrappedProtocol):
             self.state = (self.b_s, self.b_r, self.nonce)
             self.write('p2f', ((self.sid, 'F_contract'), ("send", self.P_r, ("pay", self.state, 'P_s sig'), 0)) )
             assert wait_for(self.channels['f2p']).msg[1] == 'OK'
-        self.write('p2z', 'OK')
+            self.write('p2z', 'OK')
+        else:
+            self.pump.write('')
 
     def close(self):
         if self.flag == "OPEN":
