@@ -10,7 +10,7 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
         self.P_r = sid[2]
         self.b_s = sid[3]
         self.b_r = sid[4]
-        self.delta = sid[5]
+        self.delta = sid[5] # time unit of mining block
         UCWrappedFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
         self.leakbuffer = None
         self.flag = 'OffChain'
@@ -35,7 +35,7 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
                 self.state = _state
                 if _sender == self.P_r:
                     self.flag = "Closed"
-                    #self.broadcast( ("Closed", self.state), 0 )
+                    self.broadcast( ("closed", self.state), 0 )
                 else:
                     self.flag = "UnCoopClose"
                     self.T_deadline = self.clock_round() + self.T_settle
@@ -74,9 +74,8 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
             self.pump.write('dump')
 
     def party_msg(self, d):
-        msg = d.msg
+        (_sid, _sender), msg = d.msg
         imp = d.imp
-        (_sid, _sender),msg = msg
        
         if _sender not in (self.P_s, self.P_r): self.pump.write('')
         if msg[0] == "broadcast":
@@ -87,14 +86,15 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
             if imp >= _imp:
                 self.send_to(_to, _msg, _imp)
             self.write('f2p', ((_sid,_sender), 'OK'))
+        # above are off-chain operations, and else is for on-chain operations
         else:
             print('scheduling', msg)
-            self.write( 'f2w',
+            self.write('f2w',
                 ('schedule',
-                'route_party_msg',
-                (_sender, msg, imp),
-                self.delta),
-                0
+                'route_party_msg', # execute function after scheduling
+                (_sender, msg, imp), # function arguments
+                self.delta), # scheduled delay
+                0 # import token
             )
             assert wait_for(self.channels['w2f']).msg == ('OK',)
             self.leak(msg, 0)
