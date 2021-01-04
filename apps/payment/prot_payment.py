@@ -103,6 +103,6 @@ class Prot_Pay(UCWrappedProtocol):
             self.recv_uncoopclose(_state, _deadline)
         elif msg[0] == "closed":
             _, _state = msg
-            self.write('p2z', ('closed', _state))
+            self.write('p2z', ('close', _state[0], _state[1]))
         else: self.pump.write('')
 
