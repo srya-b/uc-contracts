@@ -46,10 +46,12 @@ class F_Pay(UCWrappedFunctionality):
         if self.flag == "OPEN":
             self.flag = "CLOSE"
             msg = ('close', self.b_s, self.b_r)
+            self.leak( ("send_to", self.P_s), 0 )
             self.write_and_wait_expect(
                 ch='f2w', msg=('schedule', 'send_to', (self.P_s, msg, 0), 1),
                 read='w2f', expect=('OK',)
             )
+            self.leak( ("send_to", self.P_r), 0 )
             self.write_and_wait_expect(
                 ch='f2w', msg=('schedule', 'send_to', (self.P_r, msg, 0), 1),
                 read='w2f', expect=('OK',)
@@ -57,6 +59,7 @@ class F_Pay(UCWrappedFunctionality):
         self.pump.write('')
 
     def close(self, sender):
+        self.leak( ("close", sender), 0 )
         if sender == self.P_r or self.is_honest(self.sid, self.P_s):
             self.write_and_wait_expect(
                 ch='f2w', msg=('schedule', 'process_close', (), self.delta),
@@ -235,7 +238,7 @@ class Payment_Simulator(ITM):
                 self.log.debug('\033[94m Simulation begins: pay\033[0m')
                 m = self.sim_write_and_wait(
                     'z2p',
-                    ((self.sim_sid,self.P_s),msg),
+                    ((self.sim_sid, self.P_s), msg),
                     imp,
                     'a2z', 'p2z'
                 )
@@ -243,8 +246,10 @@ class Payment_Simulator(ITM):
                 self.log.debug('\033[94m Simulation ends: pay\033[0m')
 
             elif msg[0] == 'close':
-                # update idealqueue & increase idealdelay by 2
-                self.update_queue(leaks, msg, 2)
+                sender = msg[1]
+                # update idealqueue & increase idealdelay by 1
+                self.update_queue(leaks, (msg[0],), 1)
+                print('\n\t\t\t\t\t\tSSSSSSENDER {}'.format(sender))
 
                 self.log.debug('\033[94m Simulation begins: close\033[0m')
                 m = self.sim_write_and_wait(
@@ -281,6 +286,7 @@ class Payment_Simulator(ITM):
             if msg not in self.run_queue:
                 self.run_queue[msg] = []
             self.run_queue[msg].append((rnd, idx))
+            print('\n\n\t\t\t run_queue {} \n\t\t\t ideal_queue {}'.format(self.run_queue, self.ideal_queue))
         else:
             for _ in range(n):
                 leak = leaks.pop(0)
@@ -323,6 +329,8 @@ class Payment_Simulator(ITM):
         # simulate the 'poll' call
         r,m = self.sim_poll()
         self.sim_get_leaks()
+
+        self.log.debug(f'\t\t\033[94m poll Simulation {len(self.sim_leaks)} \033[0m')
 
         self.log.debug('\t\t\033[94m poll Simulation finished\033[0m')
         if r == self.sim_channels['p2z']:
@@ -431,12 +439,16 @@ class Payment_Simulator(ITM):
         # TODO added a tag
         _,leaks = leaks.msg
         n = 0
+        isClose = False
         if len(leaks):
-            # check and count new "schedules" in simulated wrapper
             for x in leaks:
-                _from,msg,imp = x
+                _from, msg, imp = x
+                print('\n\n\t\t\t\t from: {} \n\t\t\t\t msg: {} \n\t\t\t\t imp: {}'.format(_from, msg, imp))
+                # check and count new "schedules" in simulated wrapper
                 if msg[0] == 'schedule':
                     n += 1
+                elif msg[0] == 'close':
+                    isClose = True
 
         # self.tick(1) => TODO
         # add delay from new "schedules" in simulated wrapper to ideal-world wrapper
@@ -447,6 +459,14 @@ class Payment_Simulator(ITM):
         m = waits(self.pump, self.channels['w2a']);
         assert m.msg == ('OK',), str(m.msg)
         self.sim_leaks.extend(leaks)
+
+        # execute close in the ideal wrapper
+        if isClose:
+            rnd, idx = self.get_rnd_idx_and_update((msg[0],))
+            self.write(
+                'a2w',
+                ('exec', rnd, idx)
+            )
 
     def sim_party_output(self, m):
         # If we got output from the party, it outputed a msg to
@@ -479,6 +499,7 @@ class Payment_Simulator(ITM):
         elif msg[0] == 'close':
             if self.first_close:
                 self.first_close = False
+                print('\n\n\n \t\t\t msg {} run_queue {}'.format(msg, self.run_queue))
                 rnd, idx = self.get_rnd_idx_and_update(msg)
                 if rnd != None and idx != None:
                     self.write(
