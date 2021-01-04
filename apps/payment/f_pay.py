@@ -330,7 +330,7 @@ class Payment_Simulator(ITM):
         r,m = self.sim_poll()
         self.sim_get_leaks()
 
-        self.log.debug(f'\t\t\033[94m poll Simulation {len(self.sim_leaks)} \033[0m')
+        self.log.debug('\t\t\033[94m poll Simulation {} \033[0m'.format(len(self.sim_leaks)))
 
         self.log.debug('\t\t\033[94m poll Simulation finished\033[0m')
         if r == self.sim_channels['p2z']:
