@@ -44,14 +44,15 @@ class F_Pay(UCWrappedFunctionality):
 
     def process_close(self):
         if self.flag == "OPEN":
+            print('**\n\n Process close \n\n**')
             self.flag = "CLOSE"
             msg = ('close', self.b_s, self.b_r)
-            self.leak( ("send_to", self.P_s), 0 )
+            self.leak( ("sendclose", self.P_s), 0 )
             self.write_and_wait_expect(
                 ch='f2w', msg=('schedule', 'send_to', (self.P_s, msg, 0), 1),
                 read='w2f', expect=('OK',)
             )
-            self.leak( ("send_to", self.P_r), 0 )
+            self.leak( ("sendclose", self.P_r), 0 )
             self.write_and_wait_expect(
                 ch='f2w', msg=('schedule', 'send_to', (self.P_r, msg, 0), 1),
                 read='w2f', expect=('OK',)
@@ -105,7 +106,7 @@ class F_Pay(UCWrappedFunctionality):
 
 
 
-from uc.execuc import createWrappedUC
+from uc.execuc import createWrappedUC, createWrappedSimulation
 from contract_pay import Contract_Pay_and_bcast_and_channel
 from uc.itm import wrappedProtocolWrapper
 from uc.syn_ours import Syn_FWrapper
@@ -147,6 +148,8 @@ class Payment_Simulator(ITM):
         # Maintain a queue to see which (rnd, idx) should be exec
         # This queue is updated whenever get_leak from wrapper
         self.run_queue = {}
+        self.close_called_in_ideal_world = False
+        self.executed_process_close = False
 
         # internal state for the simulated world
         self.nonce = 0
@@ -176,7 +179,7 @@ class Payment_Simulator(ITM):
         ITM.__init__(self, k, bits, sid, pid, channels, handlers, poly, pump, importargs)
 
         # Spawn internal real world (local to the simulator)
-        self.sim_channels, static, _pump = createWrappedUC(
+        self.sim_channels, static, _pump, _itms = createWrappedSimulation(
             k,
             [('F_contract', Contract_Pay_and_bcast_and_channel)],
             wrappedProtocolWrapper(prot), # internal simulated protocol
@@ -195,6 +198,9 @@ class Payment_Simulator(ITM):
         static.write(
             (('sid', self.sim_sid), ('crupt', *[x for x in self.crupt]))
         )
+       
+        self._w, self._f, self._p, self._advitm = waits(_itms).msg
+
 
         self.handlers.update({
             self.sim_channels['p2z']: self.sim_party_msg,
@@ -247,6 +253,7 @@ class Payment_Simulator(ITM):
 
             elif msg[0] == 'close':
                 sender = msg[1]
+                self.close_called_in_ideal_world = True
                 # update idealqueue & increase idealdelay by 1
                 self.update_queue(leaks, (msg[0],), 1)
                 print('\n\t\t\t\t\t\tSSSSSSENDER {}'.format(sender))
@@ -260,15 +267,18 @@ class Payment_Simulator(ITM):
                 )
                 assert m.msg[1] == 'OK', str(m.msg)
                 self.log.debug('\033[94m Simulation ends: close\033[0m')
-
+            elif msg[0] == 'sendclose':
+                sender = msg[1]
+                self.update_queue(leaks, (msg[0],), 1)
             elif msg[0] == 'schedule':
                 # some new codeblocks scheduled in simulated wrapper
                 self.update_queue(None, msg, 1)
 
-            else:
-                self.pump.write('')
+            #else:
+            #    self.pump.write('')
 
-        self.sim_get_leaks()
+        #self.sim_get_leaks()
+        #self.pump.write('')
 
     '''
     update ideal_queue & run_queue
@@ -330,10 +340,34 @@ class Payment_Simulator(ITM):
         r,m = self.sim_poll()
         self.sim_get_leaks()
 
+
+        print('<><><><><><><><><><><><><><><>')
+        print(self._w.todo)
+        print('<><><><><><><><><><><><><><><>')
+
+        # determine whether the close broadcast has been scheduled in the simulation
+        isclose = False
+        numclose = 0
+        if not self.executed_process_close:
+            for rnd  in self._w.todo:
+                for codeblock in self._w.todo[rnd]:
+                    if codeblock[2] == 'process_send_to' and codeblock[3][1][0] == 'closed' and codeblock[0] == (self.sid, 'F_contract'):
+                    #if codeblock[0] == 'process_send_to' and codeblock[1][1] == 'closed':
+                        print('**\n\n simleaks \n\n**:')
+                        print(self.sim_leaks)
+                        isclose = True
+                        numclose += 1
+
         self.log.debug('\t\t\033[94m poll Simulation {} \033[0m'.format(len(self.sim_leaks)))
 
         self.log.debug('\t\t\033[94m poll Simulation finished\033[0m')
-        if r == self.sim_channels['p2z']:
+
+        # if the close is scheduled no party will output anything, honest or corrupt
+        if isclose and not self.executed_process_close:
+            assert numclose == 2
+            self.executed_process_close = True
+            self.close_in_simulation()
+        elif r == self.sim_channels['p2z']:
             # If we got output from the party, it outputed a committed value (or bot)
             # tell the ideal wrapper to execute the corresponding codeblock
             self.sim_party_output(m)
@@ -447,8 +481,8 @@ class Payment_Simulator(ITM):
                 # check and count new "schedules" in simulated wrapper
                 if msg[0] == 'schedule':
                     n += 1
-                elif msg[0] == 'close':
-                    isClose = True
+                #elif msg[0] == 'close':
+                #    isClose = True
 
         # self.tick(1) => TODO
         # add delay from new "schedules" in simulated wrapper to ideal-world wrapper
@@ -461,12 +495,27 @@ class Payment_Simulator(ITM):
         self.sim_leaks.extend(leaks)
 
         # execute close in the ideal wrapper
-        if isClose:
-            rnd, idx = self.get_rnd_idx_and_update((msg[0],))
-            self.write(
-                'a2w',
-                ('exec', rnd, idx)
-            )
+        #if isClose:
+        #    rnd, idx = self.get_rnd_idx_and_update((msg[0],))
+        #    self.write(
+        #        'a2w',
+        #        ('exec', rnd, idx)
+        #    )
+    
+    # always executes before sim_party_output
+    def close_in_simulation(self):
+        # check if there is a close already called in the ideal world
+        # if not then one of the parties is dishonest and it is the one 
+        # that must have initiated a close in the simulation
+        if self.close_called_in_ideal_world:
+            # this is the honest case just execute the process_call
+            rnd,idx = self.get_rnd_idx_and_update(('close',))
+            self.write('a2w', ('exec', rnd, idx))
+        else:
+            # this is the dishonest case
+            # TODO: ignore for now handle it later
+            print('For some reason this executed')
+            raise Exception("This should never happen")
 
     def sim_party_output(self, m):
         # If we got output from the party, it outputed a msg to
@@ -500,7 +549,8 @@ class Payment_Simulator(ITM):
             if self.first_close:
                 self.first_close = False
                 print('\n\n\n \t\t\t msg {} run_queue {}'.format(msg, self.run_queue))
-                rnd, idx = self.get_rnd_idx_and_update(msg)
+                #rnd, idx = self.get_rnd_idx_and_update(msg)
+                rnd,idx = self.get_rnd_idx_and_update(('sendclose',))
                 if rnd != None and idx != None:
                     self.write(
                         'a2w',
@@ -509,7 +559,8 @@ class Payment_Simulator(ITM):
                 else: # implies a corrupt party => Q: why?
                     pass
             else:
-                rnd, idx = self.get_rnd_idx_and_update(msg)
+                #rnd, idx = self.get_rnd_idx_and_update(msg)
+                rnd,idx = self.get_rnd_idx_and_update(('sendclose',))
                 self.write(
                     'a2w',
                     ('exec', rnd, idx)
@@ -527,7 +578,8 @@ class Payment_Simulator(ITM):
         try:
             rnd, idx = self.run_queue[m].pop(0)
         except:
-            print('get_rnd_idx_and_update:: no such msg exists')
+            print('get_rnd_idx_and_update:: no such msg exists:', m)
+            print(self.run_queue)
             return None, None
 
         # update `ideal_queue`

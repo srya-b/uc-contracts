@@ -29,6 +29,7 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     gevent.spawn(_a2z)
     gevent.spawn(_p2z)
 
+    print('Status of pump before call', pump.is_set())
     z2a.write(('',), 100)
     waits(pump)
 
@@ -70,7 +71,26 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     waits(pump)
     z2w.write( ('poll',), 1 )
     waits(pump)
-
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
+    z2w.write( ('poll',), 1 )
+    waits(pump)
     # for _ in range(18):
     #     z2w.write( ('poll',), 1 )
     #     waits(pump)
@@ -88,10 +108,11 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     return transcript
 
 
-from uc.itm import wrappedPartyWrapper
+from uc.itm import wrappedPartyWrapper, wrappedProtocolWrapper
 from uc.adversary import DummyWrappedAdversary
 from f_pay import F_Pay, payment_simulator, Payment_Simulator
 from prot_payment import Prot_Pay
+from contract_pay import Contract_Pay_and_bcast_and_channel
 from uc.syn_ours import Syn_FWrapper
 from uc.execuc import execWrappedUC
 
@@ -105,6 +126,20 @@ t1 = execWrappedUC(
     None
 )
 
-print('\nTranscript')
+t2 = execWrappedUC(
+    128,
+    env,
+    [('F_contract', Contract_Pay_and_bcast_and_channel)],
+    wrappedProtocolWrapper(Prot_Pay),
+    Syn_FWrapper,
+    DummyWrappedAdversary,
+    None
+)
+
+print('\nIdeal Transcript')
 for i in t1:
+    print(i)
+
+print('\nReal Transcript')
+for i in t2:
     print(i)
