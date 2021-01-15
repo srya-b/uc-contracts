@@ -1,10 +1,9 @@
 from uc.utils import waits
-import logging
 import gevent
-from numpy.polynomial.polynomial import Polynomial
+import logging
 
 log = logging.getLogger(__name__)
-# logging.basicConfig(level=1)
+logging.basicConfig(level=1)
 
 def env1(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     delta = 3
@@ -31,6 +30,7 @@ def env1(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     g1 = gevent.spawn(_a2z)
     g2 = gevent.spawn(_p2z)
     
+    print('Status of pump before call', pump.is_set())
     z2a.write(('',), 100)
     waits(pump)
 
@@ -68,9 +68,9 @@ def env1(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     z2p.write( ((sid, P_s), ('close',)) )
     waits(pump)
 
-    # for _ in range(18):
-    #     z2w.write( ('poll',), 1 )
-    #     waits(pump)
+    for _ in range(18):
+        z2w.write( ('poll',), 1 )
+        waits(pump)
    
     # z2a.write( ('A2W', ('exec', 13, 1), 0) )
     # waits(pump)
