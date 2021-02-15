@@ -133,15 +133,12 @@ class ITM:
 
 
     def write(self, ch, msg, imp=0):
-        print('imp', imp, 'impflag', self.impflag)
-        self.printstate()
         if self.impflag:
             if self.imp_in - self.imp_out + self.marked >= imp:
                 self.imp_out += imp
                 self.channels[ch].write(msg, imp)
             else:
                 raise WriteImportError((self.sid,self.pid), msg, imp)
-                #raise Exception("out of import")
         else:
             self.channels[ch].write(msg, 0)
 

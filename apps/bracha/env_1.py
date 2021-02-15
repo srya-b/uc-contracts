@@ -4,7 +4,7 @@ import gevent
 from numpy.polynomial.polynomial import Polynomial
 
 log = logging.getLogger(__name__)
-logging.basicConfig( level=50 )
+logging.basicConfig( level=1)
 
 def env1(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     delta = 3
@@ -39,37 +39,58 @@ def env1(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     waits(pump)
 
     log.debug('\033[91m send first VAL, get +2 ECHO messages \033[0m')
+    i = 1
     for _ in range(4):
+        print('Poll #{}'.format(i))
+        i+=1
         z2w.write( ('poll',), 1 )
         waits(pump)
 
     log.debug('\033[91m +2 ECHO + 1 = 3 polls to send next VAL message +2 ECHO msgs \033[0m')
+    i = 1
     for _ in range(3):
+        print('Poll #{}'.format(i))
+        i+=1
         z2w.write( ('poll',), 1)
         waits(pump)
 
     log.debug('\033[91m +2 ECHO + 1 = 3 polls to send last VAL message +2 ECHO msgs \033[0m')
+    i=1
     for _ in range(3):
+        print('Poll #{}'.format(i))
+        i+=1
         z2w.write( ('poll',), 1)
         waits(pump)
 
     log.debug('\033[91m +2 ECHO +1 = 3 polls to send 1 -> 2 ECHO msg, +2 READY msgs \033[0m')
-    for _ in range(1):
+    i=1
+    for _ in range(3):
+        print('Poll #{}'.format(i))
+        i+=1
         z2w.write( ('poll',), 1)
         waits(pump)
 
     log.debug('\033[91m +2 READY +1 = 3 polls to send 1 -> 3 ECHO msg, +2 READY msgs \033[0m')
+    i=1
     for _ in range(3):
+        print('Poll #{}'.format(i))
+        i+=1
         z2w.write( ('poll',), 1)
         waits(pump)
 
     log.debug('\033[91m +2 READY +1 = 3 polls to send 2 -> 1 ECHO msg, +2 READY msgs \033[0m')
+    i=1
     for _ in range(3):
+        print('Poll #{}'.format(i))
+        i+=1
         z2w.write( ('poll',), 1)
         waits(pump)
 
     log.debug('\033[91m +2 READY +1 = 3 polls to send 2 -> 3 ECHO msg, +0 READY msgs \033[0m')
+    i=1
     for _ in range(3):
+        print('Poll #{}'.format(i))
+        i+=1
         z2w.write( ('poll',), 1)
         waits(pump)
 
@@ -78,7 +99,10 @@ def env1(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     waits(pump)
 
     log.debug('\033[91m +0 READY +1 = 3 polls to send 3 -> 1 ECHO msg, +0 msgs \033[0m')
+    i=1
     for _ in range(4):
+        print('Poll #{}'.format(i))
+        i+=1
         z2w.write( ('poll',), 1)
         waits(pump)
 
@@ -106,9 +130,9 @@ def env1(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     z2w.write( ('poll',), 1)
     waits(pump)
 
-    log.debug('\033[91m +0 READY +1 = 3 polls to send 1 -> 3 READY msg, 3 ACCEPTS\033[0m')
-    z2w.write( ('poll',), 1)
-    waits(pump)
+    #log.debug('\033[91m +0 READY +1 = 3 polls to send 1 -> 3 READY msg, 3 ACCEPTS\033[0m')
+    #z2w.write( ('poll',), 1)
+    #waits(pump)
 
     gevent.kill(g1)
     gevent.kill(g2)
@@ -133,7 +157,8 @@ from uc.itm import ProtocolWrapper, WrappedProtocolWrapper, WrappedPartyWrapper,
 from uc.adversary import DummyWrappedAdversary
 from uc.syn_ours import Syn_FWrapper, Syn_Channel
 from prot_bracha import Syn_Bracha_Protocol
-from f_bracha import RBC_Simulator, Syn_Bracha_Functionality, brachaSimulator
+from f_bracha import Syn_Bracha_Functionality
+from sim_bracha import RBC_Simulator, brachaSimulator
 from uc.execuc import execWrappedUC
 
 if __name__=='__main__':
@@ -148,6 +173,7 @@ if __name__=='__main__':
         brachaSimulator(Syn_Bracha_Protocol),
         poly=Polynomial([100,2,3,4,5,6])
     )
+
     
     print('\n\t\t\033[93m [REAL WORLD] \033[0m\n')
     t2 = execWrappedUC(

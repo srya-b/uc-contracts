@@ -1,4 +1,5 @@
 import gevent
+from uc.utils import waits
 from uc.itm import ITM, UCAdversary, UCWrappedAdversary
 from gevent.queue import Queue, Channel, Empty
 from gevent.event import AsyncResult
@@ -97,3 +98,36 @@ class DummyWrappedAdversary(UCWrappedAdversary):
         assert imp == 0
         self.channels['a2z'].write( ('W2A', msg) )
 
+
+class SynWrapperSimulator(ITM):
+    def __init__(self, k, bits, crupt, sid, pid, channels, pump, prot, poly, importargs):
+        self.crupt = crupt
+        self.ssid = sid[0]
+        self.prot = prot
+
+        self.internal_run_queue = {}
+        self.internal_delay = 0
+
+        self.sim_run_queue = {}
+        self.sim_leaks = []
+        
+        handlers = {
+            channels['p2a']: self.party_msg,
+            channels['z2a']: self.env_msg,
+            channels['w2a']: self.wrapper_msg,
+            channels['f2a']: self.func_msg
+        }
+
+        ITM.__init__(self, k, bits, sid, pid, channels, handlers, poly, pump, importargs)
+
+    def DELAY(self, d):
+        self.write('a2w', ('delay',d), d)
+        m = waits(self.channels['w2a']); assert m.msg == 'OK', str(m)
+        self.internal_delay += d
+
+    def EXECUTE(self, _z2a, _a2z, _p2z, _pump, _rnd, _idx):
+        _z2a.write( ('A2W', ('exec', _rnd, _idx), 0) )
+        r = gevent.wait(objects=[_pump, _a2z, _p2z], count=1)[0]
+        m = r.read()
+        r.reset()
+        return r, m

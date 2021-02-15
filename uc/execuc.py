@@ -106,7 +106,7 @@ def createWrappedUC(k, fs, ps, wrapper, adv, poly, importargs={}):
         for _s,_p in crupt_msg[1:]:
             crupt.add( (_s,_p) )
 
-        w = wrapper(k, rng, crupt, {'f2w':f2w, 'w2f':w2f, 'p2w':p2w, 'w2p':w2p, 'a2w':a2w, 'w2a':w2a, 'z2w':z2w, 'w2z':w2z}, pump, poly, importargs)
+        w = wrapper(k, rng, crupt, sid, {'f2w':f2w, 'w2f':w2f, 'p2w':p2w, 'w2p':w2p, 'a2w':a2w, 'w2a':w2a, 'z2w':z2w, 'w2z':w2z}, pump, poly, importargs)
         gevent.spawn(w.run)
 
         #f = WrappedFunctionalityWrapper(k, rng, crupt, p2f, f2p, a2f, f2a, z2f, f2z, w2f, f2w, pump, poly, importargs)

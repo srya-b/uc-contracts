@@ -59,7 +59,7 @@ Adversary Interface
 -- 
 '''
 class Syn_FWrapper(UCWrapper):
-    def __init__(self, k, bits, crupt, channels, pump, poly, importargs):
+    def __init__(self, k, bits, crupt, sid, channels, pump, poly, importargs):
         self.curr_round = 1
         self.delay = 0
         self.todo = { self.curr_round: [] }
@@ -69,7 +69,7 @@ class Syn_FWrapper(UCWrapper):
         # in future rounds
         #self.adv_callme(self.curr_round)
         self.total_queue_ever = 0
-        UCWrapper.__init__(self, k, bits, crupt, 'wrap', 'me', channels, poly, pump, importargs)
+        UCWrapper.__init__(self, k, bits, crupt, sid, 'me', channels, poly, pump, importargs)
 
     def party_clock_round(self, sender):
         self.write( 'w2p', (sender, self.curr_round))
@@ -84,7 +84,7 @@ class Syn_FWrapper(UCWrapper):
             for f,args in self.todo[k]:
                 o.append((f.__name__, args))
             p_dict[k] = o
-        print('\n\033[1m', str(p_dict), '\033[0m\n')
+        print('\n\033[1m', '[sid={}, delay={}]\n\t'.format(self.sid, self.delay), str(p_dict), '\033[0m\n')
 
     def fschedule(self, sender, f, args, delta, imp):
         log.debug('\033[1mFschedule\033[0m delta: {}, import: {}, sender: {}'.format(imp, delta, sender))
@@ -103,6 +103,7 @@ class Syn_FWrapper(UCWrapper):
         self.print_todo()
         # add to the delay and return control to sender
         self.delay += 1
+        print('<><><><><>\nDelay={}\n<><><><>'.format(self.delay))
         self.write('w2f', (sender, ('OK',)) )
 
     def pschedule(self, sender, f, args, delta):
@@ -125,6 +126,7 @@ class Syn_FWrapper(UCWrapper):
         self.write('w2p', (sender, ('OK',)) )
 
     def adv_delay(self, t, imp):
+        print('\n<><><><>\n[sid={}] adv delay={}, import={}\n<><><><>\n'.format(self.sid, t, imp))
         self.assertimp(imp, t)
         self.delay += t
         self.write('w2a', "OK" )
@@ -149,8 +151,10 @@ class Syn_FWrapper(UCWrapper):
         self.assertimp(imp, 1)
         if self.delay > 0:
             self.delay -= 1
+            print('\n<><><><>\n[sid={}] Wrapper POLL: delay={}\n<><><><>\n'.format(self.sid,self.delay))
             self.write('w2a', ('poll',) )
         else:
+            print('*****\n\n [{}] delay is 0 now \n\n ******'.format(self.sid))
             self.curr_round = self.next_round()
             r = self.curr_round
             if len(self.todo[r]): self.adv_execute(r, 0)
@@ -225,7 +229,7 @@ class Syn_FWrapper(UCWrapper):
     def adv_msg(self, d):
         msg = d.msg
         imp = d.imp
-        #print('msg', msg)
+        print('adv msg at wrapper, msg={}, imp={}'.format(msg, imp))
         if msg[0] == 'delay':
             self.adv_delay(msg[1], imp)
         elif msg[0] == 'exec':
