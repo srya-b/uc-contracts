@@ -1,5 +1,8 @@
 from uc.utils import waits
 import gevent
+import logging
+
+logging.basicConfig(level=1)
 
 def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     delta = 3
@@ -25,6 +28,9 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
 
     gevent.spawn(_a2z)
     gevent.spawn(_p2z)
+
+    z2a.write(('',), 100)
+    waits(pump)
 
     z2p.write( ((sid,P_s), ('balance',)) )
     waits(pump)
@@ -60,19 +66,14 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     z2p.write( ((sid, P_s), ('close',)) )
     waits(pump)
 
-    z2w.write( ('poll',), 1 )
-    waits(pump)
-    z2w.write( ('poll',), 1 )
-    waits(pump)
-    z2w.write( ('poll',), 1 )
-    waits(pump)
-    z2w.write( ('poll',), 1 )
-    waits(pump)
+    # for _ in range(18):
+    #     z2w.write( ('poll',), 1 )
+    #     waits(pump)
    
-    z2a.write( ('A2W', ('exec', 13, 1), 0) )
-    waits(pump)
-    z2a.write( ('A2W', ('exec', 13, 0), 0) )
-    waits(pump)
+    # z2a.write( ('A2W', ('exec', 13, 1), 0) )
+    # waits(pump)
+    # z2a.write( ('A2W', ('exec', 13, 0), 0) )
+    # waits(pump)
 
     # z2w.write( ('poll',), 1 )
     # waits(pump)
@@ -84,7 +85,8 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
 
 from uc.itm import wrappedPartyWrapper
 from uc.adversary import DummyWrappedAdversary
-from f_pay import F_Pay
+from f_pay import F_Pay, payment_simulator, Payment_Simulator
+from prot_payment import Prot_Pay
 from uc.syn_ours import Syn_FWrapper
 from uc.execuc import execWrappedUC
 
@@ -94,7 +96,7 @@ t1 = execWrappedUC(
     [('F_pay', F_Pay)],
     wrappedPartyWrapper('F_pay'),
     Syn_FWrapper,
-    DummyWrappedAdversary,
+    payment_simulator(Prot_Pay),
     None
 )
 

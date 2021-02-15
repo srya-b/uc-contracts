@@ -1,7 +1,11 @@
 from uc.utils import waits
 import gevent
+import logging
 
-def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
+log = logging.getLogger(__name__)
+logging.basicConfig(level=1)
+
+def env1(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     delta = 3
     P_s = 1
     P_r = 2
@@ -23,9 +27,10 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
             transcript.append('p2z: ' + str(m.msg))
             pump.write('')
 
-    gevent.spawn(_a2z)
-    gevent.spawn(_p2z)
-
+    g1 = gevent.spawn(_a2z)
+    g2 = gevent.spawn(_p2z)
+    
+    print('Status of pump before call', pump.is_set())
     z2a.write(('',), 100)
     waits(pump)
 
@@ -73,30 +78,59 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     # waits(pump)
 
     # z2w.write( ('poll',), 1 )
-    # waits(pump)
+    # waits(pump)    
 
+    gevent.kill(g1)
+    gevent.kill(g2)
 
-
+    print('Transcript', transcript)
     return transcript
+
+
+def distinguisher(t_ideal, t_real):
+    print('\n\t\033[93m Ideal transcript\033[0m')
+    for i in t_ideal: print(i)
+
+    print('\n\t\033[93m real transcript\033[0m')
+    for i in t_real: print(i)
+
+    if t_ideal == t_real:
+        print("\033[92m[Distinguisher] They're the same\033[0m")
+    else:
+        print("\033[91m[Distinguisher] They're different\033[0m")
 
 
 from uc.itm import wrappedPartyWrapper, wrappedProtocolWrapper
 from uc.adversary import DummyWrappedAdversary
 from contract_pay import Contract_Pay_and_bcast_and_channel
+from f_pay import F_Pay, payment_simulator, Payment_Simulator
 from prot_payment import Prot_Pay
 from uc.syn_ours import Syn_FWrapper
 from uc.execuc import execWrappedUC
 
-t1 = execWrappedUC(
-    128,
-    env,
-    [('F_contract', Contract_Pay_and_bcast_and_channel)],
-    wrappedProtocolWrapper(Prot_Pay),
-    Syn_FWrapper,
-    DummyWrappedAdversary,
-    None
-)
+if __name__=='__main__':
+    print('\n\t\t\033[93m [IDEAL WORLD] \033[0m\n')
+    print('env1 type', type(env1))
+    
+    t1 = execWrappedUC(
+        128,
+        env1,
+        [('F_pay', F_Pay)],
+        wrappedPartyWrapper('F_pay'),
+        Syn_FWrapper,
+        payment_simulator(Prot_Pay),
+        None
+    )
+    
+    print('\n\t\t\033[93m [REAL WORLD] \033[0m\n')
+    t2 = execWrappedUC(
+        128,
+        env1,
+        [('F_contract', Contract_Pay_and_bcast_and_channel)],
+        wrappedProtocolWrapper(Prot_Pay),
+        Syn_FWrapper,
+        DummyWrappedAdversary,
+        None
+    )
 
-print('\nTranscript')
-for i in t1:
-    print(i)
+    distinguisher(t1, t2)

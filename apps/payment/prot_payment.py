@@ -30,14 +30,24 @@ class Prot_Pay(UCWrappedProtocol):
             self.b_r += v
             self.nonce += 1
             self.state = (self.b_s, self.b_r, self.nonce)
-            self.write('p2f', ((self.sid, 'F_contract'), ("send", self.P_r, ("pay", self.state, 'P_s sig'), 0)) )
+            self.write('p2f', 
+                ((self.sid, 'F_contract'), # (sid, tag)
+                 ("send", self.P_r, ("pay", self.state, 'P_s sig'), 0) # msg
+                )
+            )
             assert wait_for(self.channels['f2p']).msg[1] == 'OK'
-        self.write('p2z', 'OK')
+            self.write('p2z', 'OK')
+        else:
+            self.pump.write('')
 
     def close(self):
         if self.flag == "OPEN":
             self.flag = "CLOSE"
-            self.write('p2f', ((self.sid, 'F_contract'), ('close', self.state, '')))
+            self.write('p2f', 
+                ((self.sid, 'F_contract'), # (sid, tag)
+                 ('close', self.state, '') # msg
+                )
+            )
             assert wait_for(self.channels['f2p']).msg[1] == 'OK'
         self.write('p2z', 'OK')
         
@@ -72,7 +82,11 @@ class Prot_Pay(UCWrappedProtocol):
         if self.flag == "OPEN":
             _b_s, _b_r, _nonce = _state
             print('always recognize as an uncoopclose')
-            self.write('p2f', ((self.sid, 'F_contract'), ('challenge', self.state, 'P_r sig')))
+            self.write('p2f', 
+                ((self.sid, 'F_contract'), # (sid, tag)
+                 ('challenge', self.state, 'P_r sig') # msg
+                )
+            )
             assert wait_for(self.channels['f2p']).msg[1] == 'OK'
             self.flag = "CLOSE"
         self.pump.write('')
@@ -89,6 +103,6 @@ class Prot_Pay(UCWrappedProtocol):
             self.recv_uncoopclose(_state, _deadline)
         elif msg[0] == "closed":
             _, _state = msg
-            self.write('p2z', ('closed', _state))
+            self.write('p2z', ('close', _state[0], _state[1]))
         else: self.pump.write('')
 
