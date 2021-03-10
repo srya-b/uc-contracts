@@ -315,6 +315,16 @@ class UCWrappedFunctionality(ITM):
         m = wait_for(self.channels['w2f']).msg
         assert m == ('OK',)
 
+    def clock_round(self):
+        m = self.write_and_wait_for(
+            ch='f2w', msg=('clock-round',),
+            imp=0, read='w2f'
+        )
+
+        #self.write('f2w', ('clock-round',), 0)
+        #rnd = wait_for(self.channels['w2f']).msg[1]
+        return m.msg[1]
+
 class UCWrappedProtocol(ITM):
     def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
         self.handlers = {
@@ -719,6 +729,42 @@ class WrappedProtocolWrapper(ProtocolWrapper):
             _pid = self.getPID(self.w2pid, sid, pid)
             _pid.write( msg, imp )
 
+class GlobalFunctionalityWrapper(ITM):
+    def __init__(self, k, bits, crupt, sid, channels, pump, poly, importargs):
+        self.z2fid = {}
+        self.p2fid = {}
+        self.a2fid = {}
+        self.f2fid = {}
+
+        self.handlers = {
+            channels['p2f'] : self.party_msg,
+            channels['a2f'] : self.adv_msg,
+            channels['z2f'] : self.env_msg,
+        }
+        ITM.__init__(self, k, bits, sid, None, channels, self.handlers, poly, pump, importargs)
+
+
+    def add_the_functionality(self, wrapper, leger);
+        self.wrapper = wrapper
+    
+    def newFID(self, sid, tag, cls, params=()):
+        _z2w,_w2z = self._newFID(self.z2fid, self.channels['w2z'], sid, tag)
+        _p2w,_w2p = self._newFID(self.p2fid, self.channels['w2p'], sid, tag)
+        _a2w,_w2a = self._newFID(self.a2fid, self.channels['w2a'], sid, tag)
+        _f2w,_f2a = self._newFID(self.a2fid, self.channels['w2f'], sid, tag)
+      
+
+
+    def party_msg(self, d);
+        msg
+        imp
+
+        target,msg = msg
+        fid = self.getFID(self.p2fid, target)
+        fid.write( (fro, msg), imp )
+
+        
+
 class FunctionalityWrapper(ITM):
     def __init__(self, k, bits, crupt, sid, channels, pump, poly, importargs):
         self.z2fid = {}
@@ -733,7 +779,12 @@ class FunctionalityWrapper(ITM):
             channels['a2f'] : self.adv_msg,
             channels['z2f'] : self.env_msg,
         }
+    
         ITM.__init__(self, k, bits, sid, None, channels, self.handlers, poly, pump, importargs)
+
+
+    def getFID(self, _2pid, sid, tag):
+        return _2pid[sid,]
 
     def newcls(self, tag, cls):
         print('New cls', tag, cls)

@@ -87,6 +87,16 @@ class Syn_FWrapper(UCWrapper):
             p_dict[k] = o
         print('\n\033[1m', str(p_dict), '\033[0m\n')
 
+    def adv_callme(self, r):
+        if r not in self.todo: self.todo[r] = []
+        #self.todo[r].append( (lambda: self.w2a.write(('shoutout',)), ()) )
+        #self.todo[r].append( (lambda: self.write('w2a', ('shoutout',)), ()) )
+        self.todo[r].append( ('adv', 'w2a', 'shoutout', ()) )
+        self.total_queue_ever += 1
+        self.print_todo()
+        self.delay += 1
+        self.write('w2a', ('OK',))
+
     def fschedule(self, sender, f, args, delta, imp):
         log.debug('\033[1mFschedule\033[0m delta: {}, import: {}, sender: {}'.format(imp, delta, sender))
         # add to the runqueue
@@ -132,7 +142,10 @@ class Syn_FWrapper(UCWrapper):
     def adv_execute(self, r, i):
         sender, ch, f,args = self.todo[r].pop(i)
         self.print_todo()
-        self.write( ch, (sender, ('exec', f, args)) )
+        if ch == 'w2a':
+            self.write( ch, ('exec', f, args) )
+        else:
+            self.write( ch, (sender, ('exec', f, args)) )
 
     def next_round(self):
         rounds = self.todo.keys()
@@ -167,7 +180,10 @@ class Syn_FWrapper(UCWrapper):
         if msg[0] == 'poll':
             self.poll(imp)
         else:
-            self.pump.write("dump")
+            sender,msg = msg
+            if msg[0] == 'schedule':
+                self.pschedule(sender, msg[1], msg[2], msg[3], imp)
+            else: self.pump.write("dump")
 
     def func_msg(self, d):
         msg = d.msg
@@ -206,14 +222,6 @@ class Syn_FWrapper(UCWrapper):
         else:
             #dump.dump()
             self.pump.write("dump")
-
-    def adv_callme(self, r):
-        if r not in self.todo: self.todo[r] = []
-        #self.todo[r].append( (lambda: self.w2a.write(('shoutout',)), ()) )
-        self.todo[r].append( (lambda: self.write('w2a', ('shoutout',)), ()) )
-        #self.w2a.write( ('OK',) )
-        self.write('w2a', ('OK',) )
-
     def adv_get_leaks(self):
         total_import = 0
         output = []
@@ -238,6 +246,5 @@ class Syn_FWrapper(UCWrapper):
         elif msg[0] == 'get-leaks':
             self.adv_get_leaks()
         else:
-            #dump.dump()
             self.pump.write("dump")
 
