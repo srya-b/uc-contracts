@@ -52,7 +52,7 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     z2a.write( ('A2F', ((sid, 'G_Ledger'), ('select-tx', [(tx, tx_sender_sig)])), 0) )
     waits(pump)
 
-    error = True
+    error = False
     if error:
         z2a.write( ('A2W', ('callme', 1), 0) )
         waits(pump)

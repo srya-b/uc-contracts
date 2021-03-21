@@ -1,5 +1,5 @@
 import gevent
-from uc.itm import ITM, UCWrapper
+from uc.itm import ITM, UCGlobalF
 from collections import defaultdict
 from numpy.polynomial.polynomial import Polynomial
 import logging
@@ -58,8 +58,8 @@ Adversary Interface
 -- ``delay''      : There is a
 -- 
 '''
-class Syn_FWrapper(UCWrapper):
-    def __init__(self, k, bits, crupt, channels, pump, poly, importargs):
+class Syn_FWrapper(UCGlobalF):
+    def __init__(self, k, bits, crupt, sid, tag, channels, pump, poly, importargs):
         self.curr_round = 1
         self.delay = 0
         self.todo = { self.curr_round: [] }
@@ -69,7 +69,8 @@ class Syn_FWrapper(UCWrapper):
         # in future rounds
         #self.adv_callme(self.curr_round)
         self.total_queue_ever = 0
-        UCWrapper.__init__(self, k, bits, crupt, 'wrap', 'me', channels, poly, pump, importargs)
+        UCGlobalF.__init__(self, k, bits, crupt, 'wrap', 'me', channels, poly, pump, importargs)
+        self.handlers[self.channels['_2w']] = self._2w_msg
 
     def party_clock_round(self, sender):
         self.write( 'w2p', (sender, self.curr_round))
@@ -96,6 +97,26 @@ class Syn_FWrapper(UCWrapper):
         self.print_todo()
         self.delay += 1
         self.write('w2a', ('OK',))
+
+    def _2wschedule(self, sender, f, args, delta, imp):
+        log.debug('\033[1mFschedule\033[0m delta: {}, import: {}, sender: {}'.format(imp, delta, sender))
+        # add to the runqueue
+        if self.curr_round+delta not in self.todo:
+            self.todo[self.curr_round + delta] = []
+        self.todo[self.curr_round + delta].append( (sender, 'w2_', f,args) )
+        self.total_queue_ever += 1
+        log.debug('total_queue_ever: {}'.format(self.total_queue_ever))
+        
+        # leaks the schedule
+        idx = len(self.todo[self.curr_round + delta])-1
+        r = self.curr_round + delta
+        self.leaks.append( (sender, ('schedule', r, idx, f), 0) )
+
+        self.print_todo()
+        # add to the delay and return control to sender
+        self.delay += 1
+        print('done scheduling')
+        self.write('w2_', (sender, ('OK',)) )
 
     def fschedule(self, sender, f, args, delta, imp):
         log.debug('\033[1mFschedule\033[0m delta: {}, import: {}, sender: {}'.format(imp, delta, sender))
@@ -198,6 +219,16 @@ class Syn_FWrapper(UCWrapper):
         else:
             print('dump')
             self.pump.write("dump")
+
+    def _2w_msg(self, d):
+        msg = d.msg 
+        imp = d.imp
+        sender,msg = msg
+        
+        if msg[0] == 'schedule':
+            self._2wschedule(sender, msg[1], msg[2], msg[3], imp)
+        else:
+            self.pump.write('')
 
     # TODO revisit this to see if adversary can delay callme actions
     def party_callme(self, r):

@@ -1,4 +1,4 @@
-from uc.itm import UCWrappedFunctionality
+from uc.itm import UCWrappedFunctionality, UCGlobalF
 from uc.utils import wait_for, waits
 from collections import defaultdict
 import gevent
@@ -13,7 +13,7 @@ Functionality
 * 
 '''
 # TODO 
-class G_Ledger(UCWrappedFunctionality):
+class G_Ledger(UCGlobalF):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump, poly, importargs):
         self.ssid = sid[0]
         self.contract = sid[1]
@@ -21,7 +21,7 @@ class G_Ledger(UCWrappedFunctionality):
         self.max_interval = sid[3]
         self.delta = sid[4]
 
-        UCWrappedFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
+        UCGlobalF.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
 
         self.block_number = 0
         self.last_block_round = 0
@@ -37,11 +37,6 @@ class G_Ledger(UCWrappedFunctionality):
 
     def print_mempool(self):
         print('\n Mempool: {}\n'.format(self.mempool))
-
-    #def broadcast(self, msg, parties, imp=0):
-    #    self.leak(msg, 0)
-    #    for party in parties:
-    #        self.send_to(party, 
 
     def tx_ref(self, sender, val, data):
         f, args = data
@@ -158,4 +153,20 @@ class G_Ledger(UCWrappedFunctionality):
             self.pump.write('')
 
 
+    def env_msg(self, d):
+        if self.start:
+            print('trying to start')
+            self.write_and_wait_expect(
+                ch='w2_', msg=((self.sid, 'Wrapper'), ('schedule', 'new_block', (), self.max_interval)),
+                read='_2w', expect=((self.sid, 'Wrapper'), ('OK',))
+            )
+            self.start = False
+        print('finished start') 
+        msg = d.msg
+        imp = d.imp
+        self.pump.write('')
+        if msg[0] == 'balances':
+            self.write('w2z', ('balances', self.balances))
+        else:
+            self.pump.write('')
         

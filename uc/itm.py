@@ -283,6 +283,10 @@ class UCWrappedAdversary(ITM):
     def wrapper_msg(self, d):
         Exception("wrapper_msg needs to be implemented")
 
+#class UCWrappedGlobalF(UCWrappedFunctionality):
+#    def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs):
+#        UCWrappedFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
+
 class UCWrappedFunctionality(ITM):
     def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs):
         self.crupt = crupt
@@ -290,7 +294,6 @@ class UCWrappedFunctionality(ITM):
             channels['z2f'] : self.env_msg,
             channels['p2f'] : self.party_msg,
             channels['a2f'] : self.adv_msg,
-                    a
             channels['w2f'] : self.wrapper_msg,
         }
         ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
@@ -357,7 +360,7 @@ class UCWrappedProtocol(ITM):
     def leak(self, msg):
         Exception("leak needs to be defined")
 
-class UCWrapper(ITM):
+class UCGlobalF(ITM):
     def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs):
         self.crupt = crupt
         self.handlers = {
@@ -737,8 +740,9 @@ class WrappedProtocolWrapper(ProtocolWrapper):
             _pid.write( msg, imp )
 
 def DuplexWrapper(f1, f1tag, f2, f2tag):
-    def f(k, bits, crupt, sid, pid, channels, pump, poly, importargs):
-        return GlobalFunctionalityWrapper(k , bids, crupt, sid, pid, channels, pump, poly, importargs
+    def f(k, bits, crupt, sid, channels, pump, poly, importargs):
+        return GlobalFunctionalityWrapper(k , bits, crupt, sid, channels, pump, poly, importargs, f1, f1tag, f2, f2tag)
+    return f
 
 class GlobalFunctionalityWrapper(ITM):
     def __init__(self, k, bits, crupt, sid, channels, pump, poly, importargs, _f1, _f1tag, _f2, _f2tag):
@@ -747,25 +751,24 @@ class GlobalFunctionalityWrapper(ITM):
         self.a2wid = {}
         self.f2wid = {}
         self._2wid = {}
+        self.crupt = crupt
         
-        self.channels['w2_'] = GenChannel('w2_')
-        self.newFID(sid, f1tag)
-        
-        self.channels
-
         self.handlers = {
             channels['p2w'] : self.party_msg,
             channels['a2w'] : self.adv_msg,
             channels['z2w'] : self.env_msg,
             channels['f2w'] : self.func_msg,
-            channels['w2_'] : self.wrapper_msg,
+            #channels['w2_'] : self.wrapper_msg,
         }
         ITM.__init__(self, k, bits, sid, None, channels, self.handlers, poly, pump, importargs)
+        
+        self.channels['w2_'] = GenChannel('w2_')
+        self.handlers[self.channels['w2_']] = self._2w_msg
+        print('f1')
+        self.newFID(self.sid, _f1tag, _f1)
+        print('f2')
+        self.newFID(self.sid, _f2tag, _f2)
 
-
-    def add_the_functionality(self, wrapper, ledger);
-        self.wrapper = wrapper
-        self.ledger = ledger 
 
     def _newFID(self, _2fid, f2_, sid, tag):
         ff2_ = GenChannel(('write-translate',sid,tag))
@@ -775,6 +778,7 @@ class GlobalFunctionalityWrapper(ITM):
             while True:
                 r = gevent.wait(objects=[ff2_],count=1)
                 m = r[0].read()
+                print('translate')
                 ff2_.reset()
                 f2_.write( ((sid,tag), m.msg), m.imp )
         gevent.spawn(_translate) 
@@ -793,8 +797,9 @@ class GlobalFunctionalityWrapper(ITM):
         _p2w,_w2p = self._newFID(self.p2wid, self.channels['w2p'], sid, tag)
         _a2w,_w2a = self._newFID(self.a2wid, self.channels['w2a'], sid, tag)
         _f2w,_w2f = self._newFID(self.a2wid, self.channels['w2f'], sid, tag)
-        _w2_,__2w = self._newFID(self._2wid, self.channels['w2_'], sid, tag)
+        __2w,_w2_ = self._newFID(self._2wid, self.channels['w2_'], sid, tag)
 
+        print('cls', cls)
         f = cls(self.k, self.bits, self.crupt, self.sid, tag, {'p2w':_p2w, 'w2p':_w2p, 'z2w':_z2w, 'w2z':_w2z, 'f2w':_f2w, 'w2f':_w2f, 'a2w':_a2w, 'w2a':_w2a, 'w2_':_w2_, '_2w':__2w}, self.pump, self.poly, self.importargs)
         gevent.spawn(f.run)
 
@@ -822,9 +827,10 @@ class GlobalFunctionalityWrapper(ITM):
         fid = getFID(self.f2wid, sid, tag)
         fid.write( (fro, msg), imp )
 
-    def _2wmsg(self, m):
+    def _2w_msg(self, m):
+        print('2w_msg', m)
         fro, ((sid,tag), msg) = m.msg
-        imp = d.imp
+        imp = m.imp
         fid = self.getFID(self._2wid, sid, tag)
         fid.write( (fro, msg), imp )
 
