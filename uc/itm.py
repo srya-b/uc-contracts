@@ -368,6 +368,7 @@ class UCGlobalF(ITM):
             channels['f2w'] : self.func_msg,
             channels['a2w'] : self.adv_msg,
             channels['p2w'] : self.party_msg,
+            channels['_2w'] : self._2w_msg,
         }
         ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
 
@@ -385,6 +386,9 @@ class UCGlobalF(ITM):
 
     def party_msg(self, msg):
         Exception("party_msg needs to be defined")
+
+    def _2w_msg(self, msg):
+        Exception("_2w_msg needs to be implemented")
 
     def leak(self, msg):
         Exception("leak needs to be defined")
@@ -744,8 +748,13 @@ def DuplexWrapper(f1, f1tag, f2, f2tag):
         return GlobalFunctionalityWrapper(k , bits, crupt, sid, channels, pump, poly, importargs, f1, f1tag, f2, f2tag)
     return f
 
+def GlobalFWrapper( _fs, _ftags ):
+    def f(k, bits, crupt, sid, channels, pump, poly, importargs):
+        return GlobalFunctionalityWrapper(k, bits, crupt, sid, channels, pump, poly, importargs, _fs, _ftags)
+    return f
+
 class GlobalFunctionalityWrapper(ITM):
-    def __init__(self, k, bits, crupt, sid, channels, pump, poly, importargs, _f1, _f1tag, _f2, _f2tag):
+    def __init__(self, k, bits, crupt, sid, channels, pump, poly, importargs, _fs, _ftags):
         self.z2wid = {}
         self.p2wid = {}
         self.a2wid = {}
@@ -764,11 +773,9 @@ class GlobalFunctionalityWrapper(ITM):
         
         self.channels['w2_'] = GenChannel('w2_')
         self.handlers[self.channels['w2_']] = self._2w_msg
-        print('f1')
-        self.newFID(self.sid, _f1tag, _f1)
-        print('f2')
-        self.newFID(self.sid, _f2tag, _f2)
 
+        for _f_, _ftag_ in zip(_fs, _ftags):
+            self.newFID(self.sid, _ftag_, _f_)
 
     def _newFID(self, _2fid, f2_, sid, tag):
         ff2_ = GenChannel(('write-translate',sid,tag))
