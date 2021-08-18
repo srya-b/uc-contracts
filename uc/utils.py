@@ -41,3 +41,26 @@ def read_one(*cs):
     assert len(r) == 1
     r[0].reset()
     return r[0], r[0].read()
+
+def collectOutputs(ch, l, p):
+    def _f():
+        while True:
+            m = waits(a2z)
+            l.append(a2z.id + ': ' + str(m.msg))
+            print(a2z.id + ': ' + str(m.msg))
+            p.write('')
+    gevent.spawn(_f)
+
+def wrapwrite(wchan, outchan, f):
+    _chanout = GenChannel(('write-translate-{}'.format(prefix), prefix))
+    _chanin = GenChannel('read-{}'.format(prefix))
+
+    def _translate():
+        while True:
+            m = wait_for(_chanout)
+            #outchan.write( (prefix, m.msg), m.imp )
+            outchan.write( f(m) )
+        gevent.spawn(_translate)
+        return _chanin, _chanout
+    return _chanin,_chanout
+            

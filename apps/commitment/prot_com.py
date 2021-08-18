@@ -1,5 +1,5 @@
-from itm import UCProtocol
-from utils import waits, wait_for
+from uc.itm import UCProtocol
+from uc.utils import waits, wait_for
 import logging
 
 log = logging.getLogger(__name__)

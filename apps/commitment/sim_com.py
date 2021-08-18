@@ -1,4 +1,4 @@
-from itm import ITM
+from uc.itm import ITM
 
 class Sim_Com(ITM):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump, poly, importargs):

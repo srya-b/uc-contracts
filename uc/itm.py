@@ -21,7 +21,7 @@ class GenChannel(Event):
     def __init__(self, i=-1):
         Event.__init__(self)
         self._data = None
-        self.i = i
+        self.id = i
 
     def write(self, data, imp=0):
         if not self.is_set():
@@ -32,7 +32,7 @@ class GenChannel(Event):
             dump.dump()
 
     def __str__(self):
-        return "Channel id:{}".format(self.i)
+        return "Channel id:{}".format(self.id)
 
     def read(self): 
         return self._data
@@ -315,13 +315,13 @@ class UCWrappedFunctionality(ITM):
 
     def leak(self, msg, imp):
         #self.channels['f2w'].write( ('leak', msg), imp)
-        self.write('f2w', ('leak',msg), imp)
+        self.write('f2w', ((self.sid, 'F_Wrapper'), ('leak', msg)), imp)
         m = wait_for(self.channels['w2f']).msg
-        assert m == ('OK',)
+        assert m == ((self.sid, 'F_Wrapper'), ('OK',))
 
     def clock_round(self):
         m = self.write_and_wait_for(
-            ch='f2w', msg=('clock-round',),
+            ch='f2w', msg=((self.sid, 'F_Wrapper'), ('clock-round',)),
             imp=0, read='w2f'
         )
 
@@ -331,8 +331,8 @@ class UCWrappedFunctionality(ITM):
 
     def schedule(self, f, args, d):
         self.write_and_wait_expect(
-            ch='f2w', msg=('schedule', f, args, d),
-            read='w2f', expect=('OK',)
+            ch='f2w', msg=((self.sid, 'F_Wrapper'), ('schedule', f, args, d)),
+            read='w2f', expect=((self.sid, 'F_Wrapper'), ('OK',))
         )
 
 class UCWrappedProtocol(ITM):
@@ -359,6 +359,13 @@ class UCWrappedProtocol(ITM):
 
     def leak(self, msg):
         Exception("leak needs to be defined")
+    
+    def clock_round(self):
+        m = self.write_and_wait_for(
+            ch='p2w', msg=((self.sid, 'F_Wrapper'), ('clock-round',)),
+            imp=0, read='w2p'
+        )
+        return m.msg[1]
 
 class UCGlobalF(ITM):
     def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs):
@@ -414,20 +421,26 @@ class UCAsyncWrappedProtocol(UCWrappedProtocol):
         dump.dump() # should not generally happen
        
 
+def ideal_party(tof):
+    def _f(k, bits, sid, pid, channels, poly, pump, importargs):
+        return DummyParty(k, bits, sid, pid, channels, poly, pump, importargs, tof)
+    return _f
+
 class DummyParty(ITM):
-    def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
+    def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs, tof):
         self.handlers = {
             channels['z2p'] : self.env_msg,
             channels['a2p'] : self.adv_msg,
             channels['f2p'] : self.func_msg
         }
         ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
+        self.tof = tof
 
     def adv_msg(self, d):
         self.write('p2f', d.msg, d.imp)
 
     def env_msg(self, d):
-        self.write('p2f', d.msg, d.imp)
+        self.write('p2f', ( (self.sid, self.tof), d.msg), d.imp)
 
     def func_msg(self, d):
         #if self.isdishonest:
@@ -736,16 +749,17 @@ class WrappedProtocolWrapper(ProtocolWrapper):
     def wrapper_msg(self, d):
         msg = d.msg
         imp = d.imp
-        (sid,pid),msg = msg
+        sender, msg = msg
+        (sid, pid), msg = msg
         if self.is_dishonest(sid,pid):
-            self.write('p2a', ((sid,pid), msg), 0)#imp)
+            self.write('p2a', ((sid,pid), (sender, msg)), 0)
         else:
             _pid = self.getPID(self.w2pid, sid, pid)
-            _pid.write( msg, imp )
+            _pid.write((sender, msg), imp)
 
 def DuplexWrapper(f1, f1tag, f2, f2tag):
     def f(k, bits, crupt, sid, channels, pump, poly, importargs):
-        return GlobalFunctionalityWrapper(k , bits, crupt, sid, channels, pump, poly, importargs, f1, f1tag, f2, f2tag)
+        return GlobalFunctionalityWrapper(k, bits, crupt, sid, channels, pump, poly, importargs, [f1, f2], [f1tag, f2tag])
     return f
 
 def GlobalFWrapper( _fs, _ftags ):
@@ -793,17 +807,13 @@ class GlobalFunctionalityWrapper(ITM):
         return (_2ff, ff2_) 
     
     def getFID(self, _2pid, sid,tag):
-        if (sid,tag) in _2pid: return _2pid[sid,tag]
-        else:
-            cls = self.tagtocls[tag]
-            self.newFID(sid, tag, cls)
-            return _2pid[sid,tag]
+        return _2pid[sid,tag]
     
     def newFID(self, sid, tag, cls):
         _z2w,_w2z = self._newFID(self.z2wid, self.channels['w2z'], sid, tag)
         _p2w,_w2p = self._newFID(self.p2wid, self.channels['w2p'], sid, tag)
         _a2w,_w2a = self._newFID(self.a2wid, self.channels['w2a'], sid, tag)
-        _f2w,_w2f = self._newFID(self.a2wid, self.channels['w2f'], sid, tag)
+        _f2w,_w2f = self._newFID(self.f2wid, self.channels['w2f'], sid, tag)
         __2w,_w2_ = self._newFID(self._2wid, self.channels['w2_'], sid, tag)
 
         print('cls', cls)
@@ -829,9 +839,12 @@ class GlobalFunctionalityWrapper(ITM):
         fid.write( msg, imp )
 
     def func_msg(self, m):
+        print('fro', m.msg[0])
+        print('sid,tag', m.msg[1][0])
+        print('msg', m.msg[1][1])
         fro, ((sid,tag), msg) = m.msg
-        imp = d.imp
-        fid = getFID(self.f2wid, sid, tag)
+        imp = m.imp
+        fid = self.getFID(self.f2wid, sid, tag)
         fid.write( (fro, msg), imp )
 
     def _2w_msg(self, m):
@@ -903,6 +916,9 @@ class FunctionalityWrapper(ITM):
 
     def party_msg(self, m):
         print('Party msg:', m.msg)
+        print(m.msg[0])
+        print(m.msg[1][0])
+        print(m.msg[1][1])
         fro, ((sid,tag),msg) = m.msg
         imp = m.imp
         fid = self.getFID(self.p2fid, sid, tag)
@@ -952,7 +968,7 @@ class WrappedFunctionalityWrapper(FunctionalityWrapper):
 
     def wrapper_msg(self, m):
         print('wrapper message', m)
-        ((sid,tag),msg) = m.msg
+        (fro, ((sid, tag), msg)) = m.msg
         imp = m.imp
         fid = self.getFID(self.w2fid, sid, tag)
-        fid.write( msg, imp )
+        fid.write( (fro, msg), imp )

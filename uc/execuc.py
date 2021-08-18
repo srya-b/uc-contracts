@@ -3,7 +3,6 @@ import gevent
 from numpy.polynomial.polynomial import Polynomial
 import random, os
 
-#def createUC(fs, pwrapper, prot, adv):
 def createUC(k, fs, ps, adv, poly, importargs={}):
     f2p,p2f = GenChannel('f2p'),GenChannel('p2f')
     f2a,a2f = GenChannel('f2a'),GenChannel('a2f')
@@ -45,6 +44,7 @@ def createUC(k, fs, ps, adv, poly, importargs={}):
             crupt.add( (_s,_p))
 
         f = FunctionalityWrapper(k, rng, crupt, sid, func_channels, pump, poly, importargs)
+        #f = fs(k, rng, crupt, sid, -1, func_channels, pump, poly, importargs)
         for t,c in fs:
             f.newcls(t,c)
         gevent.spawn( f.run )
