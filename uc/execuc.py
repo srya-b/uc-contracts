@@ -1,4 +1,4 @@
-from uc.itm import ProtocolWrapper, FunctionalityWrapper, PartyWrapper, GenChannel, WrappedFunctionalityWrapper, WrappedProtocolWrapper, WrappedPartyWrapper
+from uc.itm import ProtocolWrapper, FunctionalityWrapper, GenChannel, WrappedFunctionalityWrapper, WrappedProtocolWrapper
 import gevent
 from numpy.polynomial.polynomial import Polynomial
 import random, os
@@ -43,10 +43,10 @@ def createUC(k, fs, ps, adv, poly, importargs={}):
         for _s,_p in crupt_msg[1:]:
             crupt.add( (_s,_p))
 
-        f = FunctionalityWrapper(k, rng, crupt, sid, func_channels, pump, poly, importargs)
-        #f = fs(k, rng, crupt, sid, -1, func_channels, pump, poly, importargs)
-        for t,c in fs:
-            f.newcls(t,c)
+        #f = FunctionalityWrapper(k, rng, crupt, sid, func_channels, pump, poly, importargs)
+        f = fs(k, rng, crupt, sid, -1, func_channels, pump, poly, importargs)
+        #for t,c in fs:
+        #    f.newcls(t,c)
         gevent.spawn( f.run )
         p = ps(k, rng, crupt, sid, party_channels, pump, poly, importargs)
 

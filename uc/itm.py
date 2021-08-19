@@ -427,25 +427,22 @@ def ideal_party(tof):
     return _f
 
 class DummyParty(ITM):
-    def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs, tof):
+    def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
         self.handlers = {
             channels['z2p'] : self.env_msg,
             channels['a2p'] : self.adv_msg,
             channels['f2p'] : self.func_msg
         }
         ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
-        self.tof = tof
 
     def adv_msg(self, d):
         self.write('p2f', d.msg, d.imp)
+        raise Exception('Adv cant write to an honest party')
 
     def env_msg(self, d):
-        self.write('p2f', ( (self.sid, self.tof), d.msg), d.imp)
+        self.write('p2f', d.msg, d.imp)
 
     def func_msg(self, d):
-        #if self.isdishonest:
-        #    self.write('p2a', d.msg, 0)
-        #else:
         fro,msg = d.msg
         self.write('p2z', msg, d.imp)
 
@@ -461,13 +458,6 @@ class WrappedDummyParty(ITM):
 
     def adv_msg(self, d):
         raise Exception("Adv can't write to an honest party")
-        #tag,msg = d.msg
-        #if tag == 'P2F':
-        #    self.write('p2f', msg, d.imp)
-        #elif tag == 'P2W':
-        #    self.write('p2w', msg, d.imp)
-        #else:
-        #    raise Exception("adv message without tag: {}".format(d.msg))
 
     def env_msg(self, d):
         self.write('p2f', d.msg, d.imp)
@@ -484,84 +474,84 @@ def partyWrapper(tof):
         return PartyWrapper(k, bits, crupt, sid, channels, pump, tof, poly, importargs)
     return f
 
-class PartyWrapper(ITM):
-    def __init__(self, k, bits, crupt, sid, channels, pump, tof, poly, importargs):
-        self.crupt = crupt
-        self.z2pid = {}
-        self.f2pid = {}
-        self.a2pid = {}
-        self.tof = tof  # TODO: for GUC this will be a problems, who to passthrough message to?
-        self.log = logging.getLogger('PartyWrapper')
-        self.handlers = {
-            channels['z2p'] : self.env_msg,
-            channels['f2p'] : self.func_msg,
-            channels['a2p'] : self.adv_msg,
-        }
-        ITM.__init__(self, k, bits, sid, None, channels, self.handlers, poly, pump, importargs)
-
-    def is_dishonest(self, sid, pid):
-        return (sid,pid) in self.crupt
-
-    def is_honest(self, sid, pid):
-        return not self.is_dishonest(sid,pid)
-
-    def _newPID(self, sid, pid, _2pid, p2_, tag):
-        pp2_ = GenChannel(('write-translate',sid,pid))
-        _2pp = GenChannel(('read',sid,pid)) # _ to 
-
-        def _translate():
-            while True:
-                r = gevent.wait(objects=[pp2_],count=1)
-                m = r[0].read()
-                pp2_.reset('pp2_ translate reset')
-                p2_.write( ((sid,pid), m.msg), m.imp )
-        gevent.spawn(_translate)
-
-        _2pid[sid,pid] = _2pp
-        return (_2pp, pp2_) 
-
-    def newPID(self, sid, pid):
-        print('[{}] Creating new party with pid: {}'.format(sid, pid))
-        _z2p,_p2z = self._newPID(sid, pid, self.z2pid, self.channels['p2z'], 'NA')
-        _f2p,_p2f = self._newPID(sid, pid, self.f2pid, self.channels['p2f'], 'NA')
-        _a2p,_p2a = self._newPID(sid, pid, self.a2pid, self.channels['p2a'], 'NA')
-        
-        itm = DummyParty(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p,'p2f':_p2f}, self.poly, self.pump, self.importargs)
-        gevent.spawn(itm.run)
-
-    def getPID(self, _2pid, sid, pid):
-        if (sid,pid) in _2pid: return _2pid[sid,pid]
-        else:
-            self.newPID(sid, pid)
-            return _2pid[sid,pid]
-   
-    def env_msg(self, d):
-        msg = d.msg
-        imp = d.imp
-        (sid,pid),msg = msg
-        if self.is_dishonest(sid,pid): raise Exception("Env writing to corrupt party: {}\n\tCruptset: {}".format((sid,pid), self.crupt))
-        _pid = self.getPID(self.z2pid,sid,pid)
-        _pid.write( ((sid,self.tof), msg), imp )
-
-    def func_msg(self, d):
-        msg = d.msg
-        imp = d.imp
-        print('func message', d)
-        fro,((sid,pid),msg) = msg
-        if self.is_dishonest(sid,pid):
-            self.write( 'p2a', ((sid,pid), msg), 0)#imp)
-        else:
-            _pid = self.getPID(self.f2pid,sid,pid)
-            _pid.write( (fro, msg), imp)
-
-    def adv_msg(self, d):
-        msg = d.msg
-        imp = d.imp
-        (sid,pid), msg = msg
-        if self.is_honest(sid,pid): raise Exception("adv writing to honest party")
-        #_pid = self.getPID(self.a2pid, sid, pid)
-        #_pid.write( msg, imp )
-        self.write( 'p2f', ((sid,pid), m.msg), m.imp )
+#class PartyWrapper(ITM):
+#    def __init__(self, k, bits, crupt, sid, channels, pump, tof, poly, importargs):
+#        self.crupt = crupt
+#        self.z2pid = {}
+#        self.f2pid = {}
+#        self.a2pid = {}
+#        self.tof = tof  # TODO: for GUC this will be a problems, who to passthrough message to?
+#        self.log = logging.getLogger('PartyWrapper')
+#        self.handlers = {
+#            channels['z2p'] : self.env_msg,
+#            channels['f2p'] : self.func_msg,
+#            channels['a2p'] : self.adv_msg,
+#        }
+#        ITM.__init__(self, k, bits, sid, None, channels, self.handlers, poly, pump, importargs)
+#
+#    def is_dishonest(self, sid, pid):
+#        return (sid,pid) in self.crupt
+#
+#    def is_honest(self, sid, pid):
+#        return not self.is_dishonest(sid,pid)
+#
+#    def _newPID(self, sid, pid, _2pid, p2_, tag):
+#        pp2_ = GenChannel(('write-translate',sid,pid))
+#        _2pp = GenChannel(('read',sid,pid)) # _ to 
+#
+#        def _translate():
+#            while True:
+#                r = gevent.wait(objects=[pp2_],count=1)
+#                m = r[0].read()
+#                pp2_.reset('pp2_ translate reset')
+#                p2_.write( ((sid,pid), m.msg), m.imp )
+#        gevent.spawn(_translate)
+#
+#        _2pid[sid,pid] = _2pp
+#        return (_2pp, pp2_) 
+#
+#    def newPID(self, sid, pid):
+#        print('[{}] Creating new party with pid: {}'.format(sid, pid))
+#        _z2p,_p2z = self._newPID(sid, pid, self.z2pid, self.channels['p2z'], 'NA')
+#        _f2p,_p2f = self._newPID(sid, pid, self.f2pid, self.channels['p2f'], 'NA')
+#        _a2p,_p2a = self._newPID(sid, pid, self.a2pid, self.channels['p2a'], 'NA')
+#        
+#        itm = DummyParty(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p,'p2f':_p2f}, self.poly, self.pump, self.importargs)
+#        gevent.spawn(itm.run)
+#
+#    def getPID(self, _2pid, sid, pid):
+#        if (sid,pid) in _2pid: return _2pid[sid,pid]
+#        else:
+#            self.newPID(sid, pid)
+#            return _2pid[sid,pid]
+#   
+#    def env_msg(self, d):
+#        msg = d.msg
+#        imp = d.imp
+#        (sid,pid),msg = msg
+#        if self.is_dishonest(sid,pid): raise Exception("Env writing to corrupt party: {}\n\tCruptset: {}".format((sid,pid), self.crupt))
+#        _pid = self.getPID(self.z2pid,sid,pid)
+#        _pid.write( ((sid,self.tof), msg), imp )
+#
+#    def func_msg(self, d):
+#        msg = d.msg
+#        imp = d.imp
+#        print('func message', d)
+#        fro,((sid,pid),msg) = msg
+#        if self.is_dishonest(sid,pid):
+#            self.write( 'p2a', ((sid,pid), msg), 0)#imp)
+#        else:
+#            _pid = self.getPID(self.f2pid,sid,pid)
+#            _pid.write( (fro, msg), imp)
+#
+#    def adv_msg(self, d):
+#        msg = d.msg
+#        imp = d.imp
+#        (sid,pid), msg = msg
+#        if self.is_honest(sid,pid): raise Exception("adv writing to honest party")
+#        #_pid = self.getPID(self.a2pid, sid, pid)
+#        #_pid.write( msg, imp )
+#        self.write( 'p2f', ((sid,pid), m.msg), m.imp )
 
 def protocolWrapper(prot):
     def f(k, bits, crupt, sid, channels, pump, poly, importargs):
@@ -632,13 +622,15 @@ class ProtocolWrapper(ITM):
     def func_msg(self, d):
         msg = d.msg
         imp = d.imp
-        (fro, ((sid,pid), msg)) = msg
+        #(fro, ((sid,pid), msg)) = msg
+        (sid,pid),msg = msg
         print('func message ot adversary, msg: {}'.format(msg))
         if self.is_dishonest(sid,pid):
             self.write('p2a', ((sid,pid), msg), 0)#imp)
         else:
             _pid = self.getPID(self.f2pid, sid, pid)
-            _pid.write( (fro, msg), imp )
+            #_pid.write( (fro, msg), imp )
+            _pid.write( msg, imp )
 
     def adv_msg(self, d):
         msg = d.msg
@@ -650,57 +642,57 @@ class ProtocolWrapper(ITM):
         #_pid.write( msg, imp )
         self.write( 'p2f', ((sid,pid), msg), imp)
 
-def wrappedPartyWrapper(tof):
-    def f(k, bits, crupt, sid, channels, pump, poly, importargs):
-        return WrappedPartyWrapper(k, bits, crupt, sid, channels, pump, tof, poly, importargs)
-    return f
-
-class WrappedPartyWrapper(PartyWrapper):
-    def __init__(self, k, bits, crupt, sid, channels, pump, tof, poly, importargs):
-        self.w2pid = {}
-        self.log = logging.getLogger('WrappedPartyWrapper')
-        PartyWrapper.__init__(self, k, bits, crupt, sid, channels, pump, tof, poly, importargs)
-        self.handlers[ channels['w2p'] ] = self.wrapper_msg
-
-    def newPID(self, sid, pid):
-        self.log.debug('\033[1m[Wrapped Party {}]\033[0m Creating new party with pid: {}'.format(sid, pid))
-        _z2p,_p2z = self._newPID(sid, pid, self.z2pid, self.channels['p2z'], 'NA')
-        _f2p,_p2f = self._newPID(sid, pid, self.f2pid, self.channels['p2f'], 'NA')
-        _a2p,_p2a = self._newPID(sid, pid, self.a2pid, self.channels['p2a'], 'NA')
-        _w2p,_p2w = self._newPID(sid, pid, self.w2pid, self.channels['p2w'], 'NA')
-        
-        itm = WrappedDummyParty(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p,'p2f':_p2f, 'w2p':_w2p,'p2w':_p2w}, self.poly, self.pump, self.importargs)
-        gevent.spawn(itm.run)
-
-    def getPID(self, _2pid, sid, pid):
-        if (sid,pid) in _2pid: return _2pid[sid,pid]
-        else:
-            assert sid == self.sid
-            self.newPID(sid, pid)
-            return _2pid[sid,pid]
-
-    def adv_msg(self, d):
-        msg = d.msg
-        imp = d.imp
-        (sid,pid), msg = msg
-        if self.is_honest(sid,pid): raise Exception("adv writing to an honest party: {}. Cruptset: {}".format((sid,pid), self.crupt))
-        tag,msg = msg
-        if tag == 'P2W':
-            self.write('p2w', ((sid,pid), msg), imp)
-        elif tag == 'P2F':
-            self.write('p2f', ((sid,pid), msg), imp)
-        else:
-            raise Exception("Not such tag over a2p: {}".format(tag))
-
-    def wrapper_msg(self, d):
-        msg = d.msg
-        imp = d.imp
-        (sid,pid),msg = msg
-        if self.is_dishonest(sid,pid):
-            self.write('p2a', ((sid,pid), msg), 0)#imp)
-        else:
-            _pid = self.getPID(self.w2pid, sid, pid)
-            _pid.write( msg, imp )
+#def wrappedPartyWrapper(tof):
+#    def f(k, bits, crupt, sid, channels, pump, poly, importargs):
+#        return WrappedPartyWrapper(k, bits, crupt, sid, channels, pump, tof, poly, importargs)
+#    return f
+#
+#class WrappedPartyWrapper(PartyWrapper):
+#    def __init__(self, k, bits, crupt, sid, channels, pump, tof, poly, importargs):
+#        self.w2pid = {}
+#        self.log = logging.getLogger('WrappedPartyWrapper')
+#        PartyWrapper.__init__(self, k, bits, crupt, sid, channels, pump, tof, poly, importargs)
+#        self.handlers[ channels['w2p'] ] = self.wrapper_msg
+#
+#    def newPID(self, sid, pid):
+#        self.log.debug('\033[1m[Wrapped Party {}]\033[0m Creating new party with pid: {}'.format(sid, pid))
+#        _z2p,_p2z = self._newPID(sid, pid, self.z2pid, self.channels['p2z'], 'NA')
+#        _f2p,_p2f = self._newPID(sid, pid, self.f2pid, self.channels['p2f'], 'NA')
+#        _a2p,_p2a = self._newPID(sid, pid, self.a2pid, self.channels['p2a'], 'NA')
+#        _w2p,_p2w = self._newPID(sid, pid, self.w2pid, self.channels['p2w'], 'NA')
+#        
+#        itm = WrappedDummyParty(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p,'p2f':_p2f, 'w2p':_w2p,'p2w':_p2w}, self.poly, self.pump, self.importargs)
+#        gevent.spawn(itm.run)
+#
+#    def getPID(self, _2pid, sid, pid):
+#        if (sid,pid) in _2pid: return _2pid[sid,pid]
+#        else:
+#            assert sid == self.sid
+#            self.newPID(sid, pid)
+#            return _2pid[sid,pid]
+#
+#    def adv_msg(self, d):
+#        msg = d.msg
+#        imp = d.imp
+#        (sid,pid), msg = msg
+#        if self.is_honest(sid,pid): raise Exception("adv writing to an honest party: {}. Cruptset: {}".format((sid,pid), self.crupt))
+#        tag,msg = msg
+#        if tag == 'P2W':
+#            self.write('p2w', ((sid,pid), msg), imp)
+#        elif tag == 'P2F':
+#            self.write('p2f', ((sid,pid), msg), imp)
+#        else:
+#            raise Exception("Not such tag over a2p: {}".format(tag))
+#
+#    def wrapper_msg(self, d):
+#        msg = d.msg
+#        imp = d.imp
+#        (sid,pid),msg = msg
+#        if self.is_dishonest(sid,pid):
+#            self.write('p2a', ((sid,pid), msg), 0)#imp)
+#        else:
+#            _pid = self.getPID(self.w2pid, sid, pid)
+#            _pid.write( msg, imp )
 
 def wrappedProtocolWrapper(prot):
     def f(k, bits, crupt, sid, channels, pump, poly, importargs):

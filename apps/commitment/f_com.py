@@ -25,6 +25,7 @@ class F_Com(UCFunctionality):
         self.state = 2
 
     def party_msg(self, m):
+        print('F_com: party msg:', m.msg)
         sender,msg = m.msg
         if self.state is 0 and sender == self.committer and msg[0] == 'commit':
             _,bit = msg

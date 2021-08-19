@@ -89,14 +89,15 @@ from uc.execuc import execUC
 from numpy.polynomial.polynomial import Polynomial
 from f_com import F_Com
 from sim_com import Sim_Com
-from uc.itm import ideal_party
+from uc.itm import ideal_party, DummyParty
 from uc.lemmaS import Lemma_Simulator, lemmaS
 
 if __name__=='__main__':
     treal = execUC(
         128,
         env2,
-        [('F_ro', Random_Oracle_and_Chan)],
+        #[('F_ro', Random_Oracle_and_Chan)],
+        Random_Oracle_and_Chan,
         protocolWrapper(Commitment_Prot),
         DummyAdversary,
         poly=Polynomial([1,2,3])
@@ -106,8 +107,10 @@ if __name__=='__main__':
     tideal = execUC(
         128,
         env2,
-        [('F_com',F_Com)],
-        protocolWrapper(ideal_party('F_com')),
+        #[('F_com',F_Com)],
+        F_Com,
+        #protocolWrapper(ideal_party('F_com')),
+        protocolWrapper(DummyParty),
         Sim_Com,
         #lemmaS(Sim_Com, Polynomial([1,2,3]), DummyAdversary),
         poly=Polynomial([0,1])
