@@ -230,15 +230,16 @@ class UCFunctionality(ITM):
         return not self.is_honest(sid, pid)
 
     def adv_msg(self, msg):
-        Exception("adv_msg needs to be defined")
+        if msg.msg[0]:
+            self.adv_msgs[msg.msg[0]](*msg.msg[1:])
+        else:
+            self.pump.write('')
 
     def party_msg(self, msg):
-        #Exception("func_msg needs to be defined")
         sender,msg = msg.msg
         if msg[0] in self.party_msgs:
             self.party_msgs[msg[0]](sender, *msg[1:])
         else:
-            print('no match:', msg)
             self.pump.write('')
 
     def env_msg(self, msg):
