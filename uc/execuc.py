@@ -1,4 +1,4 @@
-from uc.itm import ProtocolWrapper, FunctionalityWrapper, GenChannel, WrappedFunctionalityWrapper, WrappedProtocolWrapper
+from uc.itm import ProtocolWrapper, GenChannel, WrappedProtocolWrapper
 import gevent
 from numpy.polynomial.polynomial import Polynomial
 import random, os

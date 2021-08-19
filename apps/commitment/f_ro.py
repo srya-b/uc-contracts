@@ -7,31 +7,33 @@ class Random_Oracle_and_Chan(UCFunctionality):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump, poly, importargs):
         self.table = {}
         UCFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
+        self.party_msgs['hash'] = self.phash
+        self.party_msgs['send'] = self.send
 
-    def hash(self, s):
-        self.tick(1)
-        if s in self.table: return self.table[s]
-        else:
-            self.table[s] = self.sample(self.k)
-            return self.table[s]
-            
-    def send(self, to, msg, imp):
-        self.tick(1)
-        self.write('f2p', ((self.sid,to), ('send',msg)), imp)
+        self.adv_msgs['hash'] = self.ahash 
 
-    def party_msg(self, d):
-        sender, msg = d.msg
-        imp = d.imp
-        if msg[0] == 'ro':
-            self.write('f2p', (sender, ('ro', self.hash(msg[1]))))
-        elif msg[0] == 'send':
-            print('send msg', msg)
-            self.send(msg[1], msg[2], msg[3])
-        else:
-            self.pump.write('')
+    def _hash(self, x):
+        if x not in self.table:
+            self.table[x] = self.sample(self.k)
+        return self.table[x]
 
-    def adv_msg(self, d):
-        msg = d.msg
-        imp = d.imp
-        self.write('f2a', (self.hash(msg),))
+    def phash(self, sender, s):
+        self.write(
+            ch='f2p',
+            msg=(sender, self._hash(s))
+        )
+
+    def ahash(self, s):
+        self.write(
+            ch='f2a',
+            msg=self._hash(s)
+        )
+
+    def send(self, sender, to, msg, imp):
+        self.write(
+            ch='f2p',
+            msg=((self.sid,to), ('send', sender, msg)),
+            imp=imp
+        )
+
 

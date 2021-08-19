@@ -21,13 +21,13 @@ class Commitment_Prot(UCProtocol):
     def commit(self, bit):
         self.nonce = self.sample(self.k)
         self.bit = bit
-        self.write('p2f', ('ro', (self.nonce, self.bit)), 2)
+        #self.write('p2f', ('ro', (self.nonce, self.bit)), 2)
+        self.write('p2f', ('hash', (self.nonce, self.bit)), 2)
 
         m = wait_for(self.channels['f2p'])
-        _,msg = m.msg
         print('\nsending\n')
         
-        self.write('p2f', ('send', self.receiver, msg, 1), 1)
+        self.write('p2f', ('send', self.receiver, m.msg, 1), 1)
 
     def reveal(self):
         self.write('p2f', ('send', self.receiver, (self.nonce, self.bit), 0), 1)
@@ -43,10 +43,10 @@ class Commitment_Prot(UCProtocol):
 
     def check_commit(self, preimage):
         print('writing to ro', (self.sid,self.pid))
-        self.write('p2f', ('ro', preimage), 1)
+        #self.write('p2f', ('ro', preimage), 1)
+        self.write('p2f', ('hash', preimage), 1)
         m = wait_for(self.channels['f2p'])
-        _,msg = m.msg
-        assert self.commitment == msg
+        assert self.commitment == m.msg
         nonce,bit = preimage
         self.write('p2z', ('open', bit), 0)
 

@@ -6,24 +6,6 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     sid = ('one', 1, 2)
     static.write( (('sid',sid), ('crupt',)))
 
-    #transcript = []
-    #def _p2z():
-    #    while True:
-    #        m = waits(p2z)
-    #        transcript.append('p2z: ' + str(m.msg))
-    #        print('p2z: ' + str(m.msg))
-    #        pump.write('')
-
-    #def _a2z():
-    #    while True:
-    #        m = waits(a2z)
-    #        transcript.append('a2z:' + str(m.msg))
-    #        print('a2z:' + str(m.msg))
-    #        pump.write('')
-
-    #gevent.spawn(_p2z)
-    #gevent.spawn(_a2z)
-
     transript = []
     collectOutputs(_p2z, transcript, pump)
     collectOutputs(_a2z, transcript, pump)
@@ -96,7 +78,6 @@ if __name__=='__main__':
     treal = execUC(
         128,
         env2,
-        #[('F_ro', Random_Oracle_and_Chan)],
         Random_Oracle_and_Chan,
         protocolWrapper(Commitment_Prot),
         DummyAdversary,
@@ -107,9 +88,7 @@ if __name__=='__main__':
     tideal = execUC(
         128,
         env2,
-        #[('F_com',F_Com)],
         F_Com,
-        #protocolWrapper(ideal_party('F_com')),
         protocolWrapper(DummyParty),
         Sim_Com,
         #lemmaS(Sim_Com, Polynomial([1,2,3]), DummyAdversary),

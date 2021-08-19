@@ -13,25 +13,26 @@ class F_Com(UCFunctionality):
         self.bit = None
         self.state = 0 # wait to commit, 1: committed, 2: reveal
 
-    def commit(self, bit):
-        self.tick(1)
-        self.bit = bit
-        self.write('f2p', (self.receiver, 'commit'), 0)
-        self.state = 1
+        self.party_msgs['commit'] = self.commit
+        self.party_msgs['reveal'] = self.reveal
 
-    def reveal(self):
-        self.tick(1)
-        self.write('f2p', (self.receiver, ('open', self.bit)), 0)
-        self.state = 2
+    def commit(self, sender, bit):
+        if self.state is 0 and sender == self.committer:
+            print('commit')
+            self.bit = bit
+            self.write(
+                ch='f2p', 
+                msg=(self.receiver, ('commit'))
+            )
+            self.state = 1
+        else: self.pump.write('')
 
-    def party_msg(self, m):
-        print('F_com: party msg:', m.msg)
-        sender,msg = m.msg
-        if self.state is 0 and sender == self.committer and msg[0] == 'commit':
-            _,bit = msg
-            self.commit(bit)
-        elif self.state is 1 and sender == self.committer and msg[0] == 'reveal':
-            self.reveal()
-        else:
-            self.pump.write('')
+    def reveal(self, sender):
+        if self.state is 1 and sender == self.committer:
+            self.write(
+                ch='f2p',
+                msg=(self.receiver, ('open', self.bit))
+            )
+            self.state = 2
+        else: self.pump.write('')
 

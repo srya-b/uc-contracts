@@ -220,6 +220,9 @@ class UCFunctionality(ITM):
         }
         ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
 
+        self.party_msgs = {}
+        self.adv_msgs = {}
+
     def is_honest(self, sid, pid):
         return (sid,pid) in self.crupt
 
@@ -230,7 +233,13 @@ class UCFunctionality(ITM):
         Exception("adv_msg needs to be defined")
 
     def party_msg(self, msg):
-        Exception("func_msg needs to be defined")
+        #Exception("func_msg needs to be defined")
+        sender,msg = msg.msg
+        if msg[0] in self.party_msgs:
+            self.party_msgs[msg[0]](sender, *msg[1:])
+        else:
+            print('no match:', msg)
+            self.pump.write('')
 
     def env_msg(self, msg):
         Exception("env_msg needs to be defined")
@@ -846,121 +855,121 @@ class GlobalFunctionalityWrapper(ITM):
         fid = self.getFID(self._2wid, sid, tag)
         fid.write( (fro, msg), imp )
 
-class FunctionalityWrapper(ITM):
-    def __init__(self, k, bits, crupt, sid, channels, pump, poly, importargs):
-        self.z2fid = {}
-        self.p2fid = {}
-        self.a2fid = {}
-        self.f2fid = {}
-       
-        self.crupt = crupt
-        self.tagtocls = {}
-        self.handlers = {
-            channels['p2f'] : self.party_msg,
-            channels['a2f'] : self.adv_msg,
-            channels['z2f'] : self.env_msg,
-        }
-    
-        ITM.__init__(self, k, bits, sid, None, channels, self.handlers, poly, pump, importargs)
-
-
-    def getFID(self, _2pid, sid, tag):
-        return _2pid[sid,]
-
-    def newcls(self, tag, cls):
-        print('New cls', tag, cls)
-        self.tagtocls[tag] = cls
-
-    def _newFID(self, _2fid, f2_, sid, tag):
-        ff2_ = GenChannel(('write-translate',sid,tag))
-        _2ff = GenChannel(('read',sid,tag))
-
-        def _translate():
-            while True:
-                r = gevent.wait(objects=[ff2_],count=1)
-                m = r[0].read()
-                ff2_.reset()
-                f2_.write( ((sid,tag), m.msg), m.imp )
-        gevent.spawn(_translate) 
-        _2fid[sid,tag] = _2ff
-        return (_2ff, ff2_) 
-
-
-    '''Received a message for a functionality that doesn't exist yet
-    create a new functionality and add it to the wrapper'''
-    def newFID(self, sid, tag, cls, params=()):
-        _z2f,_f2z = self._newFID(self.z2fid, self.channels['f2z'], sid, tag)
-        _p2f,_f2p = self._newFID(self.p2fid, self.channels['f2p'], sid, tag)
-        _a2f,_f2a = self._newFID(self.a2fid, self.channels['f2a'], sid, tag)
-      
-        f = cls(self.k, self.bits, self.crupt, sid, -1, {'f2p':_f2p,'p2f':_p2f, 'f2a':_f2a,'a2f':_a2f, 'f2z':_f2z,'z2f':_z2f}, self.pump, self.poly, self.importargs)
-        gevent.spawn(f.run)
-
-    '''Get the relevant channel for the functionality with (sid,tag)
-    for example, if call is getFID(self, self.a2fid, sid, tag) this
-    means: get the a2f channel for the functionality.'''
-    def getFID(self, _2pid, sid,tag):
-        if (sid,tag) in _2pid: return _2pid[sid,tag]
-        else:
-            cls = self.tagtocls[tag]
-            self.newFID(sid, tag, cls)
-            return _2pid[sid,tag]
-
-    def party_msg(self, m):
-        print('Party msg:', m.msg)
-        print(m.msg[0])
-        print(m.msg[1][0])
-        print(m.msg[1][1])
-        fro, ((sid,tag),msg) = m.msg
-        imp = m.imp
-        fid = self.getFID(self.p2fid, sid, tag)
-        fid.write( (fro, msg), imp )
-
-    def adv_msg(self, m):
-        (sid,tag),msg = m.msg
-        imp = m.imp
-        fid = self.getFID(self.a2fid, sid, tag)
-        fid.write( msg, imp )
-
-    def env_msg(self, m):
-        raise Exception("env talking to F")
-
-class WrappedFunctionalityWrapper(FunctionalityWrapper):
-    #def __init__(self, k, bits, crupt, p2f, f2p, a2f, f2a, z2f, f2z, w2f, f2w, pump, poly, importargs):
-    def __init__(self, k, bits, crupt, sid, channels, pump, poly, importargs):
-        self.w2fid = {}
-        FunctionalityWrapper.__init__(self, k, bits, crupt, sid, channels, pump, poly, importargs)
-        self.handlers[channels['w2f']] = self.wrapper_msg
-
-    def newcls(self, tag, cls):
-        print('New cls', tag, cls)
-        self.tagtocls[tag] = cls
-
-    '''Received a message for a functionality that doesn't exist yet
-    create a new functionality and add it to the wrapper'''
-    def newFID(self, sid, tag, cls, params=()):
-        #print('\033[1m[{}]\033[0m Creating new Functionality with sid={}, pid={}'.format('FWrapper',sid, tag))
-        _z2f,_f2z = self._newFID(self.z2fid, self.channels['f2z'], sid, tag)
-        _p2f,_f2p = self._newFID(self.p2fid, self.channels['f2p'], sid, tag)
-        _a2f,_f2a = self._newFID(self.a2fid, self.channels['f2a'], sid, tag)
-        _w2f,_f2w = self._newFID(self.w2fid, self.channels['f2w'], sid, tag)
-      
-        f = cls(self.k, self.bits, self.crupt, sid, -1, {'f2p':_f2p, 'p2f':_p2f, 'f2a':_f2a, 'a2f':_a2f, 'f2z':_f2z, 'z2f':_z2f, 'f2w':_f2w, 'w2f':_w2f}, self.pump, self.poly, self.importargs)
-        gevent.spawn(f.run)
-
-    '''Get the relevant channel for the functionality with (sid,tag)
-    for example, if call is getFID(self, self.a2fid, sid, tag) this
-    means: get the a2f channel for the functionality.'''
-    def getFID(self, _2pid, sid,tag):
-        if (sid,tag) in _2pid: return _2pid[sid,tag]
-        else:
-            cls = self.tagtocls[tag]
-            self.newFID(sid, tag, cls)
-            return _2pid[sid,tag]
-
-    def wrapper_msg(self, m):
-        print('wrapper message', m)
-        (fro, ((sid, tag), msg)) = m.msg
-        imp = m.imp
-        fid = self.getFID(self.w2fid, sid, tag)
-        fid.write( (fro, msg), imp )
+#class FunctionalityWrapper(ITM):
+#    def __init__(self, k, bits, crupt, sid, channels, pump, poly, importargs):
+#        self.z2fid = {}
+#        self.p2fid = {}
+#        self.a2fid = {}
+#        self.f2fid = {}
+#       
+#        self.crupt = crupt
+#        self.tagtocls = {}
+#        self.handlers = {
+#            channels['p2f'] : self.party_msg,
+#            channels['a2f'] : self.adv_msg,
+#            channels['z2f'] : self.env_msg,
+#        }
+#    
+#        ITM.__init__(self, k, bits, sid, None, channels, self.handlers, poly, pump, importargs)
+#
+#
+#    def getFID(self, _2pid, sid, tag):
+#        return _2pid[sid,]
+#
+#    def newcls(self, tag, cls):
+#        print('New cls', tag, cls)
+#        self.tagtocls[tag] = cls
+#
+#    def _newFID(self, _2fid, f2_, sid, tag):
+#        ff2_ = GenChannel(('write-translate',sid,tag))
+#        _2ff = GenChannel(('read',sid,tag))
+#
+#        def _translate():
+#            while True:
+#                r = gevent.wait(objects=[ff2_],count=1)
+#                m = r[0].read()
+#                ff2_.reset()
+#                f2_.write( ((sid,tag), m.msg), m.imp )
+#        gevent.spawn(_translate) 
+#        _2fid[sid,tag] = _2ff
+#        return (_2ff, ff2_) 
+#
+#
+#    '''Received a message for a functionality that doesn't exist yet
+#    create a new functionality and add it to the wrapper'''
+#    def newFID(self, sid, tag, cls, params=()):
+#        _z2f,_f2z = self._newFID(self.z2fid, self.channels['f2z'], sid, tag)
+#        _p2f,_f2p = self._newFID(self.p2fid, self.channels['f2p'], sid, tag)
+#        _a2f,_f2a = self._newFID(self.a2fid, self.channels['f2a'], sid, tag)
+#      
+#        f = cls(self.k, self.bits, self.crupt, sid, -1, {'f2p':_f2p,'p2f':_p2f, 'f2a':_f2a,'a2f':_a2f, 'f2z':_f2z,'z2f':_z2f}, self.pump, self.poly, self.importargs)
+#        gevent.spawn(f.run)
+#
+#    '''Get the relevant channel for the functionality with (sid,tag)
+#    for example, if call is getFID(self, self.a2fid, sid, tag) this
+#    means: get the a2f channel for the functionality.'''
+#    def getFID(self, _2pid, sid,tag):
+#        if (sid,tag) in _2pid: return _2pid[sid,tag]
+#        else:
+#            cls = self.tagtocls[tag]
+#            self.newFID(sid, tag, cls)
+#            return _2pid[sid,tag]
+#
+#    def party_msg(self, m):
+#        print('Party msg:', m.msg)
+#        print(m.msg[0])
+#        print(m.msg[1][0])
+#        print(m.msg[1][1])
+#        fro, ((sid,tag),msg) = m.msg
+#        imp = m.imp
+#        fid = self.getFID(self.p2fid, sid, tag)
+#        fid.write( (fro, msg), imp )
+#
+#    def adv_msg(self, m):
+#        (sid,tag),msg = m.msg
+#        imp = m.imp
+#        fid = self.getFID(self.a2fid, sid, tag)
+#        fid.write( msg, imp )
+#
+#    def env_msg(self, m):
+#        raise Exception("env talking to F")
+#
+#class WrappedFunctionalityWrapper(FunctionalityWrapper):
+#    #def __init__(self, k, bits, crupt, p2f, f2p, a2f, f2a, z2f, f2z, w2f, f2w, pump, poly, importargs):
+#    def __init__(self, k, bits, crupt, sid, channels, pump, poly, importargs):
+#        self.w2fid = {}
+#        FunctionalityWrapper.__init__(self, k, bits, crupt, sid, channels, pump, poly, importargs)
+#        self.handlers[channels['w2f']] = self.wrapper_msg
+#
+#    def newcls(self, tag, cls):
+#        print('New cls', tag, cls)
+#        self.tagtocls[tag] = cls
+#
+#    '''Received a message for a functionality that doesn't exist yet
+#    create a new functionality and add it to the wrapper'''
+#    def newFID(self, sid, tag, cls, params=()):
+#        #print('\033[1m[{}]\033[0m Creating new Functionality with sid={}, pid={}'.format('FWrapper',sid, tag))
+#        _z2f,_f2z = self._newFID(self.z2fid, self.channels['f2z'], sid, tag)
+#        _p2f,_f2p = self._newFID(self.p2fid, self.channels['f2p'], sid, tag)
+#        _a2f,_f2a = self._newFID(self.a2fid, self.channels['f2a'], sid, tag)
+#        _w2f,_f2w = self._newFID(self.w2fid, self.channels['f2w'], sid, tag)
+#      
+#        f = cls(self.k, self.bits, self.crupt, sid, -1, {'f2p':_f2p, 'p2f':_p2f, 'f2a':_f2a, 'a2f':_a2f, 'f2z':_f2z, 'z2f':_z2f, 'f2w':_f2w, 'w2f':_w2f}, self.pump, self.poly, self.importargs)
+#        gevent.spawn(f.run)
+#
+#    '''Get the relevant channel for the functionality with (sid,tag)
+#    for example, if call is getFID(self, self.a2fid, sid, tag) this
+#    means: get the a2f channel for the functionality.'''
+#    def getFID(self, _2pid, sid,tag):
+#        if (sid,tag) in _2pid: return _2pid[sid,tag]
+#        else:
+#            cls = self.tagtocls[tag]
+#            self.newFID(sid, tag, cls)
+#            return _2pid[sid,tag]
+#
+#    def wrapper_msg(self, m):
+#        print('wrapper message', m)
+#        (fro, ((sid, tag), msg)) = m.msg
+#        imp = m.imp
+#        fid = self.getFID(self.w2fid, sid, tag)
+#        fid.write( (fro, msg), imp )
