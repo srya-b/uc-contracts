@@ -66,13 +66,11 @@ class Sim_Com(ITM):
         if self.is_dishonest(self.sid, self.receiver) and fro == (self.sid, self.receiver):
             if msg == 'commit' and self.receiver_state == 1:
                 self.receiver_random = self.sample(self.k)
-                #self.write('a2z', ('P2A', (fro, ((self.sid, 'F_ro'),('send', self.receiver_random)))))
-                self.write('a2z', ('P2A', (fro, ('send', self.receiver_random))))
+                self.write('a2z', ('P2A', (fro, ('send', ((self.sid,self.committer), self.receiver_random)))))
                 self.receiver_state = 2
             elif msg[0] == 'open' and self.receiver_state == 2 :
                 bit = msg[1]
-                #self.write('a2z', ('P2A', (fro, ((self.sid,'F_ro'),('send', (self.sample(self.k), bit))))))
-                self.write('a2z', ('P2A', (fro, ('send', (self.sample(self.k), bit)))))
+                self.write('a2z', ('P2A', (fro, ('send', ((self.sid,self.committer), (self.sample(self.k), bit))))))
                 self.receiver_state = 3
             else:
                 self.pump.write('')
