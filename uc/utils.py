@@ -45,9 +45,9 @@ def read_one(*cs):
 def collectOutputs(ch, l, p):
     def _f():
         while True:
-            m = waits(a2z)
-            l.append(a2z.id + ': ' + str(m.msg))
-            print(a2z.id + ': ' + str(m.msg))
+            m = waits(ch)
+            l.append(ch.id + ': ' + str(m.msg))
+            print('\n' + ch.id + ': ' + str(m.msg))
             p.write('')
     gevent.spawn(_f)
 

@@ -199,15 +199,25 @@ class UCProtocol(ITM):
             channels['a2p'] : self.adv_msg,
         }
         ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
+        self.env_msgs = {}
+        self.adv_msgs = {}
+        self.func_msgs = {}
 
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
 
     def func_msg(self, msg):
-        Exception("func_msg needs to be defined")
+        if m.msg[0] in self.func_msgs:
+            self.func_msgs[m.msg[0]](*m.msg[1:])
+        else:
+            self.pump.write('')
 
-    def env_msg(self, msg):
-        Exception("env_msg needs to be defined")
+    def env_msg(self, m):
+        if m.msg[0] in self.env_msgs:
+            print('msg', m.msg)
+            self.env_msgs[m.msg[0]](*m.msg[1:])
+        else:
+            self.pump.write('')
 
 class UCFunctionality(ITM):
     def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs):
@@ -229,9 +239,9 @@ class UCFunctionality(ITM):
     def is_dishonest(self, sid, pid):
         return not self.is_honest(sid, pid)
 
-    def adv_msg(self, msg):
-        if msg.msg[0]:
-            self.adv_msgs[msg.msg[0]](*msg.msg[1:])
+    def adv_msg(self, m):
+        if m.msg[0]:
+            self.adv_msgs[m.msg[0]](*m.msg[1:])
         else:
             self.pump.write('')
 
@@ -636,8 +646,10 @@ class ProtocolWrapper(ITM):
         (sid,pid),msg = msg
         print('func message ot adversary, msg: {}'.format(msg))
         if self.is_dishonest(sid,pid):
+            print('sending to a', msg)
             self.write('p2a', ((sid,pid), msg), 0)#imp)
         else:
+            print('sending to z', msg)
             _pid = self.getPID(self.f2pid, sid, pid)
             #_pid.write( (fro, msg), imp )
             _pid.write( msg, imp )

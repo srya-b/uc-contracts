@@ -22,7 +22,7 @@ class F_Com(UCFunctionality):
             self.bit = bit
             self.write(
                 ch='f2p', 
-                msg=(self.receiver, ('commit'))
+                msg=(self.receiver, 'commit')
             )
             self.state = 1
         else: self.pump.write('')

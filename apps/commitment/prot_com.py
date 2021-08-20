@@ -12,51 +12,59 @@ class Commitment_Prot(UCProtocol):
         self.iscommitter = pid == self.committer
         UCProtocol.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs) 
 
+        self.env_msgs['commit'] = self.commit
+        self.env_msgs['reveal'] = self.reveal
+        self.func_msgs['send'] = self.receive
+
         self.bit = None
         self.nonce = None
         self.state = 1
-
         self.commitment = -1
 
     def commit(self, bit):
-        self.nonce = self.sample(self.k)
-        self.bit = bit
-        #self.write('p2f', ('ro', (self.nonce, self.bit)), 2)
-        self.write('p2f', ('hash', (self.nonce, self.bit)), 2)
+        if self.bit is None and self.iscommitter:
+            self.nonce = self.sample(self.k)
+            self.bit = bit
+            m = self.write_and_wait_for(
+                ch='p2f', msg=('hash', (self.nonce, self.bit)),
+                read='f2p'
+            )
+            
+            self.write(
+                ch='p2f', 
+                #msg=('send', self.receiver, m.msg, 1)
+                msg=('send', self.receiver, m.msg, 0)
+            )
+        else: self.pump.write('')
 
-        m = wait_for(self.channels['f2p'])
-        print('\nsending\n')
-        
-        self.write('p2f', ('send', self.receiver, m.msg, 1), 1)
 
     def reveal(self):
-        self.write('p2f', ('send', self.receiver, (self.nonce, self.bit), 0), 1)
-
-    def env_msg(self, m):
-        if self.bit is None and self.iscommitter and m.msg[0] == 'commit':
-            _,bit = m.msg
-            self.commit(bit)
-        elif self.bit is not None and self.iscommitter and m.msg[0] == 'reveal':
-            self.reveal()
-        else:
-            self.pump.write('')
+        self.write(
+            ch='p2f',
+            msg=('send', self.receiver, (self.nonce, self.bit), 0)
+        )
 
     def check_commit(self, preimage):
-        print('writing to ro', (self.sid,self.pid))
-        #self.write('p2f', ('ro', preimage), 1)
-        self.write('p2f', ('hash', preimage), 1)
-        m = wait_for(self.channels['f2p'])
-        assert self.commitment == m.msg
+        m = self.write_and_wait_expect(
+            ch='p2f', msg=('hash', preimage),
+            read='f2p', expect=self.commitment
+        )
         nonce,bit = preimage
-        self.write('p2z', ('open', bit), 0)
-
-    def func_msg(self, m):
-        if not self.iscommitter and m.msg[0] == 'send' and self.state is 1:
-            self.channels['p2z'].write( 'commit', 0 )
-            self.commitment = m.msg[1]
+        self.write(
+            ch='p2z',
+            msg=('open', bit)
+        )
+ 
+    def receive(self, msg):
+        if self.iscommitter and self.state is 1:
+            self.write(
+                ch='p2z',
+                msg=('commit', 0)
+            )
+            self.commitment = msg
             self.state = 2
-        elif not self.iscommitter and m.msg[0] == 'send' and self.state is 2:
-            print('\n***checking commit**\n')
-            self.check_commit(m.msg[1])
+        elif not self.iscommitter and self.state is 2:
+            self.check_commit(msg)
         else:
             self.pump.write('')
+
