@@ -12,8 +12,8 @@ class Commitment_Prot(UCProtocol):
         self.iscommitter = pid == self.committer
         UCProtocol.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs) 
 
-        self.env_msgs['commit'] = self.commit
-        self.env_msgs['reveal'] = self.reveal
+        self.env_msgs['commit'] = self.env_commit
+        self.env_msgs['reveal'] = self.env_reveal
         self.func_msgs['send'] = self.receive
 
         self.bit = None
@@ -21,7 +21,7 @@ class Commitment_Prot(UCProtocol):
         self.state = 1
         self.commitment = -1
 
-    def commit(self, bit):
+    def env_commit(self, bit):
         if self.bit is None and self.iscommitter:
             self.nonce = self.sample(self.k)
             self.bit = bit
@@ -32,13 +32,12 @@ class Commitment_Prot(UCProtocol):
             
             self.write(
                 ch='p2f', 
-                #msg=('send', self.receiver, m.msg, 1)
                 msg=('send', self.receiver, m.msg, 0)
             )
         else: self.pump.write('')
 
 
-    def reveal(self):
+    def env_reveal(self):
         self.write(
             ch='p2f',
             msg=('send', self.receiver, (self.nonce, self.bit), 0)
@@ -55,11 +54,11 @@ class Commitment_Prot(UCProtocol):
             msg=('open', bit)
         )
  
-    def receive(self, msg):
-        if self.iscommitter and self.state is 1:
+    def receive(self, fro, msg):
+        if not self.iscommitter and self.state is 1:
             self.write(
                 ch='p2z',
-                msg=('commit', 0)
+                msg=('commit',)
             )
             self.commitment = msg
             self.state = 2

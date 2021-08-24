@@ -2,15 +2,17 @@ import gevent
 from uc.itm import ITM, UCAdversary, UCWrappedAdversary
 from gevent.queue import Queue, Channel, Empty
 from gevent.event import AsyncResult
+from collections import defaultdict
 
 class DummyAdversary(UCAdversary):
     '''Implementation of the dummy adversary. Doesn't do anything locally,
      just forwards all messages to the intended party. Z communicates with
     corrupt parties through dummy adversary'''
-    # TODO Dummy tracks v = in - (out + lengths of all inputs) halt if
-    #      v < k
     def __init__(self, k, bits, crupt, sid, pid, channels, pump, poly, importargs):
         UCAdversary.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
+        self.env_msgs['A2F'] = self.a2f
+        self.env_msgs['A2P'] = self.a2p
+        
     
     def __str__(self):
         return str(self.F)
@@ -18,23 +20,24 @@ class DummyAdversary(UCAdversary):
     def read(self, fro, msg):
         print(u'{:>20} -----> {}, msg={}'.format(str(fro), str(self), msg))
 
-    def env_msg(self, d):
-        msg = d.msg
-        imp = d.imp
-        if msg[0] == 'A2F':
-            t,msg,iprime = msg
-            self.write('a2f', msg, iprime )
-        elif msg[0] == 'A2P':
-            t,msg,iprime = msg
-            self.write('a2p', msg, iprime )
-        else: 
-            self.pump.write("dump")
+    def a2f(self, msg, iprime):
+        self.write(
+            ch='a2f',
+            msg=msg,
+            imp=iprime
+        )
+
+    def a2p(self, msg, iprime):
+        self.write(
+            ch='a2p',
+            msg=msg,
+            imp=iprime
+        )
 
     def party_msg(self, d):
         msg = d.msg
         imp = d.imp
         assert imp == 0
-        print('some party message at dummy adv')
         self.channels['a2z'].write( ('P2A', msg) )
 
     def func_msg(self, d):
