@@ -138,7 +138,6 @@ if __name__=='__main__':
         F_Com,
         protocolWrapper(DummyParty),
         Sim_Com,
-        #lemmaS(Sim_Com, Polynomial([1,2,3]), DummyAdversary),
         poly=Polynomial([0,1])
     )
 

@@ -110,7 +110,7 @@ t1 = execWrappedUC(
     env,
     [('G_Ledger', G_Ledger)],
     wrappedPartyWrapper('G_Ledger'),
-    Syn_FWrapper,
+    GlobalFWrapper([Syn_FWrapper], ['F_Wrapper']),
     DummyWrappedAdversary,
     None
 )

@@ -90,10 +90,10 @@ class Contract_Pay_and_bcast_and_channel(UCWrappedFunctionality):
         else:
             print('scheduling', msg)
             self.write('f2w',
-                ('schedule',
+                ( (self.sid, 'F_Wrapper'), ('schedule',
                 'route_party_msg', # execute function after scheduling
                 (_sender, msg, imp), # function arguments
-                self.delta), # scheduled delay
+                self.delta)), # scheduled delay
                 0 # import token
             )
             assert wait_for(self.channels['w2f']).msg == ('OK',)

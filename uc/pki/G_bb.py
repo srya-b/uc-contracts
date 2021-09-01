@@ -7,9 +7,9 @@ from ecdsa import NIST384p, VerifyingKey
 
 log = logging.getLogger(__name__)
 
-class G_bb(UCWrappedFunctionality):
+class G_bb(UCGlobalF):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump, poly, importargs):
-        UCWrappedFunctionality.__ini__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
+        UCGlobalF.__ini__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
 
         self.registered_keys = {}
         self.handlers[self.channels['_2w']] = self.gfunc_msg
@@ -30,11 +30,11 @@ class G_bb(UCWrappedFunctionality):
             self.schedule('sent_to', (sender, ('Retrieve', party, None)), 1)
         self.pump.write('')
 
-    def subroutine_receive(self, sender, party):
-        if sender in self.registered_keys:
-            return ('Retrieve', party, self.registered_keys[party])
+    def g_retrieve(self, sender, party):
+        if party in self.registered_keys:
+            self.write( 'w2_', (sender, ('Retrieve', party, self.registered_keys[party])), 1)
         else:
-            return ('Retrieve', party, None)
+            self.write( 'w2_', (sender, ('Retrieve', party, None)), 1)
 
     def party_msg(self, d):
         msg = d.msg
@@ -48,7 +48,7 @@ class G_bb(UCWrappedFunctionality):
         else:
             self.pump.write('')
 
-    def gcert_register(self, sender, party,  v):
+    def g_register(self, sender, party,  v):
         if sender not in self.registered_keys:
             self.leak( ('Registered', party, v) )
             self.registered_keys[party] = v 
@@ -56,15 +56,16 @@ class G_bb(UCWrappedFunctionality):
         else:
             raise Exception("G_cert should never register an already registered party")
 
-    def gfunc_msg(self, d):
+    def _2w_msg(self, d):
         msg = d.msg
         imp = d.imp
         sender,msg = msg
-    
+        
         if msg[0] == 'register':
-            self.gcert_register(sender, msg[1], msg[2])
+            self.g_register( sender, msg[1], msg[2] )
+        elif msg[0] == 'retrieve':
+            self.g_retrieve( self, msg[1] )
         else:
             self.pump.write('')
-            
             
 

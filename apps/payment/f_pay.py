@@ -1,10 +1,11 @@
-from uc.itm import UCWrappedFunctionality, ITM
+from uc.itm import ITM, GUCFunctionality
 from uc.utils import wait_for, waits
 import gevent
 import logging
 
-class F_Pay(UCWrappedFunctionality):
-    def __init__(self, k, buts, crupt, sid, pid, channels, pump, poly, importargs):
+class F_Pay(GUCFunctionality):
+    def __init__(self, k, buts, crupt, sid, pid, channels, pump, poly, importargs, gsid, ssids):
+        GUCFunctionality.__init__(self, k, buts, crupt, sid, pid, channels, poly, pump, importargs, gsid, ssids)
         self.ssid = sid[0]
         self.P_s = sid[1]
         self.P_r = sid[2]
@@ -13,12 +14,17 @@ class F_Pay(UCWrappedFunctionality):
         self.delta = sid[5]
         self.crupt = crupt
         self.r = 3
-        UCWrappedFunctionality.__init__(self, k, buts, crupt, sid, pid, channels, poly, pump, importargs)
 
         self.flag = "OPEN"
 
     def is_honest(self, sid, sender):
         return True
+
+    def leak(self, msg, imp):
+        self.write_and_wait_expect(
+            ch='f2g', msg=('leak', msg), imp=imp,
+            read='g2f', expect=(self.gsid, (self.sid, ('OK',)))
+        )
 
     def process_pay(self, v):
         if self.flag == "OPEN" and self.b_s >= v:
@@ -32,8 +38,8 @@ class F_Pay(UCWrappedFunctionality):
         if self.flag == "OPEN" and self.b_s >= v:
             self.leak( ("pay", v), 0 )
             self.write_and_wait_expect(
-                ch='f2w', msg=('schedule', 'process_pay', (v,), 1),
-                read='w2f', expect=('OK',)
+                ch='f2g', msg=('schedule', 'process_pay', (v,), 1),
+                read='g2f', expect=(self.gsid, (self.sid, ('OK',)))
             )
             self.write( 'f2p', ((self.sid, self.P_s), 'OK') )
         else:
@@ -49,13 +55,13 @@ class F_Pay(UCWrappedFunctionality):
             msg = ('close', self.b_s, self.b_r)
             self.leak( ("sendclose", self.P_s), 0 )
             self.write_and_wait_expect(
-                ch='f2w', msg=('schedule', 'send_to', (self.P_s, msg, 0), 1),
-                read='w2f', expect=('OK',)
+                ch='f2g', msg=('schedule', 'send_to', (self.P_s, msg, 0), 1),
+                read='g2f', expect=('OK',)
             )
             self.leak( ("sendclose", self.P_r), 0 )
             self.write_and_wait_expect(
-                ch='f2w', msg=('schedule', 'send_to', (self.P_r, msg, 0), 1),
-                read='w2f', expect=('OK',)
+                ch='f2g', msg=('schedule', 'send_to', (self.P_r, msg, 0), 1),
+                read='g2f', expect=('OK',)
             )
         self.pump.write('')
 
@@ -63,14 +69,14 @@ class F_Pay(UCWrappedFunctionality):
         self.leak( ("close", sender), 0 )
         if sender == self.P_r or self.is_honest(self.sid, self.P_s):
             self.write_and_wait_expect(
-                ch='f2w', msg=('schedule', 'process_close', (), self.delta),
-                read='w2f', expect=('OK',)
+                ch='f2g', msg=('schedule', 'process_close', (), self.delta),
+                read='g2f', expect=(self.gsid, (self.sid, ('OK',)))
             )
             self.write( 'f2p', ((self.sid, sender), 'OK') )
         else:
             self.write_and_wait_expect(
-                ch='f2w',  msg=('schedule', 'process_close', (), self.r * self.delta),
-                read='w2f', expect=('OK',)
+                ch='f2g',  msg=('schedule', 'process_close', (), self.r * self.delta),
+                read='g2f', expect=(self.gsid, (self.sid, ('OK',)))
             )
             self.write('f2p', ((self.sid, self.P_s), 'OK') )
 
@@ -108,9 +114,9 @@ class F_Pay(UCWrappedFunctionality):
 
 from uc.execuc import createWrappedUC, createWrappedSimulation
 from contract_pay import Contract_Pay_and_bcast_and_channel
-from uc.itm import wrappedProtocolWrapper
+#from uc.itm import wrappedProtocolWrapper
 from uc.syn_ours import Syn_FWrapper
-from uc.adversary import DummyWrappedAdversary
+#from uc.adversary import DummyWrappedAdversary
 
 def payment_simulator(prot):
     def f(k, bits, crupt, sid, pid, channels, pump, poly, importargs):

@@ -14,7 +14,11 @@ class Syn_Channel(UCWrappedFunctionality):
         self.leakbuffer = None
 
     def leak(self, msg):
-        self.write('f2w', ('leak', msg) )
+        #self.write('f2w', ('leak', msg) )
+        self.write_and_wait_expect(
+            ch='f2w', msg=((self.sid, 'F_Wrapper'),('leak', msg)),
+            read='w2f', expect=('OK',)
+        )
 
     def send_message(self, msg, imp):
         self.write('f2p', (self.receiver, msg), imp)
@@ -23,8 +27,12 @@ class Syn_Channel(UCWrappedFunctionality):
         if sender == self.sender:
             print('\n\nParty send.', 'msg:', msg)
             #self.write( 'f2w', ('schedule', self.send_message, (msg,imp), self.delta), 0)
-            self.write('f2w', ('schedule', 'send_message', (msg, imp), self.delta), 0)
-            assert wait_for(self.channels['w2f']).msg == ('OK',)
+            #self.write('f2w', ('schedule', 'send_message', (msg, imp), self.delta), 0)
+            #assert wait_for(self.channels['w2f']).msg == ('OK',)
+            self.write_and_wait_expect(
+                ch='f2w', msg=((self.sid, 'F_Wrapper'),('schedule', 'send_message', (msg, imp), self.delta, 0)),
+                read='w2f', expect=('OK',)
+            )
             self.leak( msg )
             self.write('f2p', (self.sender, 'OK'))
         else:

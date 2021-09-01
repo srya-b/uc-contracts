@@ -1,5 +1,5 @@
 import gevent
-from uc.itm import ITM, UCGlobalF
+from uc.itm import ITM, GUCGlobalFunctionality #UCGlobalF
 from collections import defaultdict
 from numpy.polynomial.polynomial import Polynomial
 import logging
@@ -58,8 +58,12 @@ Adversary Interface
 -- ``delay''      : There is a
 -- 
 '''
-class Syn_FWrapper(UCGlobalF):
-    def __init__(self, k, bits, crupt, sid, tag, channels, pump, poly, importargs):
+#class Syn_FWrapper(UCGlobalF):
+class Syn_FWrapper(GUCGlobalFunctionality):
+    def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs):
+        #UCGlobalF.__init__(self, k, bits, crupt, 'wrap', 'me', channels, poly, pump, importargs)
+        GUCGlobalFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
+
         self.curr_round = 1
         self.delay = 0
         self.todo = { self.curr_round: [] }
@@ -69,41 +73,57 @@ class Syn_FWrapper(UCGlobalF):
         # in future rounds
         #self.adv_callme(self.curr_round)
         self.total_queue_ever = 0
-        UCGlobalF.__init__(self, k, bits, crupt, 'wrap', 'me', channels, poly, pump, importargs)
-        self.handlers[self.channels['_2w']] = self._2w_msg
+        #self.handlers[self.channels['_2w']] = self._2w_msg
 
-    def party_clock_round(self, sender):
-        self.write( 'w2p', (sender, self.curr_round))
+        self.adv_msgs['delay'] = self.adv_delay
+        self.adv_msgs['exec'] = self.adv_execute
+        self.adv_msgs['callme'] = self.adv_callme
+        self.adv_msgs['get-leaks'] = self.adv_get_leaks
+        
+        self.party_msgs['schedule'] = self.pschedule 
+        self.party_msgs['clock-round'] = self.party_clock_round
+        #self.party_msgs['callme'] = self.party_callme 
+        self.party_msgs['leak'] = self.party_leak
+
+        self.env_msgs['poll'] = self.poll
+        #self.env_msgs['schedule'] = TODO
+
+        self.func_msgs['schedule'] = self.fschedule
+        self.func_msgs['leak'] = self.func_leak
+        self.func_msgs['clock-round'] = self.func_clock_round
+
+    def party_clock_round(self, imp, sender):
+        self.write( 'g2p', (sender, ('round', self.curr_round)) )
+
+    def func_clock_round(self, imp, sender):
+        self.write( 'g2p', (sender, ('round', self.curr_round)) )
 
     def func_clock_round(self):
-        self.write( 'w2f', self.curr_round )
+        self.write( 'g2f', self.curr_round )
 
     def print_todo(self):
         p_dict = {}
         for k in self.todo:
             o = []
             for sender, ch, f,args in self.todo[k]:
-                #o.append((f.__name__, args))
                 o.append((f, args))
             p_dict[k] = o
         print('\n\033[1m', str(p_dict), '\033[0m\n')
 
-    def adv_callme(self, r):
+    def adv_callme(self, imp, r):
         if r not in self.todo: self.todo[r] = []
-        #self.todo[r].append( (lambda: self.w2a.write(('shoutout',)), ()) )
-        #self.todo[r].append( (lambda: self.write('w2a', ('shoutout',)), ()) )
-        self.todo[r].append( ('adv', 'w2a', 'shoutout', ()) )
+        self.todo[r].append( ('adv', 'g2a', 'shoutout', ()) )
         self.total_queue_ever += 1
         self.print_todo()
         self.delay += 1
-        self.write('w2a', ('OK',))
+        self.write('g2a', ('OK',))
 
     def _2wschedule(self, sender, f, args, delta, imp):
         log.debug('\033[1mFschedule\033[0m delta: {}, import: {}, sender: {}'.format(imp, delta, sender))
         # add to the runqueue
         if self.curr_round+delta not in self.todo:
             self.todo[self.curr_round + delta] = []
-        self.todo[self.curr_round + delta].append( (sender, 'w2_', f,args) )
+        self.todo[self.curr_round + delta].append( (sender, 'g2_', f,args) )
         self.total_queue_ever += 1
         log.debug('total_queue_ever: {}'.format(self.total_queue_ever))
         
@@ -116,33 +136,36 @@ class Syn_FWrapper(UCGlobalF):
         # add to the delay and return control to sender
         self.delay += 1
         print('done scheduling')
-        self.write('w2_', (sender, ('OK',)) )
+        self.write('g2_', (sender, ('OK',)) )
 
-    def fschedule(self, sender, f, args, delta, imp):
+    #def fschedule(self, sender, f, args, delta, imp):
+    def fschedule(self, imp, sender, f, args, delta):
         log.debug('\033[1mFschedule\033[0m delta: {}, import: {}, sender: {}'.format(imp, delta, sender))
         # add to the runqueue
         if self.curr_round+delta not in self.todo:
             self.todo[self.curr_round + delta] = []
-        self.todo[self.curr_round + delta].append( (sender, 'w2f', f,args) )
+        self.todo[self.curr_round + delta].append( (sender, 'g2f', f,args) )
         self.total_queue_ever += 1
         log.debug('total_queue_ever: {}'.format(self.total_queue_ever))
         
         # leaks the schedule
         idx = len(self.todo[self.curr_round + delta])-1
         r = self.curr_round + delta
-        self.leaks.append( (sender, ('schedule', r, idx, f), 0) )
+        #self.leaks.append( (sender, ('schedule', r, idx, f), 0) )
+        self.leaks.append( ( ('schedule', r, idx, f), 0) )
 
         self.print_todo()
         # add to the delay and return control to sender
         self.delay += 1
-        self.write('w2f', (sender, ('OK',)) )
+        self.write('g2f', (sender, ('OK',)) )
 
-    def pschedule(self, sender, f, args, delta):
+   # def pschedule(self, sender, f, args, delta):
+    def pschedule(self, imp, sender, f, args, delta):
         log.debug('\033[1mPschedule\033[0m {} {}'.format(sender, delta))
         # add to runqueue
         if self.curr_round+delta not in self.todo:
             self.todo[self.curr_round + delta] = []
-        self.todo[self.curr_round + delta].append( (sender, 'w2p', f,args) )
+        self.todo[self.curr_round + delta].append( (sender, 'g2p', f,args) )
         self.total_queue_ever += 1
         log.debug('total_queue_ever: {}'.format(self.total_queue_ever))
 
@@ -153,17 +176,17 @@ class Syn_FWrapper(UCGlobalF):
     
         # add to delay and return control to sender
         self.delay += 1
-        self.write('w2p', (sender, ('OK',)) )
+        self.write('g2p', (sender, ('OK',)) )
 
-    def adv_delay(self, t, imp):
+    def adv_delay(self, imp, t):
         self.assertimp(imp, t)
         self.delay += t
-        self.write('w2a', ('OK',) )
+        self.write('g2a', ('OK',) )
 
-    def adv_execute(self, r, i):
+    def adv_execute(self, imp, r, i):
         sender, ch, f,args = self.todo[r].pop(i)
         self.print_todo()
-        if ch == 'w2a':
+        if ch == 'g2a':
             self.write( ch, ('exec', f, args) )
         else:
             self.write( ch, (sender, ('exec', f, args)) )
@@ -175,6 +198,14 @@ class Syn_FWrapper(UCGlobalF):
                 return r
         return self.curr_round
 
+    def party_leak(self, imp, sender, msg):
+        self.leaks.append( (sender, msg, imp) )
+        self.write( 'g2p', (semder, ('OK',)))
+
+    def func_leak(self, imp, sender, msg):
+        self.leaks.append( (sender, msg, imp) )
+        self.write('g2f', (sender, ('OK',)))
+
     def leak(self, rch, sender, msg, imp):
         log.debug("Leaking information, sender={}, msg={}".format(sender, msg))
         self.leaks.append( (sender, msg, imp) )
@@ -182,43 +213,42 @@ class Syn_FWrapper(UCGlobalF):
 
     def poll(self, imp):
         self.assertimp(imp, 1)
-        print('f_wrapper:: poll message from z:: delay: {}'.format(self.delay))
         if self.delay > 0:
             self.delay -= 1
-            self.write('w2a', ('poll',) )
+            self.write('g2a', ('poll',) )
         else:
             self.curr_round = self.next_round()
             r = self.curr_round
-            if len(self.todo[r]): self.adv_execute(r, 0)
-            else: self.pump.write("dump")#dump.dump()
-
-    def clock_round(self, sender, channel):
-        self.write( channel, (sender, ('round', self.curr_round)) )
-
-    def env_msg(self, d):
-        msg = d.msg
-        imp = d.imp
-        if msg[0] == 'poll':
-            self.poll(imp)
-        else:
-            sender,msg = msg
-            if msg[0] == 'schedule':
-                self.pschedule(sender, msg[1], msg[2], msg[3], imp)
+            if len(self.todo[r]): self.adv_execute(0, r, 0)
             else: self.pump.write("dump")
 
-    def func_msg(self, d):
-        msg = d.msg
-        imp = d.imp
-        sender,msg = msg
-        if msg[0] == 'schedule':
-            self.fschedule(sender, msg[1], msg[2], msg[3], imp)
-        elif msg[0] == 'leak':
-            self.leak( 'w2f', sender, msg[1], imp)
-        elif msg[0] == 'clock-round':
-            self.write( 'w2f', (sender, (('round', self.curr_round))) )
-        else:
-            print('dump')
-            self.pump.write("dump")
+    def clock_round(self, imp, sender, channel):
+        self.write( channel, (sender, ('round', self.curr_round)) )
+
+    #def env_msg(self, d):
+    #    msg = d.msg
+    #    imp = d.imp
+    #    if msg[0] == 'poll':
+    #        self.poll(imp)
+    #    else:
+    #        sender,msg = msg
+    #        if msg[0] == 'schedule':
+    #            self.pschedule(sender, msg[1], msg[2], msg[3], imp)
+    #        else: self.pump.write("dump")
+
+    #def func_msg(self, d):
+    #    msg = d.msg
+    #    imp = d.imp
+    #    sender,msg = msg
+    #    if msg[0] == 'schedule':
+    #        self.fschedule(sender, msg[1], msg[2], msg[3], imp)
+    #    elif msg[0] == 'leak':
+    #        self.leak( 'w2f', sender, msg[1], imp)
+    #    elif msg[0] == 'clock-round':
+    #        self.write( 'w2f', (sender, (('round', self.curr_round))) )
+    #    else:
+    #        print('dump')
+    #        self.pump.write("dump")
 
     def _2w_msg(self, d):
         msg = d.msg 
@@ -231,29 +261,31 @@ class Syn_FWrapper(UCGlobalF):
             self.pump.write('')
 
     # TODO revisit this to see if adversary can delay callme actions
-    def party_callme(self, r):
-        if r not in self.todo: self.todo[r] = []
-        #self.todo[r].append( (lambda: self.w2a.write(('shotout',)), ()) )
-        self.todo[r].append( (lambda: self.write('w2a', ('shotout',)), ()) )
-        #self.w2p.write( ('OK',) )
-        self.write('w2p', ('OK',) )
+    #def party_callme(self, imp, sender, r):
+    #    if r not in self.todo: self.todo[r] = []
+    #    #self.todo[r].append( (lambda: self.w2a.write(('shotout',)), ()) )
+    #    #self.todo[r].append( (lambda: self.write('w2a', ('shotout',)), ()) )
+    #    self.todo[r].append( (lambda: self.write('g2p', (('shotout',)), ()) )
+    #    #self.w2p.write( ('OK',) )
+    #    self.write('w2p', ('OK',) )
 
-    def party_msg(self, d):
-        msg = d.msg
-        imp = d.imp
-        sender,msg = msg
-        if msg[0] == 'schedule':
-            self.pschedule(msg[1], msg[2], msg[3])
-        elif msg[0] == 'clock-round':
-            self.clock_round(sender, 'w2p')
-        elif msg[0] == 'callme':
-            self.party_callme(sender)
-        elif msg[0] == 'leak':
-            self.leak( 'w2p', sender, msg, imp)
-        else:
-            #dump.dump()
-            self.pump.write("dump")
-    def adv_get_leaks(self):
+    #def party_msg(self, d):
+    #    msg = d.msg
+    #    imp = d.imp
+    #    sender,msg = msg
+    #    if msg[0] == 'schedule':
+    #        self.pschedule(msg[1], msg[2], msg[3])
+    #    elif msg[0] == 'clock-round':
+    #        self.clock_round(sender, 'w2p')
+    #    elif msg[0] == 'callme':
+    #        self.party_callme(sender)
+    #    elif msg[0] == 'leak':
+    #        self.leak( 'w2p', sender, msg, imp)
+    #    else:
+    #        #dump.dump()
+    #        self.pump.write("dump")
+    
+    def adv_get_leaks(self, imp):
         total_import = 0
         output = []
         for leak in self.leaks:
@@ -261,21 +293,21 @@ class Syn_FWrapper(UCGlobalF):
             total_import += imp
             output.append( (sender, msg, imp) )
         #self.channels['w2a'].write( output, total_import )
-        self.write( 'w2a', output, total_import )
+        self.write( 'g2a', output, total_import )
         self.leaks = []
 
-    def adv_msg(self, d):
-        msg = d.msg
-        imp = d.imp
-        #print('msg', msg)
-        if msg[0] == 'delay':
-            self.adv_delay(msg[1], imp)
-        elif msg[0] == 'exec':
-            self.adv_execute(msg[1], msg[2])
-        elif msg[0] == 'callme':
-            self.adv_callme(msg[1])
-        elif msg[0] == 'get-leaks':
-            self.adv_get_leaks()
-        else:
-            self.pump.write("dump")
+    #def adv_msg(self, d):
+    #    msg = d.msg
+    #    imp = d.imp
+    #    #print('msg', msg)
+    #    if msg[0] == 'delay':
+    #        self.adv_delay(msg[1], imp)
+    #    elif msg[0] == 'exec':
+    #        self.adv_execute(msg[1], msg[2])
+    #    elif msg[0] == 'callme':
+    #        self.adv_callme(msg[1])
+    #    elif msg[0] == 'get-leaks':
+    #        self.adv_get_leaks()
+    #    else:
+    #        self.pump.write("dump")
 

@@ -28,18 +28,23 @@ class Syn_Bracha_Protocol(UCWrappedProtocol):
     def except_me(self):
         return [p for p in self.parties if p != self.pid]
 
-    def clock_round(self):
-        self.write('p2w', ('clock-round',), 0)
-        rnd = wait_for(self.channels['w2p']).msg[1]
-        return rnd
+    #def clock_round(self):
+    #    self.write('p2w', ('clock-round',), 0)
+    #    rnd = wait_for(self.channels['w2p']).msg[1]
+    #    return rnd
 
     def send_msg(self, to, msg, imp):
         r = self.clock_round()
         fchannelsid = (self.ssid, (self.sid,self.pid), (self.sid,to), r, self.delta)
         log.debug("\nsending import: {}".format(imp))
-        self.write('p2f', ((fchannelsid,'F_chan'), ('send',msg)), imp)
-        m = wait_for(self.channels['f2p'])
-        assert m.msg[1] == 'OK', str(m)
+        #self.write('p2f', ((fchannelsid,'F_chan'), ('send',msg)), imp)
+        #m = wait_for(self.channels['f2p'])
+        #assert m.msg[1] == 'OK', str(m)
+
+        self.write_and_wait_expect(
+            ch='p2f', msg=((fchannelsid, 'F_chan'), ('send', msg)), imp=imp,
+            read='f2p', expect=('OK',)
+        )
 
     def val_msg(self, sender, inp, imp):
         # Only if you haven't already prepared a value should you accept a VAL

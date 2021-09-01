@@ -11,7 +11,8 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     b_s = 5
     b_r = 8
     sid = ('sid', P_s, P_r, b_s, b_r, delta)
-    static.write( (('sid', sid), ('crupt',)) )
+    gsid = '#sid'
+    static.write( (('sid', sid), ('gsid', gsid), ('ssids',{}),  ('crupt',)) )
 
     transcript = []
     def _a2z():
@@ -36,35 +37,35 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     waits(pump)
 
     # Should suceed
-    z2p.write( ((sid,P_s), ('pay', 3)) )
-    waits(pump)
-
-    z2w.write( ('poll',), 1 )
-    waits(pump)
-
-    # P_r will output ("pay", 3)
-    z2w.write( ('poll',), 1 )
-    waits(pump)
-
-    z2p.write( ((sid,P_s), ('balance',)) )
-    waits(pump)
-
-    # shoul fail
-    z2p.write( ((sid, P_s), ('pay', 10)) )
-    waits(pump)
-
-    z2w.write( ('poll',), 1 )
-    waits(pump)
-
-    z2w.write( ('poll',), 1 )
-    waits(pump)
-
-    z2p.write( ((sid, P_s), ('balance',)) )
-    waits(pump)
-
-    # close operation
-    z2p.write( ((sid, P_s), ('close',)) )
-    waits(pump)
+#    z2p.write( ((sid,P_s), ('pay', 3)) )
+#    waits(pump)
+#
+#    z2w.write( ('poll',), 1 )
+#    waits(pump)
+#
+#    # P_r will output ("pay", 3)
+#    z2w.write( ('poll',), 1 )
+#    waits(pump)
+#
+#    z2p.write( ((sid,P_s), ('balance',)) )
+#    waits(pump)
+#
+#    # shoul fail
+#    z2p.write( ((sid, P_s), ('pay', 10)) )
+#    waits(pump)
+#
+#    z2w.write( ('poll',), 1 )
+#    waits(pump)
+#
+#    z2w.write( ('poll',), 1 )
+#    waits(pump)
+#
+#    z2p.write( ((sid, P_s), ('balance',)) )
+#    waits(pump)
+#
+#    # close operation
+#    z2p.write( ((sid, P_s), ('close',)) )
+#    waits(pump)
 
     # for _ in range(18):
     #     z2w.write( ('poll',), 1 )
@@ -83,20 +84,24 @@ def env(k, static, z2p, z2f, z2a, z2w, a2z, p2z, f2z, w2z, pump):
     return transcript
 
 
-from uc.itm import wrappedPartyWrapper
-from uc.adversary import DummyWrappedAdversary
+from uc.itm import GUCProtocol, gucProtocolWrapper, GUCDummyParty
+from uc.adversary import DummyGUCAdversary
 from f_pay import F_Pay, payment_simulator, Payment_Simulator
-from prot_payment import Prot_Pay
+#from prot_payment import Prot_Pay
 from uc.syn_ours import Syn_FWrapper
 from uc.execuc import execWrappedUC
 
 t1 = execWrappedUC(
     128,
     env,
-    [('F_pay', F_Pay)],
-    wrappedPartyWrapper('F_pay'),
+    #[('F_pay', F_Pay)],
+    F_Pay,
+    #wrappedPartyWrapper('F_pay'),
+    gucProtocolWrapper(GUCDummyParty),
+    #GlobalFWrapper([Syn_FWrapper], ['F_Wrapper']),
     Syn_FWrapper,
-    payment_simulator(Prot_Pay),
+    #payment_simulator(Prot_Pay),
+    DummyGUCAdversary,
     None
 )
 

@@ -1,5 +1,5 @@
-from itm import ITM, UCAdversary, GenChannel
-from utils import wait_for, waits, read_one, read
+from uc.itm import ITM, UCAdversary, GenChannel
+from uc.utils import wait_for, waits, read_one, read
 import gevent
 import logging
 

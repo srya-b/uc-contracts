@@ -123,9 +123,10 @@ t1 = execWrappedUC(
     [('G_Ledger', G_Ledger)],
     wrappedPartyWrapper('G_Ledger'),
 #    Syn_FWrapper,
-    DuplexWrapper(Syn_FWrapper, 'Wrapper', G_Ledger, "G_Ledger"),
+    #DuplexWrapper(Syn_FWrapper, 'Wrapper', G_Ledger, "G_Ledger"),
+    GlobalFWrapper([Syn_FWrapper, G_Ledger], ['F_Wrapper', 'G_Ledger'])
     DummyWrappedAdversary,
-    None
+    None, 
 )
 
 print('\nTranscript')
