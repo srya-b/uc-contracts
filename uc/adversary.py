@@ -48,7 +48,7 @@ class DummyAdversary(UCAdversary):
 
 
 #class DummyWrappedAdversary(UCWrappedAdversary):
-class DummyGUCAdversary(GUCAdversary):
+class GUCDummyAdversary(GUCAdversary):
     '''Implementation of the dummy adversary. Doesn't do anything locally,
      just forwards all messages to the intended party. Z communicates with
      corrupt parties through dummy adversary'''
@@ -57,7 +57,7 @@ class DummyGUCAdversary(GUCAdversary):
         GUCAdversary.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs, gsid, ssids)
         self.env_msgs['A2F'] = self.a2f
         self.env_msgs['A2P'] = self.a2p
-        self.env_msgs['A2F'] = self.a2g
+        self.env_msgs['A2G'] = self.a2g
     
     def __str__(self):
         return str(self.F)
@@ -102,6 +102,7 @@ class DummyGUCAdversary(GUCAdversary):
         )
 
     def a2g(self, msg, iprime):
+        print('a2g msg', self.channels['a2g'].id)
         self.write(
             ch='a2g',
             msg=msg,

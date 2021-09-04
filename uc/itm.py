@@ -52,7 +52,6 @@ def fwd(ch1, ch2):
         while True:
             r = gevent.wait([ch1])
             m = r[0].read()
-            print('Read mesage on ch1:', m)
             ch2.write( m.msg, m.imp )
     gevent.spawn(foo, ch1, ch2)
 
@@ -302,10 +301,11 @@ class UCFunctionality(ITM):
         else:
             self.pump.write('')
 
-    def party_msg(self, msg):
-        sender,msg = msg.msg
+    def party_msg(self, d):
+        sender,msg = d.msg
+        imp = d.imp
         if msg[0] in self.party_msgs:
-            self.party_msgs[msg[0]](sender, *msg[1:])
+            self.party_msgs[msg[0]](imp, sender, *msg[1:])
         else:
             raise Exception('unknown message', msg)
             self.pump.write('')
@@ -314,10 +314,10 @@ class UCFunctionality(ITM):
         Exception("env_msg needs to be defined")
 
 class GUCFunctionality(UCFunctionality):
-    def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs, gsid, ssids):
+    def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs, gsid, _ssids):
         UCFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
         self.gsid = gsid
-        self.ssids = ssids
+        self._ssids = _ssids
         self.handlers[channels['g2f']] = self.gfunc_msg
         self.gfunc_msgs = {}
         self.gf = lambda x: x[0]
@@ -335,65 +335,6 @@ class GUCFunctionality(UCFunctionality):
         else:
             self.pump.write('')
     
-class GUCGlobalFunctionality(ITM):
-    def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs):
-        self.crupt = crupt
-        self.handlers = {
-            channels['p2g'] : self.party_msg,
-            channels['a2g'] : self.adv_msg,
-            channels['z2g'] : self.env_msg,
-            channels['f2g'] : self.func_msg
-        }
-        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
-        
-        self.party_msgs = {}
-        self.adv_msgs = {}
-        self.env_msgs = {}
-        self.func_msgs = {}
-
-        self.f = lambda x: x[0]
-        self.fparse = lambda x: x[1:]
-    
-    def is_honest(self, sid, pid):
-        return (sid,pid) not in self.crupt
-
-    def wrapwrite(self, msg):
-        return (self.sid, msg)
-
-    def adv_msg(self, m):
-        if m.msg[0] in self.adv_msgs:
-            self.adv_msgs[m.msg[0]](m.imp, *m.msg[1:])
-        else:
-            self.pump.write('')
-
-    def party_msg(self, m):
-        sender, msg = m.msg
-        if msg[0] in self.party_msgs:
-            self.party_msgs[msg[0]](m.imp, sender, *msg[1:])
-        else:
-            raise Exception('unknown message', msg)
-            self.pump.write('')
-
-    def env_msg(self, m):
-        msg = m.msg
-        imp = m.imp
-        if msg[0] in self.env_msgs:
-            self.env_msgs[msg[0]](imp, *msg[1:])
-        else:
-            raise Exception('unknown message', msg)
-            self.pump.write('')
-
-    def func_msg(self, m):
-        msg = m.msg
-        imp = m.msg
-        sender,msg = msg
-        if self.f(msg) in self.func_msgs:
-            self.func_msgs[self.f(msg)](imp, sender, *self.fparse(msg))
-        else:
-            raise Exception('unknown message', msg)
-            self.pump.write('')
-
-
 class UCAdversary(ITM):
     def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs):
         self.crupt = crupt
@@ -484,138 +425,11 @@ class GUCAdversary(UCAdversary):
             elif t is 'A2G' and msg[1][0] in self.a2p_msgs:
                 self.a2g_msgs[msg[1][0]](msg[0], msg[1][1:])
             elif t in self.env_msgs:
+                print('Fallback adversary msg')
                 self.env_msgs[t](msg, d.imp)
             else:
-                raise Exception('Message {} not handled by adversary'.format(msg))
+                raise Exception('Message {} not handled by adversary'.format(msg[1][0]))
                 self.pump.write('')
-
-
-
-class UCWrappedAdversary(ITM):
-    def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs):
-        self.crupt = crupt
-        self.handlers = {
-            channels['p2a'] : self.party_msg,
-            channels['f2a'] : self.func_msg,
-            channels['z2a'] : self.env_msg,
-            channels['w2a'] : self.wrapper_msg
-        }
-        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
-
-    def is_honest(self, sid, pid):
-        return (sid,pid) in self.crupt
-
-    def party_msg(self, d):
-        Exception("party_msg needs to be implemented")
-
-    def func_msg(self, d):
-        Exception("func_msg needs to be implemented")
-
-    def env_msg(self, d):
-        Exception("env_msg needs to be implemented")
-
-    def wrapper_msg(self, d):
-        Exception("wrapper_msg needs to be implemented")
-
-class UCWrappedFunctionality(ITM):
-    def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs):
-        self.crupt = crupt
-        self.handlers = {
-            channels['z2f'] : self.env_msg,
-            channels['p2f'] : self.party_msg,
-            channels['a2f'] : self.adv_msg,
-            channels['w2f'] : self.wrapper_msg,
-        }
-        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
-
-    def is_honest(self, sid, pid):
-        return (sid,pid) in self.crupt
-
-    def adv_msg(self, msg):
-        Exception("adv_msg needs to be defined")
-
-    def party_msg(self, msg):
-        Exception("party_msg needs to be defined")
-
-    def env_msg(self, msg):
-        Exception("env_msg needs to be defined")
-
-    def wrapper_msg(self, msg):
-        Exception("wrapper_msg needs to be defined")
-
-    def leak(self, msg, imp):
-        self.write('f2w', ((self.sid, 'F_Wrapper'), ('leak', msg)), imp)
-        m = wait_for(self.channels['w2f']).msg
-        assert m == ((self.sid, 'F_Wrapper'), ('OK',))
-
-    def clock_round(self):
-        m = self.write_and_wait_for(
-            ch='f2w', msg=((self.sid, 'F_Wrapper'), ('clock-round',)),
-            imp=0, read='w2f'
-        )
-
-        return m.msg[1]
-
-    def schedule(self, f, args, d):
-        self.write_and_wait_expect(
-            ch='f2w', msg=((self.sid, 'F_Wrapper'), ('schedule', f, args, d)),
-            read='w2f', expect=((self.sid, 'F_Wrapper'), ('OK',))
-        )
-
-
-class UCGlobalF(ITM):
-    def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs):
-        self.crupt = crupt
-        self.handlers = {
-            channels['z2w'] : self.env_msg,
-            channels['f2w'] : self.func_msg,
-            channels['a2w'] : self.adv_msg,
-            channels['p2w'] : self.party_msg,
-            channels['_2w'] : self._2w_msg,
-        }
-        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
-
-    def is_honest(self, sid, pid):
-        return (sid,pid) in self.crupt
-
-    def adv_msg(self, msg):
-        Exception("adv_msg needs to be defined")
-
-    def func_msg(self, msg):
-        Exception("func_msg needs to be defined")
-
-    def env_msg(self, msg):
-        Exception("env_msg needs to be defined")
-
-    def party_msg(self, msg):
-        Exception("party_msg needs to be defined")
-
-    def _2w_msg(self, msg):
-        Exception("_2w_msg needs to be implemented")
-
-    def leak(self, msg):
-        Exception("leak needs to be defined")
-
-class UCAsyncWrappedFunctionality(UCWrappedFunctionality):
-    def __init__(self, k, bits, crupt, sid, pid, channels):
-        UCWrappedFunctionality.__init__(self, k, bits, crupt, sid, pid, channels)
-        
-    def leak(self, msg):
-        self.f2w(("leak", msg))
-        
-    def eventually(self, msg):
-        self.f2w(("eventually", msg))
-        
-#class UCAsyncWrappedProtocol(UCWrappedProtocol):
-#    def __init__(self, k, bits, sid, pid, channels):
-#        UCWrappedProtocol.__init__(self, k, bits, sid, pid, channels)
-#        
-#    def leak(self, msg):
-#        dump.dump() # should not generally happen
-#        
-#    def eventually(self, msg):
-#        dump.dump() # should not generally happen
-       
 
 def ideal_party(tof):
     def _f(k, bits, sid, pid, channels, poly, pump, importargs):
@@ -814,6 +628,100 @@ class GUCProtocolWrapper(ProtocolWrapper):
             _pid = self.getPID(self.w2pid, sid, pid)
             _pid.write(msg, imp)
 
+
+class GUCGlobalFunctionality(ITM):
+    def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs):
+        self.crupt = crupt
+        self.handlers = {
+            channels['p2g'] : self.party_msg,
+            channels['a2g'] : self.adv_msg,
+            channels['z2g'] : self.env_msg,
+            channels['f2g'] : self.func_msg
+        }
+        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
+        
+        self.party_msgs = {}
+        self.adv_msgs = {}
+        self.env_msgs = {}
+        self.func_msgs = {}
+
+        self.f = lambda x: x[0]
+        self.fparse = lambda x: x[1:]
+        self._start = True
+   
+    def on_init(self):
+        pass
+
+    def is_honest(self, sid, pid):
+        return (sid,pid) not in self.crupt
+
+    def wrapwrite(self, msg):
+        return (self.sid, msg)
+
+    def adv_msg(self, m):
+        if self._start: 
+            self.on_init()
+            self._start = False
+        print('guc func adv msg', m.msg)
+        to,msg = m.msg
+        if msg[0] in self.adv_msgs:
+            self.adv_msgs[msg[0]](m.imp, *msg[1:])
+        else:
+            self.pump.write('')
+
+    def party_msg(self, m):
+        if self._start: 
+            self.on_init()
+            self._start = False
+        sender, (to, msg) = m.msg
+        if msg[0] in self.party_msgs:
+            self.party_msgs[msg[0]](m.imp, sender, *msg[1:])
+        else:
+            raise Exception('unknown message', msg)
+            self.pump.write('')
+
+    def env_msg(self, m):
+        if self._start: 
+            self.on_init()
+            self._start = False
+        msg = m.msg
+        imp = m.imp
+        if msg[0] in self.env_msgs:
+            self.env_msgs[msg[0]](imp, *msg[1:])
+        else:
+            raise Exception('unknown message', msg)
+            self.pump.write('')
+
+    def func_msg(self, m):
+        if self._start:
+            self.on_init()
+            self._start = False
+        msg = m.msg
+        imp = m.msg
+        sender,msg = msg
+        if self.f(msg) in self.func_msgs:
+            self.func_msgs[self.f(msg)](imp, sender, *self.fparse(msg))
+        else:
+            raise Exception('unknown message', self.f(msg))
+            self.pump.write('')
+
+class GUCWrappedGlobalFunctionality(GUCGlobalFunctionality):
+    def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs, _ssids):
+        GUCGlobalFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
+        self.handlers[ channels['ssid2g'] ] = self.ssid2g_msg
+        self.ssid2g_msgs = {}
+        self._ssids = _ssids
+
+    def ssid2g_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        frosid, msg = msg
+        if msg[0] in self.ssid2g_msgs:
+            self.ssid2g_msgs[msg[0]](imp, frosid, *msg[1:])
+        else:
+            raise Exception('Unknown msg', msg)
+
+
 def DuplexWrapper(f1, f1tag, f2, f2tag):
     def f(k, bits, crupt, sid, channels, pump, poly, importargs):
         return GlobalFunctionalityWrapper(k, bits, crupt, sid, channels, pump, poly, importargs, [f1, f2], [f1tag, f2tag])
@@ -824,84 +732,161 @@ def GlobalFWrapper( _fs, _ftags ):
         return GlobalFunctionalityWrapper(k, bits, crupt, sid, channels, pump, poly, importargs, _fs, _ftags)
     return f
 
-class GlobalFunctionalityWrapper(ITM):
-    def __init__(self, k, bits, crupt, sid, channels, pump, poly, importargs, _fs, _ftags):
-        self.z2wid = {}
-        self.p2wid = {}
-        self.a2wid = {}
-        self.f2wid = {}
-        self._2wid = {}
-        self.crupt = crupt
-        
-        self.handlers = {
-            channels['p2w'] : self.party_msg,
-            channels['a2w'] : self.adv_msg,
-            channels['z2w'] : self.env_msg,
-            channels['f2w'] : self.func_msg,
-            #channels['w2_'] : self.wrapper_msg,
-        }
-        ITM.__init__(self, k, bits, sid, None, channels, self.handlers, poly, pump, importargs)
-        
-        self.channels['w2_'] = GenChannel('w2_')
-        self.handlers[self.channels['w2_']] = self._2w_msg
+def duplexGUCWrapper(f1, f2):
+    def f(k, bits, crupt, sid, pid, channels, poly, pump, importargs, ssids):
+        return GUCGlobalFunctionalityWrapper(k, bits, crupt, sid, pid, channels, poly, pump, importargs, [f1,f2], ssids)
+    return f
 
-        for _f_, _ftag_ in zip(_fs, _ftags):
-            self.newFID(self.sid, _ftag_, _f_)
+class GUCGlobalFunctionalityWrapper(GUCGlobalFunctionality):
+    def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs, gs, ssids):
+        GUCGlobalFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
+        self.z2gid = {}
+        self.p2gid = {}
+        self.f2gid = {}
+        self.a2gid = {}
+        self.ssid2gid = {}
+        self.ssids = ssids 
+        self.gs = gs
 
-    def _newFID(self, _2fid, f2_, sid, tag):
-        ff2_ = GenChannel(('write-translate',sid,tag))
-        _2ff = GenChannel(('read',sid,tag))
+        self.channels['g2ssid'] = GenChannel('g2ssid')
+
+        #self.handlers[ channels['ssid2g'] ] = self.ssid2g_msg # global F receiving from another ssid
+        self.handlers[ self.channels['g2ssid'] ] = self.g2ssid_msg # global F sending to another ssid
+        
+        for s,g in zip(ssids, gs):
+            self.newFID(s, g)
+
+    def _newFID(self, _2fid, real_f2outside, sid):
+        #ff2_ = GenChannel(('write-translate',sid))
+        internal_f2outside = GenChannel(('write-translate',sid))
+        #_2ff = GenChannel(('read',sid))
+        internal_outside2f = GenChannel(('read',sid))
 
         def _translate():
             while True:
-                r = gevent.wait(objects=[ff2_],count=1)
+                r = gevent.wait(objects=[internal_f2outside],count=1)
                 m = r[0].read()
-                ff2_.reset()
-                f2_.write( ((sid,tag), m.msg), m.imp )
+                internal_f2outside.reset()
+                print('translate append sid={} to msg={}'.format(sid, m.msg))
+                #real_f2outside.write( (sid, m.msg), m.imp )
+                real_f2outside.write( m.msg, m.imp )
         gevent.spawn(_translate) 
-        _2fid[sid,tag] = _2ff
-        return (_2ff, ff2_) 
+        _2fid[sid] = internal_outside2f
+        return (internal_outside2f, internal_f2outside) 
     
-    def getFID(self, _2pid, sid,tag):
-        return _2pid[sid,tag]
-    
-    def newFID(self, sid, tag, cls):
-        _z2w,_w2z = self._newFID(self.z2wid, self.channels['w2z'], sid, tag)
-        _p2w,_w2p = self._newFID(self.p2wid, self.channels['w2p'], sid, tag)
-        _a2w,_w2a = self._newFID(self.a2wid, self.channels['w2a'], sid, tag)
-        _f2w,_w2f = self._newFID(self.f2wid, self.channels['w2f'], sid, tag)
-        __2w,_w2_ = self._newFID(self._2wid, self.channels['w2_'], sid, tag)
+    def newFID(self, ssid, cls):
+        _z2g,_g2z = self._newFID(self.z2gid, self.channels['g2z'], ssid)
+        _p2g,_g2p = self._newFID(self.p2gid, self.channels['g2p'], ssid)
+        _a2g,_g2a = self._newFID(self.a2gid, self.channels['g2a'], ssid)
+        _f2g,_g2f = self._newFID(self.f2gid, self.channels['g2f'], ssid)
+        _ssid2g,_g2ssid = self._newFID(self.ssid2gid, self.channels['g2ssid'], ssid)
 
-        f = cls(self.k, self.bits, self.crupt, self.sid, tag, {'p2w':_p2w, 'w2p':_w2p, 'z2w':_z2w, 'w2z':_w2z, 'f2w':_f2w, 'w2f':_w2f, 'a2w':_a2w, 'w2a':_w2a, 'w2_':_w2_, '_2w':__2w}, self.pump, self.poly, self.importargs)
+        chset = {'p2g':_p2g, 'g2p':_g2p, 'z2g':_z2g, 'g2z':_g2z, 'f2g':_f2g, 'g2f':_g2f, 'a2g':_a2g, 'g2a':_g2a, 'g2ssid':_g2ssid, 'ssid2g':_ssid2g}
+
+        f = cls(self.k, self.bits, self.crupt, ssid, -1, chset, self.poly, self.pump, self.importargs, self.ssids)
         gevent.spawn(f.run)
 
-    def party_msg(self, m):
-        fro, ((sid, tag), msg) = m.msg
-        imp = m.imp
-        fid = self.getFID( self.p2wid, sid, tag)
-        fid.write( (fro, msg), imp )
+    def getFID(self, ssid, _2gid):
+        return _2gid[ssid]
+    
+    def party_msg(self, d): 
+        msg = d.msg
+        imp = d.imp
+        fro,(to, (ssid,msg)) = msg
+        sid,pid = fro
+        self.p2gid[ssid].write( (fro, msg), imp )
 
-    def adv_msg(self, m):
-        (sid,tag),msg = m.msg
-        imp = m.imp
-        fid = self.getFID(self.a2wid, sid, tag)
-        fid.write( msg,imp )
+    def func_msg(self, d):
+        msg = d.msg 
+        imp = d.imp
+        fro,(to, (ssid,msg)) = msg
+        self.f2gid[ssid].write( (fro,msg), imp )
 
-    def env_msg(self, m):
-        (sid,tag), msg = m.msg
-        imp = m.imp
-        fid = self.getFID(self.z2wid, sid, tag)
-        fid.write( msg, imp )
+    def g2ssid_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        fro, (ssid, msg) = msg
+        print('g2ssid_msg="{}", fro="{}", ssid="{}"'.format(msg, fro, ssid))
+        self.ssid2gid[ssid].write( (fro, msg), imp )
 
-    def func_msg(self, m):
-        fro, ((sid,tag), msg) = m.msg
-        imp = m.imp
-        fid = self.getFID(self.f2wid, sid, tag)
-        fid.write( (fro, msg), imp )
-
-    def _2w_msg(self, m):
-        fro, ((sid,tag), msg) = m.msg
-        imp = m.imp
-        fid = self.getFID(self._2wid, sid, tag)
-        fid.write( (fro, msg), imp )
-
+#class GlobalFunctionalityWrapper(ITM):
+#    def __init__(self, k, bits, crupt, sid, channels, pump, poly, importargs, _fs, _ftags):
+#        self.z2wid = {}
+#        self.p2wid = {}
+#        self.a2wid = {}
+#        self.f2wid = {}
+#        self._2wid = {}
+#        self.crupt = crupt
+#        
+#        self.handlers = {
+#            channels['p2w'] : self.party_msg,
+#            channels['a2w'] : self.adv_msg,
+#            channels['z2w'] : self.env_msg,
+#            channels['f2w'] : self.func_msg,
+#            #channels['w2_'] : self.wrapper_msg,
+#        }
+#        ITM.__init__(self, k, bits, sid, None, channels, self.handlers, poly, pump, importargs)
+#        
+#        self.channels['w2_'] = GenChannel('w2_')
+#        self.handlers[self.channels['w2_']] = self._2w_msg
+#
+#        for _f_, _ftag_ in zip(_fs, _ftags):
+#            self.newFID(self.sid, _ftag_, _f_)
+#
+#    def _newFID(self, _2fid, f2_, sid, tag):
+#        ff2_ = GenChannel(('write-translate',sid,tag))
+#        _2ff = GenChannel(('read',sid,tag))
+#
+#        def _translate():
+#            while True:
+#                r = gevent.wait(objects=[ff2_],count=1)
+#                m = r[0].read()
+#                ff2_.reset()
+#                f2_.write( ((sid,tag), m.msg), m.imp )
+#        gevent.spawn(_translate) 
+#        _2fid[sid,tag] = _2ff
+#        return (_2ff, ff2_) 
+#    
+#    def getFID(self, _2pid, sid,tag):
+#        return _2pid[sid,tag]
+#    
+#    def newFID(self, sid, tag, cls):
+#        _z2w,_w2z = self._newFID(self.z2wid, self.channels['w2z'], sid, tag)
+#        _p2w,_w2p = self._newFID(self.p2wid, self.channels['w2p'], sid, tag)
+#        _a2w,_w2a = self._newFID(self.a2wid, self.channels['w2a'], sid, tag)
+#        _f2w,_w2f = self._newFID(self.f2wid, self.channels['w2f'], sid, tag)
+#        __2w,_w2_ = self._newFID(self._2wid, self.channels['w2_'], sid, tag)
+#
+#        f = cls(self.k, self.bits, self.crupt, self.sid, tag, {'p2w':_p2w, 'w2p':_w2p, 'z2w':_z2w, 'w2z':_w2z, 'f2w':_f2w, 'w2f':_w2f, 'a2w':_a2w, 'w2a':_w2a, 'w2_':_w2_, '_2w':__2w}, self.pump, self.poly, self.importargs)
+#        gevent.spawn(f.run)
+#
+#    def party_msg(self, m):
+#        fro, ((sid, tag), msg) = m.msg
+#        imp = m.imp
+#        fid = self.getFID( self.p2wid, sid, tag)
+#        fid.write( (fro, msg), imp )
+#
+#    def adv_msg(self, m):
+#        (sid,tag),msg = m.msg
+#        imp = m.imp
+#        fid = self.getFID(self.a2wid, sid, tag)
+#        fid.write( msg,imp )
+#
+#    def env_msg(self, m):
+#        (sid,tag), msg = m.msg
+#        imp = m.imp
+#        fid = self.getFID(self.z2wid, sid, tag)
+#        fid.write( msg, imp )
+#
+#    def func_msg(self, m):
+#        fro, ((sid,tag), msg) = m.msg
+#        imp = m.imp
+#        fid = self.getFID(self.f2wid, sid, tag)
+#        fid.write( (fro, msg), imp )
+#
+#    def _2w_msg(self, m):
+#        fro, ((sid,tag), msg) = m.msg
+#        imp = m.imp
+#        fid = self.getFID(self._2wid, sid, tag)
+#        fid.write( (fro, msg), imp )
+#

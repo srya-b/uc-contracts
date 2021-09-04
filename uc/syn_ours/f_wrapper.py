@@ -1,5 +1,5 @@
 import gevent
-from uc.itm import ITM, GUCGlobalFunctionality #UCGlobalF
+from uc.itm import ITM, GUCWrappedGlobalFunctionality
 from collections import defaultdict
 from numpy.polynomial.polynomial import Polynomial
 import logging
@@ -58,11 +58,9 @@ Adversary Interface
 -- ``delay''      : There is a
 -- 
 '''
-#class Syn_FWrapper(UCGlobalF):
-class Syn_FWrapper(GUCGlobalFunctionality):
-    def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs):
-        #UCGlobalF.__init__(self, k, bits, crupt, 'wrap', 'me', channels, poly, pump, importargs)
-        GUCGlobalFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
+class Syn_FWrapper(GUCWrappedGlobalFunctionality):
+    def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs, ssids):
+        GUCWrappedGlobalFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs, ssids)
 
         self.curr_round = 1
         self.delay = 0
@@ -92,6 +90,16 @@ class Syn_FWrapper(GUCGlobalFunctionality):
         self.func_msgs['leak'] = self.func_leak
         self.func_msgs['clock-round'] = self.func_clock_round
 
+        self.ssid2g_msgs['schedule'] = self.ssid_schedule
+        self.ssid2g_msgs['leak'] = self.ssid_leak
+        self.ssid2g_msgs['clock-round'] = self.ssid_clock_round
+
+    def ssid_leak(self, *args):
+        pass
+
+    def ssid_clock_round(self, imp, sender):
+        self.write('g2ssid', (sender, ('round', self.curr_round)))
+
     def party_clock_round(self, imp, sender):
         self.write( 'g2p', (sender, ('round', self.curr_round)) )
 
@@ -118,12 +126,12 @@ class Syn_FWrapper(GUCGlobalFunctionality):
         self.delay += 1
         self.write('g2a', ('OK',))
 
-    def _2wschedule(self, sender, f, args, delta, imp):
+    def ssid_schedule(self, imp, sender, f, args, delta):
         log.debug('\033[1mFschedule\033[0m delta: {}, import: {}, sender: {}'.format(imp, delta, sender))
         # add to the runqueue
         if self.curr_round+delta not in self.todo:
             self.todo[self.curr_round + delta] = []
-        self.todo[self.curr_round + delta].append( (sender, 'g2_', f,args) )
+        self.todo[self.curr_round + delta].append( (sender, 'g2ssid', f,args) )
         self.total_queue_ever += 1
         log.debug('total_queue_ever: {}'.format(self.total_queue_ever))
         
@@ -136,7 +144,7 @@ class Syn_FWrapper(GUCGlobalFunctionality):
         # add to the delay and return control to sender
         self.delay += 1
         print('done scheduling')
-        self.write('g2_', (sender, ('OK',)) )
+        self.write('g2ssid', (sender, ('OK',)) )
 
     #def fschedule(self, sender, f, args, delta, imp):
     def fschedule(self, imp, sender, f, args, delta):
