@@ -549,14 +549,10 @@ class ProtocolWrapper(ITM):
     def func_msg(self, d):
         msg = d.msg
         imp = d.imp
-        #(fro, ((sid,pid), msg)) = msg
-        print('func message, msg: {}'.format(msg))
         fromsid,((tosid,topid),msg) = msg
         if self.is_dishonest(tosid,topid):
-            print('sending to a', msg)
             self.write('p2a', ((tosid,topid), msg), 0)#imp)
         else:
-            print('sending to z', msg)
             _pid = self.getPID(self.f2pid, tosid, topid)
             #_pid.write( (fro, msg), imp )
             _pid.write( msg, imp )
@@ -566,9 +562,6 @@ class ProtocolWrapper(ITM):
         imp = d.imp
         (sid,pid), msg = msg
         if self.is_honest(sid,pid): raise Exception("adv writing to an honest party: {}. Cruptset: {}".format((sid,pid), self.crupt))
-        #tag,msg = msg
-        #_pid = self.getPID(self.a2pid, sid, pid)
-        #_pid.write( msg, imp )
         self.write( 'p2f', ((sid,pid), msg), imp)
 
 
@@ -662,11 +655,14 @@ class GUCGlobalFunctionality(ITM):
         if self._start: 
             self.on_init()
             self._start = False
-        print('guc func adv msg', m.msg)
         to,msg = m.msg
         if msg[0] in self.adv_msgs:
+            print('adv msg')
             self.adv_msgs[msg[0]](m.imp, *msg[1:])
         else:
+            print('sid:', self.sid)
+            print('adv_msgs:', self.adv_msgs)
+            raise Exception("No such message: {}".format(msg[0]))
             self.pump.write('')
 
     def party_msg(self, m):
@@ -684,12 +680,12 @@ class GUCGlobalFunctionality(ITM):
         if self._start: 
             self.on_init()
             self._start = False
-        msg = m.msg
+        to,msg = m.msg
         imp = m.imp
         if msg[0] in self.env_msgs:
             self.env_msgs[msg[0]](imp, *msg[1:])
         else:
-            raise Exception('unknown message', msg)
+            raise Exception('unknown message={} with type={}'.format(msg, msg[0]))
             self.pump.write('')
 
     def func_msg(self, m):
@@ -698,7 +694,7 @@ class GUCGlobalFunctionality(ITM):
             self._start = False
         msg = m.msg
         imp = m.msg
-        sender,msg = msg
+        sender,(to, msg) = msg
         if self.f(msg) in self.func_msgs:
             self.func_msgs[self.f(msg)](imp, sender, *self.fparse(msg))
         else:
@@ -767,7 +763,6 @@ class GUCGlobalFunctionalityWrapper(GUCGlobalFunctionality):
                 r = gevent.wait(objects=[internal_f2outside],count=1)
                 m = r[0].read()
                 internal_f2outside.reset()
-                print('translate append sid={} to msg={}'.format(sid, m.msg))
                 #real_f2outside.write( (sid, m.msg), m.imp )
                 real_f2outside.write( m.msg, m.imp )
         gevent.spawn(_translate) 
@@ -800,7 +795,7 @@ class GUCGlobalFunctionalityWrapper(GUCGlobalFunctionality):
         msg = d.msg 
         imp = d.imp
         fro,(to, (ssid,msg)) = msg
-        self.f2gid[ssid].write( (fro,msg), imp )
+        self.f2gid[ssid].write( (fro, (ssid, msg)), imp )
 
     def g2ssid_msg(self, d):
         msg = d.msg
@@ -808,6 +803,18 @@ class GUCGlobalFunctionalityWrapper(GUCGlobalFunctionality):
         fro, (ssid, msg) = msg
         print('g2ssid_msg="{}", fro="{}", ssid="{}"'.format(msg, fro, ssid))
         self.ssid2gid[ssid].write( (fro, msg), imp )
+
+    def adv_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        to,(ssid,msg) = msg
+        self.a2gid[ssid].write( (ssid, msg), imp)
+
+    def env_msg(self, d):
+        msg = d.msg
+        imp = d.imp
+        to,(ssid,msg) = msg
+        self.z2gid[ssid].write( (ssid, msg), imp ) 
 
 #class GlobalFunctionalityWrapper(ITM):
 #    def __init__(self, k, bits, crupt, sid, channels, pump, poly, importargs, _fs, _ftags):
@@ -889,4 +896,3 @@ class GUCGlobalFunctionalityWrapper(GUCGlobalFunctionality):
 #        imp = m.imp
 #        fid = self.getFID(self._2wid, sid, tag)
 #        fid.write( (fro, msg), imp )
-#

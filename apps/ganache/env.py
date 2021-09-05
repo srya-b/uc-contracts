@@ -4,7 +4,9 @@ import gevent
 def env(k, static, z2p, z2f, z2a, z2g, a2z, p2z, f2z, g2z, pump):
     sid = 'hellsid'
     gsid = '#' + sid
-    static.write( (('sid', sid), ('gsid', gsid), ('ssids', (('ledgersid', 2, 7, 3), 'wrappersid')), ('crupt',)))
+    ledgersid = ('ledgersid', 2, 7, 3)
+    wrappersid = 'wrappersid'
+    static.write( (('sid', sid), ('gsid', gsid), ('ssids', (ledgersid, wrappersid)), ('crupt',)))
 
     transcript = []
     def _a2z():
@@ -24,8 +26,14 @@ def env(k, static, z2p, z2f, z2a, z2g, a2z, p2z, f2z, g2z, pump):
     z2p.write( ((sid, 1), ('ledger', ('accounts',))) )
     waits(pump)
 
-    z2a.write( ('A2G', (gsid, ('mineblock',))))
+    #z2a.write( ('A2G', (gsid, (ledgersid, ('mineblock',)))))
+    #waits(pump)
+
+    z2g.write( (gsid, (wrappersid, ('poll',))), 1 )
     waits(pump)
+    z2g.write( (gsid, (wrappersid, ('poll',))), 1 )
+    waits(pump)
+    
 
     return transcript
 

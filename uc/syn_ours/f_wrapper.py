@@ -223,6 +223,7 @@ class Syn_FWrapper(GUCWrappedGlobalFunctionality):
         self.assertimp(imp, 1)
         if self.delay > 0:
             self.delay -= 1
+            print('\n\033[1m' + 'Polled delay from {} -> {}'.format(self.delay+1, self.delay) +'\033[0m')
             self.write('g2a', ('poll',) )
         else:
             self.curr_round = self.next_round()
