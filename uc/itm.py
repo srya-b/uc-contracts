@@ -3,9 +3,7 @@ import sys
 from uc.utils import wait_for, waits
 from gevent.queue import Queue, Channel, Empty
 from gevent.event import AsyncResult, Event
-from numpy.polynomial.polynomial import Polynomial
 from uc.errors import WriteImportError, TickError
-from uc.messages import *
 import gevent
 import logging
 import inspect

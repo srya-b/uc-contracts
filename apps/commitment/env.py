@@ -6,8 +6,6 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     static.write( (('sid',sid), ('crupt',)))
 
     transcript = []
-    #collectOutputs(_p2z, transcript, pump)
-    #collectOutputs(_a2z, transcript, pump)
     def _a2z():
         while True:
             m = waits(a2z)
@@ -32,7 +30,6 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     
     gevent.kill(g1)
     gevent.kill(g2)
-
 
     print('transcript', transcript)
     return transcript
@@ -133,7 +130,7 @@ from uc.lemmaS import Lemma_Simulator, lemmaS
 if __name__=='__main__':
     tideal = execUC(
         128,
-        env_committer_crupt,
+        env,
         F_Com,
         protocolWrapper(DummyParty),
         Sim_Com,
@@ -142,7 +139,7 @@ if __name__=='__main__':
     print('\n')
     treal = execUC(
         128,
-        env_committer_crupt,
+        env,
         Random_Oracle_and_Chan,
         protocolWrapper(Commitment_Prot),
         DummyAdversary,
