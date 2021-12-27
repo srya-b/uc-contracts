@@ -1,5 +1,4 @@
 from uc.utils import waits, collectOutputs
-from uc.itm import fork, forever
 import gevent
 
 def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
@@ -12,23 +11,23 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     def _a2z():
         while True:
             m = waits(a2z)
-            transcript.append('a2z: ' + str(m.msg))
+            transcript.append('a2z: ' + str(m))
             pump.write('dump')
 
     def _p2z():
         while True:
             m = waits(p2z)
-            transcript.append('p2z: ' + str(m.msg))
+            transcript.append('p2z: ' + str(m))
             pump.write('dump')
 
     g1 = gevent.spawn(_a2z)
     g2 = gevent.spawn(_p2z)
     
 
-    z2p.write( ((sid,1), ('commit',0)), 3 )
+    z2p.write( ((sid,1), ('commit',0)))
     waits(pump)
 
-    z2p.write( ((sid,1), ('reveal',)), 1 )
+    z2p.write( ((sid,1), ('reveal',)))
     waits(pump)
     
     gevent.kill(g1)
@@ -46,24 +45,24 @@ def env_receiver_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     def _p2z():
         while True:
             m = waits(p2z)
-            transcript.append('p2z: ' + str(m.msg))
-            print('p2z: ' + str(m.msg))
+            transcript.append('p2z: ' + str(m))
+            print('p2z: ' + str(m))
             pump.write('')
 
     def _a2z():
         while True:
             m = waits(a2z)
-            transcript.append('a2z:' + str(m.msg))
-            print('a2z:' + str(m.msg))
+            transcript.append('a2z:' + str(m))
+            print('a2z:' + str(m))
             pump.write('')
 
     gevent.spawn(_p2z)
     gevent.spawn(_a2z)
 
-    z2p.write( ((sid,1), ('commit',0)), 3)
+    z2p.write( ((sid,1), ('commit',0)))
     waits(pump)
 
-    z2p.write( ((sid,1), ('reveal',)), 1)
+    z2p.write( ((sid,1), ('reveal',)))
     waits(pump)
 
     print('transcript', transcript)
@@ -78,16 +77,16 @@ def env_committer_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
         while True:
             m = waits(p2z)
             #transcript.append('p2z: ' + str(m.msg))
-            transcript.append(m.msg)
-            print('p2z: ' + str(m.msg))
+            transcript.append(m)
+            print('p2z: ' + str(m))
             pump.write('')
 
     def _a2z():
         while True:
             m = waits(a2z)
             #transcript.append('a2z:' + str(m.msg))
-            transcript.append(m.msg)
-            print('a2z:' + str(m.msg))
+            transcript.append(m)
+            print('a2z:' + str(m))
             pump.write('')
 
     gevent.spawn(_p2z)
@@ -97,14 +96,14 @@ def env_committer_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     #waits(pump)
     m = waits(a2z)
     print('env msg', m)
-    _,(sid,lasthash) = m.msg
+    _,(sid,lasthash) = m
     print('last hash', lasthash)
-    transcript.append('a2z: ' + str(m.msg))
+    transcript.append('a2z: ' + str(m))
 
-    z2a.write( ('A2P', ((sid,1), ('send', 2, lasthash, 0))), 0)
+    z2a.write( ('A2P', ((sid,1), ('send', 2, lasthash))))
     waits(pump)
 
-    z2a.write( ('A2P', ((sid,1), ('send', 2, (123, 0), 0))), 0)
+    z2a.write( ('A2P', ((sid,1), ('send', 2, (123, 0)))))
     waits(pump)
 
     return transcript
@@ -135,21 +134,19 @@ from uc.lemmaS import Lemma_Simulator, lemmaS
 if __name__=='__main__':
     tideal = execUC(
         128,
-        env_receiver_crupt,
+        env_committer_crupt,
         F_Com,
         protocolWrapper(DummyParty),
         Sim_Com,
-        poly=Polynomial([0,1])
     )
 
     print('\n')
     treal = execUC(
         128,
-        env_receiver_crupt,
+        env_committer_crupt,
         Random_Oracle_and_Chan,
         protocolWrapper(Commitment_Prot),
         DummyAdversary,
-        poly=Polynomial([1,2,3])
     )
 
     distinguisher(tideal, treal)

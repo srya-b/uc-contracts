@@ -46,8 +46,8 @@ def collectOutputs(ch, l, p):
     def _f():
         while True:
             m = waits(ch)
-            l.append(ch.id + ': ' + str(m.msg))
-            print('\n' + ch.id + ': ' + str(m.msg))
+            l.append(ch.id + ': ' + str(m))
+            print('\n' + ch.id + ': ' + str(m))
             p.write('')
     gevent.spawn(_f)
 
@@ -59,7 +59,7 @@ def wrapwrite(wchan, outchan, f):
         while True:
             m = wait_for(_chanout)
             #outchan.write( (prefix, m.msg), m.imp )
-            outchan.write( f(m.msg), m.imp )
+            outchan.write( f(m))
         gevent.spawn(_translate)
         return _chanin, _chanout
     return _chanin,_chanout

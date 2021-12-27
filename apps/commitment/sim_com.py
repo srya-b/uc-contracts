@@ -2,13 +2,13 @@ from uc.itm import ITM, UCAdversary
 
 #class Sim_Com(ITM):
 class Sim_Com(UCAdversary):
-    def __init__(self, k, bits, crupt, sid, pid, channels, pump, poly, importargs):
+    def __init__(self, k, bits, crupt, sid, pid, channels, pump):
         #self.crupt = crupt
         self.ssid = sid[0]
         self.committer = sid[1]
         self.receiver = sid[2]
 
-        UCAdversary.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
+        UCAdversary.__init__(self, k, bits, crupt, sid, pid, channels, pump)
 
         self.table = {}
         self.revtable = {}
@@ -35,7 +35,7 @@ class Sim_Com(UCAdversary):
         )
 
     def commit_send(self, to, msg):
-        rec, commitmsg, iprime = msg
+        rec, commitmsg = msg
         print('commit_send to={}, commitmsg={}'.format(to, commitmsg))
         if to == (self.sid, self.committer):
             b = self.sample(1)
@@ -46,7 +46,7 @@ class Sim_Com(UCAdversary):
         else: self.pump.write('')
 
     def open_send(self, to, msg):
-        rec, (nonce, bit), iprime = msg
+        rec, (nonce, bit) = msg
         if to == (self.sid, self.committer):
             self.write(
                 ch='a2p', msg=(to, ('reveal',))

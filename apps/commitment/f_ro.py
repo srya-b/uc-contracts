@@ -4,9 +4,9 @@ import logging
 log = logging.getLogger(__name__)
 
 class Random_Oracle_and_Chan(UCFunctionality):
-    def __init__(self, k, bits, crupt, sid, pid, channels, pump, poly, importargs):
+    def __init__(self, k, bits, crupt, sid, pid, channels, pump):
         self.table = {}
-        UCFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs)
+        UCFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, pump)
         self.party_msgs['hash'] = self.phash
         self.party_msgs['send'] = self.send
 
@@ -17,7 +17,7 @@ class Random_Oracle_and_Chan(UCFunctionality):
             self.table[x] = self.sample(self.k)
         return self.table[x]
 
-    def phash(self, imp, sender, s):
+    def phash(self, sender, s):
         self.write(
             ch='f2p',
             msg=(sender, self._hash(s))
@@ -29,11 +29,10 @@ class Random_Oracle_and_Chan(UCFunctionality):
             msg=self._hash(s)
         )
 
-    def send(self, imp, sender, to, msg, imp_to_send):
+    def send(self, sender, to, msg):
         self.write(
             ch='f2p',
             msg=((self.sid,to), ('send', sender, msg)),
-            imp=imp_to_send
         )
 
 

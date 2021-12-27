@@ -5,12 +5,12 @@ import logging
 log = logging.getLogger(__name__)
 
 class Commitment_Prot(UCProtocol):
-    def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
+    def __init__(self, k, bits, sid, pid, channels, pump):
         self.ssid = sid[0]
         self.committer = sid[1]
         self.receiver = sid[2]
         self.iscommitter = pid == self.committer
-        UCProtocol.__init__(self, k, bits, sid, pid, channels, poly, pump, importargs) 
+        UCProtocol.__init__(self, k, bits, sid, pid, channels, pump) 
 
         self.env_msgs['commit'] = self.env_commit
         self.env_msgs['reveal'] = self.env_reveal
@@ -32,7 +32,7 @@ class Commitment_Prot(UCProtocol):
             
             self.write(
                 ch='p2f', 
-                msg=('send', self.receiver, m.msg, 0)
+                msg=('send', self.receiver, m)
             )
         else: self.pump.write('')
 
@@ -40,7 +40,7 @@ class Commitment_Prot(UCProtocol):
     def env_reveal(self):
         self.write(
             ch='p2f',
-            msg=('send', self.receiver, (self.nonce, self.bit), 0)
+            msg=('send', self.receiver, (self.nonce, self.bit))
         )
 
     def check_commit(self, preimage):
