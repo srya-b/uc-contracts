@@ -31,7 +31,7 @@ class Sim_Com(UCAdversary):
 
     def env_hash(self, s):
         self.write(
-            ch='a2z', msg=('F2A', self.hash(s))
+            ch='a2z', msg=('F2A', (self.sid,self.hash(s)))
         )
 
     def commit_send(self, to, msg):

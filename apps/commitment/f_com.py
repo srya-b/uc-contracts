@@ -16,7 +16,7 @@ class F_Com(UCFunctionality):
         self.party_msgs['commit'] = self.commit
         self.party_msgs['reveal'] = self.reveal
 
-    def commit(self, sender, bit):
+    def commit(self, imp, sender, bit):
         if self.state is 0 and sender == self.committer:
             print('commit')
             self.bit = bit
@@ -27,7 +27,7 @@ class F_Com(UCFunctionality):
             self.state = 1
         else: self.pump.write('')
 
-    def reveal(self, sender):
+    def reveal(self, imp, sender):
         print('reveal')
         if self.state is 1 and sender == self.committer:
             print('reveal if')

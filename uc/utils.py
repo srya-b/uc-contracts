@@ -59,7 +59,7 @@ def wrapwrite(wchan, outchan, f):
         while True:
             m = wait_for(_chanout)
             #outchan.write( (prefix, m.msg), m.imp )
-            outchan.write( f(m) )
+            outchan.write( f(m.msg), m.imp )
         gevent.spawn(_translate)
         return _chanin, _chanout
     return _chanin,_chanout

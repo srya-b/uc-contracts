@@ -38,7 +38,7 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     print('transcript', transcript)
     return transcript
 
-def env2(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
+def env_receiver_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     sid = ('one', 1, 2)
     static.write( (('sid',sid), ('crupt', (sid,2))))
 
@@ -96,7 +96,8 @@ def env_committer_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     z2a.write( ('A2F', ('hash', (123, 0))))
     #waits(pump)
     m = waits(a2z)
-    _,lasthash = m.msg
+    print('env msg', m)
+    _,(sid,lasthash) = m.msg
     print('last hash', lasthash)
     transcript.append('a2z: ' + str(m.msg))
 
@@ -134,7 +135,7 @@ from uc.lemmaS import Lemma_Simulator, lemmaS
 if __name__=='__main__':
     tideal = execUC(
         128,
-        env_committer_crupt,
+        env_receiver_crupt,
         F_Com,
         protocolWrapper(DummyParty),
         Sim_Com,
@@ -144,7 +145,7 @@ if __name__=='__main__':
     print('\n')
     treal = execUC(
         128,
-        env_committer_crupt,
+        env_receiver_crupt,
         Random_Oracle_and_Chan,
         protocolWrapper(Commitment_Prot),
         DummyAdversary,

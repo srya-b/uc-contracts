@@ -284,6 +284,9 @@ class UCFunctionality(ITM):
             channels['a2f'] : self.adv_msg,
             channels['z2f'] : self.env_msg
         }
+        #self.real_f2p = channels['f2p']
+        #channels['f2p'] = GenChannel('f_f2p')
+        #wrapwrite(self.channels['f2p'], self.real_f2p, lambda x: (sid, m.msg))
         ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, poly, pump, importargs)
 
         self.party_msgs = {}
@@ -295,6 +298,9 @@ class UCFunctionality(ITM):
     def is_dishonest(self, sid, pid):
         return not self.is_honest(sid, pid)
 
+    def wrapwrite(self, msg):
+        return (self.sid, msg)
+
     def adv_msg(self, m):
         if m.msg[0] in self.adv_msgs:
             self.adv_msgs[m.msg[0]](*m.msg[1:])
@@ -305,6 +311,7 @@ class UCFunctionality(ITM):
         sender,msg = d.msg
         imp = d.imp
         if msg[0] in self.party_msgs:
+            print('f_commit msg:', msg)
             self.party_msgs[msg[0]](imp, sender, *msg[1:])
         else:
             raise Exception('unknown message', msg)

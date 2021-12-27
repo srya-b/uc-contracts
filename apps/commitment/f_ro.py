@@ -17,7 +17,7 @@ class Random_Oracle_and_Chan(UCFunctionality):
             self.table[x] = self.sample(self.k)
         return self.table[x]
 
-    def phash(self, sender, s):
+    def phash(self, imp, sender, s):
         self.write(
             ch='f2p',
             msg=(sender, self._hash(s))
@@ -29,11 +29,11 @@ class Random_Oracle_and_Chan(UCFunctionality):
             msg=self._hash(s)
         )
 
-    def send(self, sender, to, msg, imp):
+    def send(self, imp, sender, to, msg, imp_to_send):
         self.write(
             ch='f2p',
             msg=((self.sid,to), ('send', sender, msg)),
-            imp=imp
+            imp=imp_to_send
         )
 
 
