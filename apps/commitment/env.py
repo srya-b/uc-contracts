@@ -125,10 +125,9 @@ from uc.adversary import DummyAdversary
 from f_ro import Random_Oracle_and_Chan
 from prot_com import Commitment_Prot
 from uc.execuc import execUC
-from numpy.polynomial.polynomial import Polynomial
 from f_com import F_Com
 from sim_com import Sim_Com
-from uc.itm import ideal_party, DummyParty
+from uc.itm import DummyParty
 from uc.lemmaS import Lemma_Simulator, lemmaS
 
 if __name__=='__main__':

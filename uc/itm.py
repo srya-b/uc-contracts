@@ -26,11 +26,9 @@ class GenChannel(Event):
 
     def write(self, data):
         if not self.is_set():
-            #self._data = MSG(data, imp); self.set()
             self._data = data; self.set() 
         else: 
             raise Exception("\033[1mwriting to channel already full with {}. Writing {} in {}\033[0m".format(self._data,data,self.i))
-            #dump.dump()
 
     def __str__(self):
         return "Channel id:{}".format(self.id)
@@ -75,23 +73,18 @@ class ITM:
     def wrapwrite(self, msg):
         return msg
 
-    #def write(self, ch, msg, imp=0):
     def write(self, ch, msg):
         self.channels[ch].write(self.wrapwrite(msg))
 
     def read(self, ch=None):
         return wait_for(self.channels[ch])
 
-    #def write_and_wait_for(self, ch=None, msg=None, imp=0, read=None):
     def write_and_wait_for(self, ch=None, msg=None, read=None):
-        #self.write(ch, msg, imp)
         self.write(ch, msg)
         m = self.read(read)
         return m
 
-    #def write_and_wait_expect(self, ch=None, msg=None, imp=0, read=None, expect=None):
     def write_and_wait_expect(self, ch=None, msg=None, read=None, expect=None):
-        #m = self.write_and_wait_for(ch, msg, imp, read)
         m = self.write_and_wait_for(ch, msg, read)
         assert m == expect, 'Expected: {}, Received: {}'.format(expect, m)
         return m
@@ -111,20 +104,11 @@ class ITM:
             assert len(ready) == 1
             r = ready[0]
             msg = r.read()
-            #msg = d.msg
             r.reset()
-            #try:
             self.handlers[r](msg)
-            #except WriteImportError as e:
-            #    self.log.error('WriteImportError: from={}, msg={}'.format(e.fro, e.msg))
-            #    self.pump.write('dump')
-            #except TickError as e:
-            #    self.log.error("TickError: from={}, amount={}".format(e.fro, e.amt))
-            #    self.pump.write('dump')
 
 
 class UCProtocol(ITM):
-    #def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
     def __init__(self, k, bits, sid, pid, channels, pump):
         self.handlers = {
             channels['z2p'] : self.env_msg,
@@ -141,15 +125,15 @@ class UCProtocol(ITM):
     def adv_msg(self, msg):
         Exception("adv_msg needs to be defined")
 
-    def func_msg(self, m):
-        if self.f(m) in self.func_msgs:
-            self.func_msgs[self.f(m)](*(self.parse(m)))
+    def func_msg(self, msg):
+        if self.f(msg) in self.func_msgs:
+            self.func_msgs[self.f(msg)](*(self.parse(msg)))
         else:
             self.pump.write('')
 
-    def env_msg(self, m):
-        if m[0] in self.env_msgs:
-            self.env_msgs[m[0]](*m[1:])
+    def env_msg(self, msg):
+        if msg[0] in self.env_msgs:
+            self.env_msgs[msg[0]](*msg[1:])
         else:
             self.pump.write('')
 
@@ -209,7 +193,6 @@ class UCProtocol(ITM):
 #    #    return m.msg[1]
 
 class UCFunctionality(ITM):
-    #def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump):
         self.crupt = crupt
         self.handlers = {
@@ -217,9 +200,7 @@ class UCFunctionality(ITM):
             channels['a2f'] : self.adv_msg,
             channels['z2f'] : self.env_msg
         }
-        #self.real_f2p = channels['f2p']
-        #channels['f2p'] = GenChannel('f_f2p')
-        #wrapwrite(self.channels['f2p'], self.real_f2p, lambda x: (sid, m.msg))
+        
         ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, pump)
 
         self.party_msgs = {}
@@ -234,17 +215,15 @@ class UCFunctionality(ITM):
     def wrapwrite(self, msg):
         return (self.sid, msg)
 
-    def adv_msg(self, m):
-        if m[0] in self.adv_msgs:
-            self.adv_msgs[m[0]](*m[1:])
+    def adv_msg(self, msg):
+        if msg[0] in self.adv_msgs:
+            self.adv_msgs[msg[0]](*msg[1:])
         else:
             self.pump.write('')
 
-    def party_msg(self, d):
-        sender,msg = d
-        #imp = d.imp
+    def party_msg(self, m):
+        sender,msg = m
         if msg[0] in self.party_msgs:
-            print('party to func msg:', msg)
             self.party_msgs[msg[0]](sender, *msg[1:])
         else:
             raise Exception('unknown message', msg)
@@ -254,7 +233,6 @@ class UCFunctionality(ITM):
         Exception("env_msg needs to be defined")
 
 class UCAdversary(ITM):
-    #def __init__(self, k, bits, crupt, sid, pid, channels, poly, pump, importargs):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump):
         self.crupt = crupt
         self.handlers = {
@@ -283,16 +261,14 @@ class UCAdversary(ITM):
         else:
             self.pump.write('')
 
-    def func_msg(self, d):
-        msg = d
-        #imp = d.imp
+    def func_msg(self, msg):
         if self.f(msg[0]) in self.func_msgs:
             self.func_msgs[self.f(msg[0])](*self.fparse(msg))
         else:
             self.pump.write('')
 
-    def env_msg(self, d):
-        t,msg = d
+    def env_msg(self, m):
+        t,msg = m
         if t is 'A2F' and msg[0] in self.a2f_msgs:
             self.a2f_msgs[msg[0]](*msg[1:])
         elif t is 'A2P' and msg[1][0] in self.a2p_msgs:
@@ -350,13 +326,12 @@ class UCAdversary(ITM):
 #                raise Exception('Message {} not handled by adversary'.format(msg[1][0]))
 #                self.pump.write('')
 
-def ideal_party(tof):
-    def _f(k, bits, sid, pid, channels, poly, pump, importargs):
-        return DummyParty(k, bits, sid, pid, channels, poly, pump, importargs, tof)
-    return _f
+#def ideal_party(tof):
+#    def _f(k, bits, sid, pid, channels, poly, pump, importargs):
+#        return DummyParty(k, bits, sid, pid, channels, poly, pump, importargs, tof)
+#    return _f
 
 class DummyParty(ITM):
-    #def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs):
     def __init__(self, k, bits, sid, pid, channels, pump):
         self.handlers = {
             channels['z2p'] : self.env_msg,
@@ -365,15 +340,15 @@ class DummyParty(ITM):
         }
         ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, pump)
 
-    def adv_msg(self, d):
-        self.write('p2f', d)
+    def adv_msg(self, msg):
+        self.write('p2f', msg)
         raise Exception('Adv cant write to an honest party')
 
-    def env_msg(self, d):
-        self.write('p2f', d)
+    def env_msg(self, msg):
+        self.write('p2f', msg)
 
-    def func_msg(self, d):
-        self.write('p2z', d)
+    def func_msg(self, msg):
+        self.write('p2z', msg)
 
 #class GUCDummyParty(ITM):
 #    def __init__(self, k, bits, sid, pid, channels, poly, pump, importargs, gsid, ssids):
@@ -407,7 +382,6 @@ def protocolWrapper(prot):
 
 from collections import defaultdict
 class ProtocolWrapper(ITM):
-    #def __init__(self, k, bits, crupt, sid, channels, pump, prot, poly, importargs):
     def __init__(self, k, bits, crupt, sid, channels, pump, prot):
         self.crupt = crupt
         self.z2pid = {}
@@ -431,14 +405,14 @@ class ProtocolWrapper(ITM):
 
     def _newPID(self, sid, pid, _2pid, p2_, tag):
         pp2_ = GenChannel(('write-translate-{}'.format(tag),sid,pid)) 
-        _2pp = GenChannel(('read-{}'.format(tag),sid,pid)) # _ to 
+        _2pp = GenChannel(('read-{}'.format(tag),sid,pid)) 
 
         def _translate():
            while True:
                 r = gevent.wait(objects=[pp2_],count=1)
-                m = r[0].read()
+                msg = r[0].read()
                 pp2_.reset('pp2_ translate reset')
-                p2_.write( ((sid,pid), m))
+                p2_.write( ((sid,pid), msg))
         gevent.spawn(_translate)
 
         _2pid[sid,pid] = _2pp
@@ -459,28 +433,21 @@ class ProtocolWrapper(ITM):
             self.newPID(sid,pid)
             return _2pid[sid,pid]
 
-    def env_msg(self, d):
-        msg = d
-        #imp = d.imp
+    def env_msg(self, msg):
         ((sid,pid), msg) = msg
         if self.is_dishonest(sid,pid): raise Exception("Environment writing to corrupt party")
         _pid = self.getPID(self.z2pid,sid,pid)
         _pid.write(msg)
     
-    def func_msg(self, d):
-        msg = d
-        #imp = d.imp
+    def func_msg(self, msg):
         fromsid,((tosid,topid),msg) = msg
         if self.is_dishonest(tosid,topid):
             self.write('p2a', ((tosid,topid), msg))
         else:
             _pid = self.getPID(self.f2pid, tosid, topid)
-            #_pid.write( (fro, msg), imp )
             _pid.write( msg)
 
-    def adv_msg(self, d):
-        msg = d
-        #imp = d.imp
+    def adv_msg(self, msg):
         (sid,pid), msg = msg
         if self.is_honest(sid,pid): raise Exception("adv writing to an honest party: {}. Cruptset: {}".format((sid,pid), self.crupt))
         self.write( 'p2f', ((sid,pid), msg))
