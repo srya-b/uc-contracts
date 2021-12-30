@@ -107,7 +107,7 @@ class ITM:
         m = self.read(read)
         return m
 
-    def write_and_wait_expect(self, ch=None, msg=None, read=None, expect=None):
+    def write_and_expect_msg(self, ch=None, msg=None, read=None, expect=None):
         m = self.write_and_wait_for(ch, msg, read)
         assert m == expect, 'Expected: {}, Received: {}'.format(expect, m)
         return m
@@ -129,7 +129,6 @@ class ITM:
             msg = r.read()
             r.reset()
             self.handlers[r](msg)
-
 
 class UCProtocol(ITM):
     def __init__(self, k, bits, sid, pid, channels, pump):
@@ -199,6 +198,7 @@ class UCFunctionality(ITM):
 
     def env_msg(self, msg):
         Exception("env_msg needs to be defined")
+
 
 class UCAdversary(ITM):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump):
@@ -278,7 +278,6 @@ class ProtocolWrapper(ITM):
         self.z2pid = {}
         self.f2pid = {}
         self.a2pid = {}
-        self.p2pid = {}
         self.prot = prot
         self.log = logging.getLogger('ProtocolWrapper')
         self.handlers = {

@@ -64,7 +64,10 @@ class DummyAdversary(UCAdversary):
         Args:
             msg (tuple): message from a protocol party
         """
-        self.channels['a2z'].write( ('P2A', msg) )
+        self.write(
+            ch='a2z',
+            msg=('P2A', msg)
+        )
 
     def func_msg(self, msg):
         """
@@ -73,5 +76,8 @@ class DummyAdversary(UCAdversary):
         Args:
             msg (tuple): message from the functionality
         """
-        self.channels['a2z'].write( ('F2A', msg) )
+        self.write(
+            ch='a2z',
+            msg=('F2A', msg)
+        )
 

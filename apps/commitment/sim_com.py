@@ -1,9 +1,7 @@
 from uc.itm import ITM, UCAdversary
 
-#class Sim_Com(ITM):
 class Sim_Com(UCAdversary):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump):
-        #self.crupt = crupt
         self.ssid = sid[0]
         self.committer = sid[1]
         self.receiver = sid[2]
@@ -36,7 +34,6 @@ class Sim_Com(UCAdversary):
 
     def commit_send(self, to, msg):
         rec, commitmsg = msg
-        print('commit_send to={}, commitmsg={}'.format(to, commitmsg))
         if to == (self.sid, self.committer):
             b = self.sample(1)
             self.write(
@@ -54,7 +51,7 @@ class Sim_Com(UCAdversary):
         else: self.pump.write('')
 
     def recv_commit(self, sender):
-        if sender == (self.sid, self.receiver) and self.receiver_state is 1:
+        if sender == (self.sid, self.receiver) and self.receiver_state == 1:
             self.receiver_random = self.sample(self.k)
             self.write(
                 ch='a2z',
@@ -65,7 +62,7 @@ class Sim_Com(UCAdversary):
 
 
     def recv_open(self, sender, bit):
-        if sender == (self.sid, self.receiver) and self.receiver_state is 2:
+        if sender == (self.sid, self.receiver) and self.receiver_state == 2:
             self.write(
                 ch='a2z',
                 msg=('P2A', (sender, ('send', ((self.sid, self.committer), (self.sample(self.k), bit))))),

@@ -44,7 +44,7 @@ class Commitment_Prot(UCProtocol):
         )
 
     def check_commit(self, preimage):
-        m = self.write_and_wait_expect(
+        m = self.write_and_expect_msg(
             ch='p2f', msg=('hash', preimage),
             read='f2p', expect=self.commitment
         )
@@ -55,14 +55,14 @@ class Commitment_Prot(UCProtocol):
         )
  
     def receive(self, fro, msg):
-        if not self.iscommitter and self.state is 1:
+        if not self.iscommitter and self.state == 1:
             self.write(
                 ch='p2z',
                 msg=('commit',)
             )
             self.commitment = msg
             self.state = 2
-        elif not self.iscommitter and self.state is 2:
+        elif not self.iscommitter and self.state == 2:
             self.check_commit(msg)
         else:
             self.pump.write('')
