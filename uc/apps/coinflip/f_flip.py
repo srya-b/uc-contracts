@@ -12,31 +12,24 @@ class F_Flip(UCFunctionality):
 
         self.flip = None
 
-        self.party_msg['flip'] = self.flip
-        self.party_msg['getflip'] = self.getflip
-    
-    def flip(self, sender):
+        self.party_msgs['flip'] = self.party_flip
+        self.party_msgs['getflip'] = self.party_getflip
+        self.party_msgs['sendmsg'] = self.party_sendmsg
+
+    def party_flip(self, sender):
         if sender == self.flipper:
             self.flip = self.sample(1)
-            self.write(
-                ch='a2f',
-                msg=('flip',)
-            )
+            self.write( ch='a2f', msg=('flip',) )
         else: self.pump.write('')
 
-    def getflip(self, sender):
-        m = self.write_and_wait_for(
-            ch='a2f', msg=('askflip',sender).
-            read='f2a'
-        )
-
+    def party_getflip(self, sender):
+        m = self.write_and_wait_for( ch='f2a', msg=('askflip',sender), read='a2f' )
         if m == ('yes',):
-            self.write(
-                ch='f2p',
-                msg=(sender, ('flip', self.flip))
-            )
+            self.write( ch='f2p', msg=(sender, ('flip', self.flip)) )
         elif m == ('no',):
             self.pump.write('')
         else:
             raise Exception('Unexpected message. Expected ("yes",) or ("no",), got: {}'.format(m))
 
+    def party_sendmsg(self, sender, to, msg):
+        self.write( ch='f2p', msg=((self.sid, to), ('recvmsg', sender, msg)) )

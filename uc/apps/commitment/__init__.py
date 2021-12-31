@@ -1,4 +1,3 @@
-from f_com import F_Com
-from f_ro import Random_Oracle_and_Chan
-from prot_com import Commitment_Prot
-import commsg
+from uc.apps.commitment.f_com import F_Com_Channel
+from uc.apps.commitment.f_ro import Random_Oracle_and_Chan
+from uc.apps.commitment.prot_com import Commitment_Prot

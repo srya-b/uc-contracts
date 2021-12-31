@@ -4,6 +4,23 @@ from numpy.polynomial.polynomial import Polynomial
 import random, os
 
 def createUC(k, fs, ps, adv):
+    """Setups of the necessary ITIs in the UC experiment,
+    waits to receive the sid and crupt list from the environment,
+    and offers all channels in the execution.
+
+    Args:
+        k: The security parameter
+        fs: The functionality being run, must have same interface as UCFunctionality
+        ps: The protocol to be run inside the ProtocolWrapper, same as UCProtocol
+        adv: The adversary code, as UCAdversary
+
+    Returns:
+        channels: all of the channels between the main ITIs in the execution.
+        static: the channel through which the environment communicates to execuc
+            to give the sid and crupt list
+        pump: The channel that all ITIs get use to return control to env and env cant
+            wait on.
+    """
     f2p,p2f = GenChannel('f2p'),GenChannel('p2f')
     f2a,a2f = GenChannel('f2a'),GenChannel('a2f')
     f2z,z2f = GenChannel('f2z'),GenChannel('z2f')
@@ -53,6 +70,20 @@ def createUC(k, fs, ps, adv):
     return channels,static,pump
 
 def execUC(k, env, fs, ps, adv):
+    """The main function called which sets up the UC experiment,
+    runs the environmenta, and returns its output.
+
+    Args:
+        k: The security parameter.
+        env: the code for the environment, look at envs in uc.apps
+        fs: the functionality code, follows UCFunctionality
+        ps: the protocol code to run inside ProtocolWrapper, follows UCProtocol
+        adv: the adversary code, follows UCAdverasary, see uc.adversary
+
+    Returns:
+        b: the output (bit) from the environment
+    """
     c,static,pump = createUC(k, fs, ps, adv)
-    return env(k, static, c['z2p'], c['z2f'], c['z2a'], c['a2z'], c['f2z'], c['p2z'], pump)
+    b = env(k, static, c['z2p'], c['z2f'], c['z2a'], c['a2z'], c['f2z'], c['p2z'], pump)
+    return b
 

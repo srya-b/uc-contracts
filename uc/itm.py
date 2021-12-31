@@ -213,8 +213,8 @@ class UCAdversary(ITM):
         self.func_msgs = {}
         self.party_msgs = {}
         
-        self.a2f_msgs = {}
-        self.a2p_msgs = {}
+        self.z2a2f_msgs = {}
+        self.z2a2p_msgs = {}
 
         self.f = lambda x: x[0]
         self.fparse = lambda x: x[1:]
@@ -237,10 +237,10 @@ class UCAdversary(ITM):
 
     def env_msg(self, m):
         t,msg = m
-        if t is 'A2F' and msg[0] in self.a2f_msgs:
-            self.a2f_msgs[msg[0]](*msg[1:])
-        elif t is 'A2P' and msg[1][0] in self.a2p_msgs:
-            self.a2p_msgs[msg[1][0]](msg[0], msg[1][1:])
+        if t == 'A2F' and msg[0] in self.z2a2f_msgs:
+            self.z2a2f_msgs[msg[0]](*msg[1:])
+        elif t == 'A2P' and msg[1][0] in self.z2a2p_msgs:
+            self.z2a2p_msgs[msg[1][0]](msg[0], msg[1][1:])
         elif t in self.env_msgs:
             self.env_msgs[t](msg)
         else:
@@ -338,7 +338,6 @@ class ProtocolWrapper(ITM):
             _pid.write( msg)
 
     def adv_msg(self, msg):
-        print("\n adv msg: {}\n".format(msg))
         (sid,pid), msg = msg
         if self.is_honest(sid,pid): raise Exception("adv writing to an honest party: {}. Cruptset: {}".format((sid,pid), self.crupt))
         self.write( 'p2f', ((sid,pid), msg))

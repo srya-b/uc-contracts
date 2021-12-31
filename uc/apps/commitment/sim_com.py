@@ -16,13 +16,14 @@ class Sim_Com(UCAdversary):
         self.committed_bit = None
         self.dont_open = False
 
-        self.a2f_msgs['hash'] = self.env_hash
+        self.z2a2f_msgs['hash'] = self.env_hash
         if self.is_dishonest(self.sid, self.receiver):
             self.party_msgs['commit'] = self.recv_commit
             self.party_msgs['open'] = self.recv_open
             self.party_msgs['recvmsg'] = self.recvmsg
         elif self.is_dishonest(self.sid, self.committer):
-            self.a2p_msgs['sendmsg'] = self.commit_send
+            # TODO: what is the receiver sends a message to the crupt committer?
+            self.z2a2p_msgs['sendmsg'] = self.commit_send
 
     def hash(self, s):
         if s not in self.table:
@@ -68,13 +69,13 @@ class Sim_Com(UCAdversary):
     def recv_commit(self, sender):
         if sender == (self.sid, self.receiver) and self.receiver_state is 1:
             self.receiver_random = self.sample(self.k)
-            self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', ((self.sid, self.committer), self.receiver_random)))) )
+            self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', ((self.sid, self.committer), ('commit', self.receiver_random))))) )
             self.receiver_state = 2
         else: self.pump.write('')
 
 
     def recv_open(self, sender, bit):
         if sender == (self.sid, self.receiver) and self.receiver_state is 2:
-            self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', ((self.sid, self.committer), (self.sample(self.k), bit))))) )
+            self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', ((self.sid, self.committer), ('open', (self.sample(self.k), bit)))))) )
             self.receiver_state = 3
         else: self.pump.write('')

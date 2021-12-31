@@ -35,8 +35,11 @@ class Commitment_Prot(UCProtocol):
     def env_reveal(self):
         self.write( ch='p2f', msg=('sendmsg', self.receiver, ('open', (self.nonce, self.bit))) )
 
-    def env_sendmsg(self, to, msg):
-        self.write( ch='p2f', msg=('sendmsg', to, msg) )
+    def env_sendmsg(self, msg):
+        if self.iscommitter:
+            self.write( ch='p2f', msg=('sendmsg', self.receiver, msg) )
+        else:
+            self.write( ch='p2f', msg=('sendmsg', self.committer, msg) )
 
     def check_commit(self, preimage):
         try:
@@ -55,5 +58,5 @@ class Commitment_Prot(UCProtocol):
         elif not self.iscommitter and self.state is 2 and msg[0] == 'open':
             self.check_commit(msg[1])
         else:
-            self.write( ch='p2z', msg=('recvmsg', fro, msg) )
+            self.write( ch='p2z', msg=('recvmsg', msg) )
 
