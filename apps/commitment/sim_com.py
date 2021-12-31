@@ -33,6 +33,7 @@ class Sim_Com(UCAdversary):
         )
 
     def commit_send(self, to, msg):
+        print('\n\n commitmsg: {}\n\n'.format(msg))
         rec, commitmsg = msg
         if to == (self.sid, self.committer):
             b = self.sample(1)

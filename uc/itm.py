@@ -329,7 +329,7 @@ class ProtocolWrapper(ITM):
         _pid = self.getPID(self.z2pid,sid,pid)
         _pid.write(msg)
     
-    def func_msg(self, msg):
+    def func_msg(self, msg):        
         fromsid,((tosid,topid),msg) = msg
         if self.is_dishonest(tosid,topid):
             self.write('p2a', ((tosid,topid), msg))
@@ -338,6 +338,7 @@ class ProtocolWrapper(ITM):
             _pid.write( msg)
 
     def adv_msg(self, msg):
+        print("\n adv msg: {}\n".format(msg))
         (sid,pid), msg = msg
         if self.is_honest(sid,pid): raise Exception("adv writing to an honest party: {}. Cruptset: {}".format((sid,pid), self.crupt))
         self.write( 'p2f', ((sid,pid), msg))
