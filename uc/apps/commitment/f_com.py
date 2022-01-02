@@ -34,7 +34,7 @@ class F_Com_Channel(UCFunctionality):
         else: self.pump.write('')
 
     def sendmsg(self, sender, msg):
-        if sender == (self.sid, self.committer):
+        if sender == self.committer:
             self.write( ch='f2p', msg=(self.receiver, ('recvmsg', msg)) )
         else:
             self.write( ch='f2p', msg=(self.committer, ('recvmsg', msg)) )

@@ -99,7 +99,7 @@ class ITM:
     def write(self, ch, msg):
         self.channels[ch].write(self.wrapwrite(msg))
 
-    def read(self, ch=None):
+    def read(self, ch):
         return wait_for(self.channels[ch])
 
     def write_and_wait_for(self, ch=None, msg=None, read=None):
@@ -189,6 +189,7 @@ class UCFunctionality(ITM):
             self.pump.write('')
 
     def party_msg(self, m):
+        print('party msg', m)
         sender,msg = m
         if msg[0] in self.party_msgs:
             self.party_msgs[msg[0]](sender, *msg[1:])
@@ -230,8 +231,10 @@ class UCAdversary(ITM):
             self.pump.write('')
 
     def func_msg(self, msg):
-        if self.f(msg[0]) in self.func_msgs:
-            self.func_msgs[self.f(msg[0])](*self.fparse(msg))
+        sendersid,msg = msg
+        if self.f(msg) in self.func_msgs:
+            print('func msg at adv', msg)
+            self.func_msgs[self.f(msg)](*self.fparse(msg))
         else:
             self.pump.write('')
 
@@ -240,7 +243,7 @@ class UCAdversary(ITM):
         if t == 'A2F' and msg[0] in self.z2a2f_msgs:
             self.z2a2f_msgs[msg[0]](*msg[1:])
         elif t == 'A2P' and msg[1][0] in self.z2a2p_msgs:
-            self.z2a2p_msgs[msg[1][0]](msg[0], msg[1][1:])
+            self.z2a2p_msgs[msg[1][0]](msg[0], *msg[1][1:])
         elif t in self.env_msgs:
             self.env_msgs[t](msg)
         else:
