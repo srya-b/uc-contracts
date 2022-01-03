@@ -22,10 +22,10 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     g2 = gevent.spawn(_p2z)
     
 
-    z2p.write( ((sid,1), ('commit',0)))
+    z2p.write( (1, ('commit',0)))
     waits(pump)
 
-    z2p.write( ((sid,1), ('reveal',)))
+    z2p.write( (1, ('reveal',)))
     waits(pump)
     
     gevent.kill(g1)
@@ -56,10 +56,10 @@ def env_receiver_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     gevent.spawn(_p2z)
     gevent.spawn(_a2z)
 
-    z2p.write( ((sid,1), ('commit',0)))
+    z2p.write( (1, ('commit',0)))
     waits(pump)
 
-    z2p.write( ((sid,1), ('reveal',)))
+    z2p.write( (1, ('reveal',)))
     waits(pump)
 
     print('transcript', transcript)
@@ -67,7 +67,7 @@ def env_receiver_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
 
 def env_committer_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     sid = ('one', 1, 2)
-    static.write( (('sid',sid), ('crupt', (sid,1))))
+    static.write( (('sid',sid), ('crupt', 1)))
 
     transcript = []
     def _p2z():
@@ -83,24 +83,24 @@ def env_committer_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     z2a.write( ('A2F', ('hash', (123, 0))))
     m = waits(a2z)
     print('env msg', m)
-    _,(sid,lasthash) = m
+    _,lasthash = m
     print('last hash', lasthash)
     transcript.append('a2z: ' + str(m))
 
-    z2a.write( ('A2P', ((sid,1), ('sendmsg', 2, ('commit',lasthash)))))
+    z2a.write( ('A2P', (1, ('sendmsg', 2, ('commit',lasthash)))))
     waits(pump)
 
-    z2a.write( ('A2P', ((sid,1), ('sendmsg', 2, 'yoyoyo'))) )
+    z2a.write( ('A2P', (1, ('sendmsg', 2, 'yoyoyo'))) )
     waits(pump)
 
-    z2a.write( ('A2P', ((sid,1), ('sendmsg', 2, ('open', (123, 0))))))
+    z2a.write( ('A2P', (1, ('sendmsg', 2, ('open', (123, 0))))))
     waits(pump)
 
     return transcript
 
 def env_committer_crupt_bad_open(k, static, z2p, z2f, z2a, a2z, f2a, p2z, pump):
     sid = ('one', 1, 2)
-    static.write( (('sid',sid), ('crupt', (sid,1))))
+    static.write( (('sid',sid), ('crupt', 1)))
 
     transcript = []
     def _p2z():
@@ -116,21 +116,21 @@ def env_committer_crupt_bad_open(k, static, z2p, z2f, z2a, a2z, f2a, p2z, pump):
     z2a.write( ('A2F', ('hash', (123, 0))))
     m = waits(a2z)
     print('env msg', m)
-    _,(sid,lasthash) = m
+    _,lasthash = m
     print('last hash', lasthash)
     transcript.append('a2z: ' + str(m))
 
-    z2a.write( ('A2P', ((sid,1), ('sendmsg', 2, ('commit',lasthash)))))
+    z2a.write( ('A2P', (1, ('sendmsg', 2, ('commit',lasthash)))))
     waits(pump)
 
-    z2p.write( ((sid,2), ('sendmsg', ('this is the right message'))) )
+    z2p.write( (2, ('sendmsg', ('this is the right message'))) )
     #waits(pump)
     waits(a2z)
 
-    z2a.write( ('A2P', ((sid,1), ('sendmsg', 2, 'yoyoyo'))) )
+    z2a.write( ('A2P', (1, ('sendmsg', 2, 'yoyoyo'))) )
     waits(pump)
 
-    z2a.write( ('A2P', ((sid,1), ('sendmsg', 2, ('open', (123, 1))))))
+    z2a.write( ('A2P', (1, ('sendmsg', 2, ('open', (123, 1))))))
     waits(pump)
 
     return transcript

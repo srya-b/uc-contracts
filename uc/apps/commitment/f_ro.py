@@ -32,7 +32,7 @@ class Random_Oracle_and_Chan(UCFunctionality):
     def sendmsg(self, sender, to, msg):
         self.write(
             ch='f2p',
-            msg=((self.sid,to), ('recvmsg', sender, msg)),
+            msg=(to, ('recvmsg', sender, msg)),
         )
 
 

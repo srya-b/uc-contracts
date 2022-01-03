@@ -55,8 +55,8 @@ def createUC(k, fs, ps, adv):
 
         assert crupt_msg[0] == 'crupt'
         crupt = set()
-        for _s,_p in crupt_msg[1:]:
-            crupt.add( (_s,_p))
+        for _p in crupt_msg[1:]:
+            crupt.add( _p )
 
         f = fs(k, rng, crupt, sid, -1, func_channels, pump)
         gevent.spawn( f.run )

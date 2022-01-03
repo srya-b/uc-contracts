@@ -180,7 +180,8 @@ class UCFunctionality(ITM):
         return not self.is_honest(sid, pid)
 
     def wrapwrite(self, msg):
-        return (self.sid, msg)
+        #return (self.sid, msg)
+        return msg
 
     def adv_msg(self, msg):
         if msg[0] in self.adv_msgs:
@@ -189,9 +190,7 @@ class UCFunctionality(ITM):
             self.pump.write('')
 
     def party_msg(self, m):
-        print('party msg', m)
         sender,msg = m
-        print('msg', msg[1:])
         if msg[0] in self.party_msgs:
             self.party_msgs[msg[0]](sender, *msg[1:])
         else:
@@ -221,8 +220,8 @@ class UCAdversary(ITM):
         self.f = lambda x: x[0]
         self.fparse = lambda x: x[1:]
 
-    def is_dishonest(self, sid, pid):
-        return (sid,pid) in self.crupt
+    def is_dishonest(self, pid):
+        return pid in self.crupt
 
     def party_msg(self, d):
         sender, msg = d
@@ -233,15 +232,17 @@ class UCAdversary(ITM):
             self.pump.write('')
 
     def func_msg(self, msg):
-        sendersid,msg = msg
+        #sendersid,msg = msg
         if self.f(msg) in self.func_msgs:
-            print('func msg at adv', msg)
+            #print('func msg at adv', msg)
             self.func_msgs[self.f(msg)](*self.fparse(msg))
         else:
             self.pump.write('')
 
     def env_msg(self, m):
         t,msg = m
+        print('adv env msg t: {}, msg: {}'.format(t, msg[1][0]))
+        print('z2a2p_msgs: {}'.format(self.z2a2p_msgs))
         if t == 'A2F' and msg[0] in self.z2a2f_msgs:
             self.z2a2f_msgs[msg[0]](*msg[1:])
         elif t == 'A2P' and msg[1][0] in self.z2a2p_msgs:
@@ -292,57 +293,69 @@ class ProtocolWrapper(ITM):
         }
         ITM.__init__(self, k, bits, sid, None, channels, self.handlers, pump)
 
-    def is_dishonest(self, sid, pid):
-        return (sid,pid) in self.crupt
+    def is_dishonest(self, pid):
+        return pid in self.crupt
 
     def is_honest(self, sid, pid):
-        return not self.is_dishonest(sid,pid)
+        return not self.is_dishonest(pid)
 
-    def _newPID(self, sid, pid, _2pid, p2_, tag):
-        pp2_ = GenChannel(('write-translate-{}'.format(tag),sid,pid)) 
-        _2pp = GenChannel(('read-{}'.format(tag),sid,pid)) 
+    def _newPID(self, pid, _2pid, p2_, tag):
+        pp2_ = GenChannel(('write-translate-{}'.format(tag),self.sid,pid)) 
+        _2pp = GenChannel(('read-{}'.format(tag),self.sid,pid)) 
 
         def _translate():
            while True:
                 r = gevent.wait(objects=[pp2_],count=1)
                 msg = r[0].read()
                 pp2_.reset()
-                p2_.write( ((sid,pid), msg))
+                #p2_.write( ((sid,pid), msg))
+                print('translate append', pid)
+                p2_.write( (pid, msg) )
         gevent.spawn(_translate)
 
-        _2pid[sid,pid] = _2pp
+        _2pid[self.sid,pid] = _2pp
         return (_2pp, pp2_) 
 
-    def newPID(self, sid, pid):
+    #def newPID(self, sid, pid):
+    def newPID(self, pid):
         print('\033[1m[{}]\033[0m Creating new party with pid: {}'.format('PWrapper', pid))
-        _z2p,_p2z = self._newPID(sid, pid, self.z2pid, self.channels['p2z'], 'p2z')
-        _f2p,_p2f = self._newPID(sid, pid, self.f2pid, self.channels['p2f'], 'p2f')
-        _a2p,_p2a = self._newPID(sid, pid, self.a2pid, self.channels['p2a'], 'p2a')
+        _z2p,_p2z = self._newPID(pid, self.z2pid, self.channels['p2z'], 'p2z')
+        _f2p,_p2f = self._newPID(pid, self.f2pid, self.channels['p2f'], 'p2f')
+        _a2p,_p2a = self._newPID(pid, self.a2pid, self.channels['p2a'], 'p2a')
         
         p = self.prot(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p, 'p2f':_p2f}, self.pump)
         gevent.spawn(p.run)
 
-    def getPID(self, _2pid, sid, pid):
-        if (sid,pid) in _2pid: return _2pid[sid,pid]
+    #def getPID(self, _2pid, sid, pid):
+    def getPID(self, _2pid, pid):
+        if (self.sid,pid) in _2pid: return _2pid[self.sid,pid]
         else:
-            self.newPID(sid,pid)
-            return _2pid[sid,pid]
+            self.newPID(pid)
+            return _2pid[self.sid,pid]
 
     def env_msg(self, msg):
-        ((sid,pid), msg) = msg
-        if self.is_dishonest(sid,pid): raise Exception("Environment writing to corrupt party")
-        _pid = self.getPID(self.z2pid,sid,pid)
+        #((sid,pid), msg) = msg
+        pid,msg = msg
+        print('pwrapper end msg', pid)
+        #if self.is_dishonest(sid,pid): raise Exception("Environment writing to corrupt party")
+        #_pid = self.getPID(self.z2pid,sid,pid)
+        if self.is_dishonest(pid): raise Exception("Environment writing to corrupt party")
+        _pid = self.getPID(self.z2pid,pid)
         _pid.write(msg)
     
     def func_msg(self, msg):        
-        fromsid,((tosid,topid),msg) = msg
-        if self.is_dishonest(tosid,topid):
-            self.write('p2a', ((tosid,topid), msg))
+        #fromsid,((tosid,topid),msg) = msg
+        topid, msg = msg
+        print('pwrapper func msg', topid)
+        #if self.is_dishonest(tosid,topid):
+        if self.is_dishonest(topid):
+            self.write('p2a', (topid, msg))
         else:
-            _pid = self.getPID(self.f2pid, tosid, topid)
+            _pid = self.getPID(self.f2pid, topid)
             _pid.write( msg)
 
     def adv_msg(self, msg):
-        (sid,pid), msg = msg
-        if self.is_honest(sid,pid): raise Exception("adv writing to an honest party: {}. Cruptset: {}".format((sid,pid), self.crupt))
-        self.write( 'p2f', ((sid,pid), msg))
+        #(sid,pid), msg = msg
+        pid, msg = msg
+        if self.is_honest(self.sid, pid): raise Exception("adv writing to an honest party: {}. Cruptset: {}".format((self.sid,pid), self.crupt))
+        self.write( 'p2f', (pid, msg))

@@ -18,10 +18,10 @@ class Sim_Com(UCAdversary):
 
         self.z2a2f_msgs['hash'] = self.env_hash
         self.party_msgs['recvmsg'] = self.recvmsg
-        if self.is_dishonest(self.sid, self.receiver):
+        if self.is_dishonest(self.receiver):
             self.party_msgs['commit'] = self.recv_commit
             self.party_msgs['open'] = self.recv_open
-        elif self.is_dishonest(self.sid, self.committer):
+        elif self.is_dishonest(self.committer):
             self.z2a2p_msgs['sendmsg'] = self.commit_send
 
     def set_entry(self, key, value):
@@ -50,7 +50,8 @@ class Sim_Com(UCAdversary):
         Args:
             s: the preimage
         """
-        self.write( ch='a2z', msg=('F2A', (self.sid,self.hash(s))) )
+        #self.write( ch='a2z', msg=('F2A', (self.sid,self.hash(s))) )
+        self.write( ch='a2z', msg=('F2A', self.hash(s)) )
 
     def commit_send(self, to, recv, msg):
         """Check wait for sendmsgs from Z until you see the commit message (msg[0] == 'commit').
@@ -67,7 +68,8 @@ class Sim_Com(UCAdversary):
             msg: the message for `to` to send to `recv`
         """
         b = self.sample(1)
-        if msg[0] == 'commit' and to == (self.sid, self.committer) and recv == self.receiver:
+        #if msg[0] == 'commit' and to == (self.sid, self.committer) and recv == self.receiver:
+        if msg[0] == 'commit' and to == self.committer and recv == self.receiver:
             if msg[1] in self.revtable:
                 try:
                     n,b = self.revtable[msg[1]]
@@ -92,7 +94,8 @@ class Sim_Com(UCAdversary):
             recv: the party receiving this message from `to`
             msg: the message
         """
-        if msg[0] == 'open' and to == (self.sid, self.committer) and not self.dont_open:
+        #if msg[0] == 'open' and to == (self.sid, self.committer) and not self.dont_open:
+        if msg[0] == 'open' and to == self.committer and not self.dont_open:
             try: 
                 rec, (nonce, bit) = msg
                 assert bit == self.committed_bit
@@ -127,7 +130,8 @@ class Sim_Com(UCAdversary):
             sender: the party sending this message to A
         """
         self.receiver_random = self.sample(self.k)
-        self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', ((self.sid, self.committer), ('commit', self.receiver_random))))) )
+        #self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', ((self.sid, self.committer), ('commit', self.receiver_random))))) )
+        self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', (self.committer, ('commit', self.receiver_random))))) )
 
 
     def recv_open(self, sender, bit):
@@ -144,4 +148,5 @@ class Sim_Com(UCAdversary):
         """
         nonce = self.sample(self.k)
         self.set_entry((nonce,bit), self.receiver_random)
-        self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', ((self.sid, self.committer), ('open', (nonce, bit)))))) )
+        #self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', ((self.sid, self.committer), ('open', (nonce, bit)))))) )
+        self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', (self.committer, ('open', (nonce, bit)))))) )
