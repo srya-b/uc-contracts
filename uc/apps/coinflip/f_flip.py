@@ -24,6 +24,7 @@ class F_Flip(UCFunctionality):
         else: self.pump.write('')
 
     def party_getflip(self, sender):
+        print('someone asking for getflip\n\n')
         if self.flip is None: self.pump.write('')
         else:
             m = self.write_and_wait_for( ch='f2a', msg=('askflip',sender), read='a2f' )
@@ -38,4 +39,5 @@ class F_Flip(UCFunctionality):
         if sender == self.flipper:
             self.write( ch='f2p', msg=(self.receiver, ('recvmsg', msg)) )
         else:
+            print('\n\n receiver asking to sendmsg: {} \n\n'.format(msg))
             self.write( ch='f2p', msg=(self.flipper, ('recvmsg', msg)) )
