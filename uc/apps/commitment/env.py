@@ -161,7 +161,7 @@ from uc.lemmaS import Lemma_Simulator, lemmaS
 if __name__=='__main__':
     tideal = execUC(
         128,
-        env,
+        env_committer_crupt_bad_open,
         F_Com_Channel,
         protocolWrapper(DummyParty),
         Sim_Com,
@@ -170,7 +170,7 @@ if __name__=='__main__':
     print('\n')
     treal = execUC(
         128,
-        env,
+        env_committer_crupt_bad_open,
         Random_Oracle_and_Chan,
         protocolWrapper(Commitment_Prot),
         DummyAdversary,

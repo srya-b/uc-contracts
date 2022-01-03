@@ -22,8 +22,6 @@ class Sim_Flip(UCAdversary):
         elif self.is_dishonest(self.sid, self.receiver):
             self.deliver_flipper = False
             self.flipper_bit = None
-            #self.func_msgs['askflip'] = self.receiver_askflip
-            #self.z2a2p_msgs['sendmsg'] = self.receiver_sendmsg
             self.func_msgs['flip'] = self.receiver_flip
        
     #
