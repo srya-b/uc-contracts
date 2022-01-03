@@ -191,6 +191,7 @@ class UCFunctionality(ITM):
     def party_msg(self, m):
         print('party msg', m)
         sender,msg = m
+        print('msg', msg[1:])
         if msg[0] in self.party_msgs:
             self.party_msgs[msg[0]](sender, *msg[1:])
         else:

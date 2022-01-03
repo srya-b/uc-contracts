@@ -123,7 +123,7 @@ def env_committer_crupt_bad_open(k, static, z2p, z2f, z2a, a2z, f2a, p2z, pump):
     z2a.write( ('A2P', ((sid,1), ('sendmsg', 2, ('commit',lasthash)))))
     waits(pump)
 
-    z2a.write( ('A2P', ((sid,1), ('sendmsg', 'yoyoyo'))) )
+    z2a.write( ('A2P', ((sid,1), ('sendmsg', 2, 'yoyoyo'))) )
     waits(pump)
 
     z2a.write( ('A2P', ((sid,1), ('sendmsg', 2, ('open', (123, 1))))))
@@ -157,7 +157,7 @@ from uc.lemmaS import Lemma_Simulator, lemmaS
 if __name__=='__main__':
     tideal = execUC(
         128,
-        env_receiver_crupt,
+        env,
         F_Com_Channel,
         protocolWrapper(DummyParty),
         Sim_Com,
@@ -166,7 +166,7 @@ if __name__=='__main__':
     print('\n')
     treal = execUC(
         128,
-        env_receiver_crupt,
+        env,
         Random_Oracle_and_Chan,
         protocolWrapper(Commitment_Prot),
         DummyAdversary,

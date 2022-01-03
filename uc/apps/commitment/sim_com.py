@@ -34,10 +34,10 @@ class Sim_Com(UCAdversary):
     def env_hash(self, s):
         self.write( ch='a2z', msg=('F2A', (self.sid,self.hash(s))) )
 
-    def commit_send(self, to, msg):
-        receiver, msg = msg
+    def commit_send(self, to, recv, msg):
+        #receiver, msg = msg
         b = self.sample(1)
-        if msg[0] == 'commit' and to == (self.sid, self.committer):
+        if msg[0] == 'commit' and to == (self.sid, self.committer) and recv == self.receiver:
             if msg[1] in self.revtable:
                 try:
                     n,b = self.revtable[msg[1]]
@@ -46,12 +46,12 @@ class Sim_Com(UCAdversary):
             else: self.dont_open = True
             self.write( ch='a2p', msg=(to, ('commit', b)) )
             self.committed_bit = b
-            self.a2p_msgs['sendmsg'] = self.open_send
+            self.z2a2p_msgs['sendmsg'] = self.open_send
         else: 
-            self.write( ch='a2p', msg=(to, ('sendmsg', receiver, msg)) )
+            print('\n\n this is the wrong else shit: {} \n\n'.format(msg))
+            self.write( ch='a2p', msg=(to, ('sendmsg', msg)) )
 
-    def open_send(self, to, msg):
-        receiver, msg = msg
+    def open_send(self, to, recv, msg):
         if msg[0] == 'open' and to == (self.sid, self.committer) and not self.dont_open:
             try: 
                 rec, (nonce, bit) = msg
@@ -61,7 +61,8 @@ class Sim_Com(UCAdversary):
                 self.dont_open = True
                 self.pump.write('')
         else:
-            self.write( ch='a2p', msg=(to, ('sendmsg', receiver, msg)) )
+            print('\n\nthis is some else shit\n\n')
+            self.write( ch='a2p', msg=(to, ('sendmsg', msg)) )
 
     def recvmsg(self, sender, msgsender, msg):
         self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', (msgsender, msg)))) )
