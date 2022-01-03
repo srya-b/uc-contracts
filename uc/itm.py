@@ -227,6 +227,7 @@ class UCAdversary(ITM):
     def party_msg(self, d):
         sender, msg = d
         if msg[0] in self.party_msgs:
+            print('adv party msg: {}'.format(msg))
             self.party_msgs[msg[0]](sender, *msg[1:])
         else:
             self.pump.write('')

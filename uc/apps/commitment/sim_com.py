@@ -23,6 +23,7 @@ class Sim_Com(UCAdversary):
             self.party_msgs['recvmsg'] = self.recvmsg
         elif self.is_dishonest(self.sid, self.committer):
             # TODO: what is the receiver sends a message to the crupt committer?
+            self.party_msgs['recvmsg'] = self.recvmsg
             self.z2a2p_msgs['sendmsg'] = self.commit_send
 
     def hash(self, s):
@@ -64,8 +65,8 @@ class Sim_Com(UCAdversary):
             print('\n\nthis is some else shit\n\n')
             self.write( ch='a2p', msg=(to, ('sendmsg', msg)) )
 
-    def recvmsg(self, sender, msgsender, msg):
-        self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', (msgsender, msg)))) )
+    def recvmsg(self, sender, msg):
+        self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', msg))) )
 
     def recv_commit(self, sender):
         if sender == (self.sid, self.receiver) and self.receiver_state is 1:

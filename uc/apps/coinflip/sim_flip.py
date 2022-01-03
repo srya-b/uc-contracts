@@ -44,7 +44,7 @@ class Sim_Flip(UCAdversary):
    
     def func_askflip(self, who):
         if self.is_dishonest(self.sid, self.flipper):
-            if who == (self.sid, self.receover) and self.deliver_receiver:
+            if who == (self.sid, self.receiver) and self.deliver_receiver:
                 self.write( ch='a2f', msg=('yes',) )
             else:
                 self.write( ch='a2f', msg=('no',) )

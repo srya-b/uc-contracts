@@ -123,6 +123,10 @@ def env_committer_crupt_bad_open(k, static, z2p, z2f, z2a, a2z, f2a, p2z, pump):
     z2a.write( ('A2P', ((sid,1), ('sendmsg', 2, ('commit',lasthash)))))
     waits(pump)
 
+    z2p.write( ((sid,2), ('sendmsg', ('this is the right message'))) )
+    #waits(pump)
+    waits(a2z)
+
     z2a.write( ('A2P', ((sid,1), ('sendmsg', 2, 'yoyoyo'))) )
     waits(pump)
 
