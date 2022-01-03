@@ -39,5 +39,4 @@ class F_Flip(UCFunctionality):
         if sender == self.flipper:
             self.write( ch='f2p', msg=(self.receiver, ('recvmsg', msg)) )
         else:
-            print('\n\n receiver asking to sendmsg: {} \n\n'.format(msg))
             self.write( ch='f2p', msg=(self.flipper, ('recvmsg', msg)) )
