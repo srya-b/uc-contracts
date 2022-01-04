@@ -12,13 +12,13 @@ class Sim_Flip(UCAdversary):
         self.z2a2p_msgs['sendmsg'] = self.sendmsg
         self.func_msgs['askflip'] = self.func_askflip
         self.party_msgs['recvmsg'] = self.recvmsg
-        if self.is_dishonest(self.sid, self.flipper):
+        if self.is_dishonest(self.flipper):
             self.deliver_receiver = False
             self.env_commit_bit = None
             self.flip = None
             self.z2a2p_msgs['commit'] = self.flipper_commit
             self.z2a2p_msgs['reveal'] = self.flipper_open
-        elif self.is_dishonest(self.sid, self.receiver):
+        elif self.is_dishonest(self.receiver):
             self.deliver_flipper = False
             self.flipper_bit = None
             self.func_msgs['flip'] = self.receiver_flip
@@ -45,7 +45,7 @@ class Sim_Flip(UCAdversary):
         self.write( ch='a2f', msg=('yes',) )
         sender,(_,self.flip) = self.read('p2a')
         self.receiver_bit = self.flip ^ self.env_commit_bit
-        self.write( ch='a2z', msg=('P2A', ((self.sid, self.flipper), ('recvmsg', ('bit', self.receiver_bit)))) )
+        self.write( ch='a2z', msg=('P2A', (self.flipper, ('recvmsg', ('bit', self.receiver_bit)))) )
    
     def func_askflip(self, who):
         """React to F_flip asking to deliver the flip to a party.
@@ -56,16 +56,21 @@ class Sim_Flip(UCAdversary):
         Args:
             who: the party that requsted 'getflip' in F_flip
         """
-        if self.is_dishonest(self.sid, self.flipper):
-            if who == (self.sid, self.receiver) and self.deliver_receiver:
+        print('askflip')
+        if self.is_dishonest(self.flipper):
+            print('d flipper')
+            if who == self.receiver and self.deliver_receiver:
                 self.write( ch='a2f', msg=('yes',) )
             else:
                 self.write( ch='a2f', msg=('no',) )
-        elif self.is_dishonest(self.sid, self.receiver):
-            if who == (self.sid,self.flipper) and self.deliver_flipper:
+        elif self.is_dishonest(self.receiver):
+            print(' d receiver')
+            if who == self.flipper and self.deliver_flipper:
                 self.write( ch='a2f', msg=('yes',) )
             else:
                 self.write( ch='a2f', msg=('no',) )
+        else:
+            self.write( ch='a2f', msg=('yes',) )
 
     def flipper_open(self, to):
         """FLIPPER CRUPT: Z telling crupt flipper to open the commitment.
@@ -110,7 +115,7 @@ class Sim_Flip(UCAdversary):
         Msg:
             From F_flip: ('flip',)
         """
-        self.write( ch='a2z', msg=('P2A', ((self.sid,self.receiver), ('commit',))) )
+        self.write( ch='a2z', msg=('P2A', (self.receiver, ('commit',))) )
         self.z2a2p_msgs['sendmsg'] = self.receiver_sendmsg
 
     def receiver_sendmsg(self, sender, msg):

@@ -6,8 +6,8 @@ log = logging.getLogger(__name__)
 
 class F_Flip(UCFunctionality):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump):
-        self.flipper = (sid, sid[1])
-        self.receiver = (sid, sid[2])
+        self.flipper = sid[1]
+        self.receiver = sid[2]
         UCFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, pump)
 
         self.flip = None
@@ -18,16 +18,17 @@ class F_Flip(UCFunctionality):
 
     def party_flip(self, sender):
         if sender == self.flipper:
-            print('flipper init flip')
             self.flip = self.sample(1)
             self.write( ch='f2a', msg=('flip',) )
         else: self.pump.write('')
 
     def party_getflip(self, sender):
-        print('someone asking for getflip\n\n')
+        print('getflip')
         if self.flip is None: self.pump.write('')
         else:
+            print('ask adb')
             m = self.write_and_wait_for( ch='f2a', msg=('askflip',sender), read='a2f' )
+            print('getadvb')
             if m == ('yes',):
                 self.write( ch='f2p', msg=(sender, ('flip', self.flip)) )
             elif m == ('no',):

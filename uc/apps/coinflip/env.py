@@ -23,13 +23,13 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     g1 = gevent.spawn(_a2z)
     g2 = gevent.spawn(_p2z)
 
-    z2p.write( ((sid,1), ('flip',)) )
+    z2p.write( (1, ('flip',)) )
     waits(pump)
 
-    z2p.write( ((sid,1), ('getflip',)) )
+    z2p.write( (1, ('getflip',)) )
     waits(pump)
 
-    z2p.write( ((sid,2), ('getflip',)) )
+    z2p.write( (2, ('getflip',)) )
     waits(pump)
     gevent.kill(g1)
     gevent.kill(g2)
@@ -38,7 +38,7 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
 
 def env_flipper_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     sid = ('one', 1, 2)
-    static.write( (('sid',sid), ('crupt', (sid,1))))
+    static.write( (('sid',sid), ('crupt', 1)))
 
     transcript = []
     def _a2z():
@@ -58,25 +58,25 @@ def env_flipper_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     g1 = gevent.spawn(_a2z)
     g2 = gevent.spawn(_p2z)
 
-    z2a.write( ('A2P', ((sid,1), ('commit', 1))) )
+    z2a.write( ('A2P', (1, ('commit', 1))) )
     waits(pump)
 
-    z2p.write( ((sid,2), ('getflip',)) )
+    z2p.write( (2, ('getflip',)) )
     waits(pump)
     
-    z2a.write( ('A2P', ((sid,1), ('sendmsg', ('yoyoyoy',)))) )
+    z2a.write( ('A2P', (1, ('sendmsg', ('yoyoyoy',)))) )
     waits(pump)
 
-    z2p.write( ((sid,2), ('sendmsg', ('titititititit',))) )
+    z2p.write( (2, ('sendmsg', ('titititititit',))) )
     waits(pump)
 
-    z2p.write( ((sid,2), ('getflip',)) )
+    z2p.write( (2, ('getflip',)) )
     waits(pump)
 
-    z2a.write( ('A2P', ((sid,1), ('reveal',))) )
+    z2a.write( ('A2P', (1, ('reveal',))) )
     waits(pump)
 
-    z2p.write( ((sid,2), ('getflip',)) )
+    z2p.write( (2, ('getflip',)) )
     waits(pump)
 
     gevent.kill(g1)
@@ -86,7 +86,7 @@ def env_flipper_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
 
 def env_flipper_crupt_no_open(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     sid = ('one', 1, 2)
-    static.write( (('sid',sid), ('crupt', (sid,1))))
+    static.write( (('sid',sid), ('crupt', 1)))
 
     transcript = []
     def _a2z():
@@ -106,25 +106,25 @@ def env_flipper_crupt_no_open(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     g1 = gevent.spawn(_a2z)
     g2 = gevent.spawn(_p2z)
 
-    z2a.write( ('A2P', ((sid,1), ('commit', 1))) )
+    z2a.write( ('A2P', (1, ('commit', 1))) )
     waits(pump)
 
-    z2p.write( ((sid,2), ('getflip',)) )
+    z2p.write( (2, ('getflip',)) )
     waits(pump)
     
-    z2a.write( ('A2P', ((sid,1), ('sendmsg', ('yoyoyoy',)))) )
+    z2a.write( ('A2P', (1, ('sendmsg', ('yoyoyoy',)))) )
     waits(pump)
 
-    z2p.write( ((sid,2), ('sendmsg', ('titititititit',))) )
+    z2p.write( (2, ('sendmsg', ('titititititit',))) )
     waits(pump)
 
-    z2p.write( ((sid,2), ('getflip',)) )
+    z2p.write( (2, ('getflip',)) )
     waits(pump)
 
-    #z2a.write( ('A2P', ((sid,1), ('reveal',))) )
+    #z2a.write( ('A2P', (1, ('reveal',))) )
     #waits(pump)
 
-    z2p.write( ((sid,2), ('getflip',)) )
+    z2p.write( (2, ('getflip',)) )
     waits(pump)
 
     gevent.kill(g1)
@@ -134,7 +134,7 @@ def env_flipper_crupt_no_open(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
 
 def env_receiver_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     sid = ('one', 1, 2)
-    static.write( (('sid',sid), ('crupt', (sid,2))))
+    static.write( (('sid',sid), ('crupt', 2)))
 
     transcript = []
     def _a2z():
@@ -154,25 +154,25 @@ def env_receiver_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     g1 = gevent.spawn(_a2z)
     g2 = gevent.spawn(_p2z)
 
-    z2a.write( ('A2P', ((sid,2), ('sendmsg', ('is this a real message',)))) )
+    z2a.write( ('A2P', (2, ('sendmsg', ('is this a real message',)))) )
     waits(pump)
 
-    z2p.write( ((sid,1), ('flip',)) )
+    z2p.write( (1, ('flip',)) )
     waits(pump)
 
-    z2p.write( ((sid,1), ('sendmsg', ('yea this is the honest message',))) )
+    z2p.write( (1, ('sendmsg', ('yea this is the honest message',))) )
     waits(pump)
 
-    z2a.write( ('A2P', ((sid,2), ('sendmsg', ('notbit', 1)))) )
+    z2a.write( ('A2P', (2, ('sendmsg', ('notbit', 1)))) )
     waits(pump)
 
-    z2p.write( ((sid,1), ('getflip',)) )
+    z2p.write( (1, ('getflip',)) )
     waits(pump)
 
-    z2a.write( ('A2P', ((sid,2), ('sendmsg', ('bit', 1)))) )
+    z2a.write( ('A2P', (2, ('sendmsg', ('bit', 1)))) )
     waits(pump)
 
-    z2p.write( ((sid,1), ('getflip',)) )
+    z2p.write( (1, ('getflip',)) )
     waits(pump)
 
     gevent.kill(g1)
@@ -206,7 +206,7 @@ print('\n real \n')
 
 treal = execUC(
     128,
-    env_flipper_crupt,
+    env_receiver_crupt,
     F_Com_Channel,
     protocolWrapper(Flip_Prot),
     DummyAdversary
@@ -216,7 +216,7 @@ print('\n ideal \n')
 
 tideal = execUC(
     128,
-    env_flipper_crupt,
+    env_receiver_crupt,
     F_Flip,
     protocolWrapper(DummyParty),
     Sim_Flip

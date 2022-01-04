@@ -267,6 +267,7 @@ class DummyParty(ITM):
         raise Exception('Adv cant write to an honest party')
 
     def env_msg(self, msg):
+        print('dummy env msg', msg)
         self.write('p2f', msg)
 
     def func_msg(self, msg):
@@ -309,7 +310,6 @@ class ProtocolWrapper(ITM):
                 msg = r[0].read()
                 pp2_.reset()
                 #p2_.write( ((sid,pid), msg))
-                print('translate append', pid)
                 p2_.write( (pid, msg) )
         gevent.spawn(_translate)
 
@@ -336,17 +336,16 @@ class ProtocolWrapper(ITM):
     def env_msg(self, msg):
         #((sid,pid), msg) = msg
         pid,msg = msg
-        print('pwrapper end msg', pid)
         #if self.is_dishonest(sid,pid): raise Exception("Environment writing to corrupt party")
         #_pid = self.getPID(self.z2pid,sid,pid)
         if self.is_dishonest(pid): raise Exception("Environment writing to corrupt party")
+        print('pwrapper env msg', msg)
         _pid = self.getPID(self.z2pid,pid)
         _pid.write(msg)
     
     def func_msg(self, msg):        
         #fromsid,((tosid,topid),msg) = msg
         topid, msg = msg
-        print('pwrapper func msg', topid)
         #if self.is_dishonest(tosid,topid):
         if self.is_dishonest(topid):
             self.write('p2a', (topid, msg))
