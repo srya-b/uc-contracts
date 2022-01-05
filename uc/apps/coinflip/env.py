@@ -206,7 +206,7 @@ print('\n real \n')
 
 treal = execUC(
     128,
-    env_receiver_crupt,
+    env_receiver_crupt_no_open,
     F_Com_Channel,
     protocolWrapper(Flip_Prot),
     DummyAdversary
@@ -216,7 +216,7 @@ print('\n ideal \n')
 
 tideal = execUC(
     128,
-    env_receiver_crupt,
+    env_receiver_crupt_no_open,
     F_Flip,
     protocolWrapper(DummyParty),
     Sim_Flip

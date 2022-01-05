@@ -35,7 +35,7 @@ class GenChannel(Event):
         if not self.is_set():
             self._data = data; self.set() 
         else: 
-            raise Exception("\033[1mwriting to channel already full with {}. Writing {} in {}\033[0m".format(self._data,data,self.i))
+            raise Exception("\033[1mwriting to channel already full with {}. Writing {} in {}\033[0m".format(self._data,data,self.id))
 
     def __str__(self):
         return "Channel id:{}".format(self.id)
@@ -54,6 +54,26 @@ class GenChannel(Event):
         Reset the channel so it can be written to again.
         """
         self.clear()
+
+def wrapwrite(chan, wrapper):
+    newchan = GenChannel('wrap(' + chan.id + ')')
+    def _wrapwrite():
+        while True:
+            m = waits(newchan)
+            chan.write( wrapper(m) )
+    gevent.spawn(_wrapwrite)
+    return newchan
+
+def unwrapread(chans, select, unwrap):
+    newchan = GenChannel()
+    
+    def _unwrapread():
+        while True:
+            m = waits(newchan)
+            select(m).write( unwrap(m) )
+    gevent.spawn(_unwrapread)
+    return newchan
+            
 
 class ITM:
     """
@@ -180,7 +200,6 @@ class UCFunctionality(ITM):
         return not self.is_honest(sid, pid)
 
     def wrapwrite(self, msg):
-        #return (self.sid, msg)
         return msg
 
     def adv_msg(self, msg):
@@ -226,23 +245,18 @@ class UCAdversary(ITM):
     def party_msg(self, d):
         sender, msg = d
         if msg[0] in self.party_msgs:
-            print('adv party msg: {}'.format(msg))
             self.party_msgs[msg[0]](sender, *msg[1:])
         else:
             self.pump.write('')
 
     def func_msg(self, msg):
-        #sendersid,msg = msg
         if self.f(msg) in self.func_msgs:
-            #print('func msg at adv', msg)
             self.func_msgs[self.f(msg)](*self.fparse(msg))
         else:
             self.pump.write('')
 
     def env_msg(self, m):
         t,msg = m
-        print('adv env msg t: {}, msg: {}'.format(t, msg[1][0]))
-        print('z2a2p_msgs: {}'.format(self.z2a2p_msgs))
         if t == 'A2F' and msg[0] in self.z2a2f_msgs:
             self.z2a2f_msgs[msg[0]](*msg[1:])
         elif t == 'A2P' and msg[1][0] in self.z2a2p_msgs:
@@ -267,7 +281,6 @@ class DummyParty(ITM):
         raise Exception('Adv cant write to an honest party')
 
     def env_msg(self, msg):
-        print('dummy env msg', msg)
         self.write('p2f', msg)
 
     def func_msg(self, msg):
@@ -309,14 +322,12 @@ class ProtocolWrapper(ITM):
                 r = gevent.wait(objects=[pp2_],count=1)
                 msg = r[0].read()
                 pp2_.reset()
-                #p2_.write( ((sid,pid), msg))
                 p2_.write( (pid, msg) )
         gevent.spawn(_translate)
 
         _2pid[self.sid,pid] = _2pp
         return (_2pp, pp2_) 
 
-    #def newPID(self, sid, pid):
     def newPID(self, pid):
         print('\033[1m[{}]\033[0m Creating new party with pid: {}'.format('PWrapper', pid))
         _z2p,_p2z = self._newPID(pid, self.z2pid, self.channels['p2z'], 'p2z')
@@ -326,7 +337,6 @@ class ProtocolWrapper(ITM):
         p = self.prot(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p, 'p2f':_p2f}, self.pump)
         gevent.spawn(p.run)
 
-    #def getPID(self, _2pid, sid, pid):
     def getPID(self, _2pid, pid):
         if (self.sid,pid) in _2pid: return _2pid[self.sid,pid]
         else:
@@ -334,19 +344,13 @@ class ProtocolWrapper(ITM):
             return _2pid[self.sid,pid]
 
     def env_msg(self, msg):
-        #((sid,pid), msg) = msg
         pid,msg = msg
-        #if self.is_dishonest(sid,pid): raise Exception("Environment writing to corrupt party")
-        #_pid = self.getPID(self.z2pid,sid,pid)
         if self.is_dishonest(pid): raise Exception("Environment writing to corrupt party")
-        print('pwrapper env msg', msg)
         _pid = self.getPID(self.z2pid,pid)
         _pid.write(msg)
     
     def func_msg(self, msg):        
-        #fromsid,((tosid,topid),msg) = msg
         topid, msg = msg
-        #if self.is_dishonest(tosid,topid):
         if self.is_dishonest(topid):
             self.write('p2a', (topid, msg))
         else:
@@ -354,7 +358,6 @@ class ProtocolWrapper(ITM):
             _pid.write( msg)
 
     def adv_msg(self, msg):
-        #(sid,pid), msg = msg
         pid, msg = msg
         if self.is_honest(self.sid, pid): raise Exception("adv writing to an honest party: {}. Cruptset: {}".format((self.sid,pid), self.crupt))
         self.write( 'p2f', (pid, msg))

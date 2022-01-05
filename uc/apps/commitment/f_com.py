@@ -7,8 +7,6 @@ log = logging.getLogger(__name__)
 class F_Com_Channel(UCFunctionality):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump):
         self.ssid = sid[0]
-        #self.committer = (sid, sid[1])
-        #self.receiver = (sid, sid[2])
         self.committer = sid[1]
         self.receiver = sid[2]
         UCFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, pump)

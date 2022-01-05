@@ -51,11 +51,11 @@ class Commitment_Prot(UCProtocol):
             self.pump.write('')
  
     def func_receive(self, fro, msg):
-        if not self.iscommitter and self.state is 1 and msg[0] == 'commit':
+        if not self.iscommitter and self.state == 1 and msg[0] == 'commit':
             self.write( ch='p2z', msg=('commit',) )
             self.commitment = msg[1]
             self.state = 2
-        elif not self.iscommitter and self.state is 2 and msg[0] == 'open':
+        elif not self.iscommitter and self.state == 2 and msg[0] == 'open':
             self.check_commit(msg[1])
         else:
             self.write( ch='p2z', msg=('recvmsg', msg) )

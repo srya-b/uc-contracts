@@ -56,15 +56,12 @@ class Sim_Flip(UCAdversary):
         Args:
             who: the party that requsted 'getflip' in F_flip
         """
-        print('askflip')
         if self.is_dishonest(self.flipper):
-            print('d flipper')
             if who == self.receiver and self.deliver_receiver:
                 self.write( ch='a2f', msg=('yes',) )
             else:
                 self.write( ch='a2f', msg=('no',) )
         elif self.is_dishonest(self.receiver):
-            print(' d receiver')
             if who == self.flipper and self.deliver_flipper:
                 self.write( ch='a2f', msg=('yes',) )
             else:

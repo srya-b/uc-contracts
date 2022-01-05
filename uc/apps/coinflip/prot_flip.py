@@ -126,6 +126,3 @@ class Flip_Prot(UCProtocol):
         """
         self.write( ch='p2f', msg=('sendmsg', msg))
 
-    
-        
-       

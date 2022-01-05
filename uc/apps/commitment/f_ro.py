@@ -18,6 +18,7 @@ class Random_Oracle_and_Chan(UCFunctionality):
         return self.table[x]
 
     def phash(self, sender, s):
+        print('Hash request from: {}'.format(sender))
         self.write(
             ch='f2p',
             msg=(sender, self._hash(s))
@@ -30,6 +31,7 @@ class Random_Oracle_and_Chan(UCFunctionality):
         )
 
     def sendmsg(self, sender, to, msg):
+        print('Party sendmsg from {} to {}'.format(sender, to))
         self.write(
             ch='f2p',
             msg=(to, ('recvmsg', sender, msg)),

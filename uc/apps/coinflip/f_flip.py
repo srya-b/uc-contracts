@@ -23,12 +23,9 @@ class F_Flip(UCFunctionality):
         else: self.pump.write('')
 
     def party_getflip(self, sender):
-        print('getflip')
         if self.flip is None: self.pump.write('')
         else:
-            print('ask adb')
             m = self.write_and_wait_for( ch='f2a', msg=('askflip',sender), read='a2f' )
-            print('getadvb')
             if m == ('yes',):
                 self.write( ch='f2p', msg=(sender, ('flip', self.flip)) )
             elif m == ('no',):

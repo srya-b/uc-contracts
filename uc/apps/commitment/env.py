@@ -90,11 +90,11 @@ def env_committer_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     z2a.write( ('A2P', (1, ('sendmsg', 2, ('commit',lasthash)))))
     waits(pump)
 
-    z2a.write( ('A2P', (1, ('sendmsg', 2, 'yoyoyo'))) )
-    waits(pump)
+    #z2a.write( ('A2P', (1, ('sendmsg', 2, 'yoyoyo'))) )
+    #waits(pump)
 
-    z2a.write( ('A2P', (1, ('sendmsg', 2, ('open', (123, 0))))))
-    waits(pump)
+    #z2a.write( ('A2P', (1, ('sendmsg', 2, ('open', (123, 0))))))
+    #waits(pump)
 
     return transcript
 

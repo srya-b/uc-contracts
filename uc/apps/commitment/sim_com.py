@@ -2,7 +2,6 @@ from uc.itm import ITM, UCAdversary
 
 class Sim_Com(UCAdversary):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump):
-        print('Sim com sid:', sid)
         self.ssid = sid[0]
         self.committer = sid[1]
         self.receiver = sid[2]
@@ -50,7 +49,6 @@ class Sim_Com(UCAdversary):
         Args:
             s: the preimage
         """
-        #self.write( ch='a2z', msg=('F2A', (self.sid,self.hash(s))) )
         self.write( ch='a2z', msg=('F2A', self.hash(s)) )
 
     def commit_send(self, to, recv, msg):
@@ -68,7 +66,6 @@ class Sim_Com(UCAdversary):
             msg: the message for `to` to send to `recv`
         """
         b = self.sample(1)
-        #if msg[0] == 'commit' and to == (self.sid, self.committer) and recv == self.receiver:
         if msg[0] == 'commit' and to == self.committer and recv == self.receiver:
             if msg[1] in self.revtable:
                 try:
@@ -117,7 +114,10 @@ class Sim_Com(UCAdversary):
             sender: the party sending the message
             msg: the message received
         """
-        self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', msg))) )
+        if sender == self.committer:
+            self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', self.receiver, msg))) )
+        else:
+            self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', self.committer, msg))) )
 
     def recv_commit(self, sender):
         """RECEIVER CRUPT: wait for the receiver to get a commit from F_com.
@@ -130,7 +130,6 @@ class Sim_Com(UCAdversary):
             sender: the party sending this message to A
         """
         self.receiver_random = self.sample(self.k)
-        #self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', ((self.sid, self.committer), ('commit', self.receiver_random))))) )
         self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', (self.committer, ('commit', self.receiver_random))))) )
 
 
@@ -148,5 +147,4 @@ class Sim_Com(UCAdversary):
         """
         nonce = self.sample(self.k)
         self.set_entry((nonce,bit), self.receiver_random)
-        #self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', ((self.sid, self.committer), ('open', (nonce, bit)))))) )
         self.write( ch='a2z', msg=('P2A', (sender, ('recvmsg', (self.committer, ('open', (nonce, bit)))))) )
