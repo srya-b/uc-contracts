@@ -1,4 +1,4 @@
-from uc.itm import UCAdversary
+from uc import UCAdversary
 
 class Sim_Flip(UCAdversary):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump):

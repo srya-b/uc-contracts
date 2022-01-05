@@ -1,4 +1,5 @@
-from uc.itm import ProtocolWrapper, GenChannel
+from uc.protocol import ProtocolWrapper
+from uc.itm import GenChannel
 import gevent
 from numpy.polynomial.polynomial import Polynomial
 import random, os
@@ -60,7 +61,8 @@ def createUC(k, fs, ps, adv):
 
         f = fs(k, rng, crupt, sid, -1, func_channels, pump)
         gevent.spawn( f.run )
-        p = ps(k, rng, crupt, sid, party_channels, pump)
+        p = ProtocolWrapper(k, rng, crupt, sid, party_channels, pump, ps)
+        #p = ps(k, rng, crupt, sid, party_channels, pump)
 
         gevent.spawn(p.run)
         advitm = adv(k, rng, crupt, sid, -1, adv_channels, pump)

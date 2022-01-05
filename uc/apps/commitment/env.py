@@ -148,22 +148,20 @@ def distinguisher(t_ideal, t_real):
     else:
         print("\033[91m[Distinguisher] They're different\033[0m")
 
-from uc.itm import ProtocolWrapper, protocolWrapper
 from uc.adversary import DummyAdversary
 from f_ro import Random_Oracle_and_Chan
 from prot_com import Commitment_Prot
 from uc.execuc import execUC
 from f_com import F_Com_Channel
 from sim_com import Sim_Com
-from uc.itm import DummyParty
-from uc.lemmaS import Lemma_Simulator, lemmaS
+from uc.protocol import DummyParty, protocolWrapper
 
 if __name__=='__main__':
     tideal = execUC(
         128,
         env_committer_crupt_bad_open,
         F_Com_Channel,
-        protocolWrapper(DummyParty),
+        DummyParty,
         Sim_Com,
     )
 
@@ -172,7 +170,7 @@ if __name__=='__main__':
         128,
         env_committer_crupt_bad_open,
         Random_Oracle_and_Chan,
-        protocolWrapper(Commitment_Prot),
+        Commitment_Prot,
         DummyAdversary,
     )
 

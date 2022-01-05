@@ -1,4 +1,4 @@
-from uc.itm import ITM, UCAdversary
+from uc import UCAdversary
 
 class Sim_Com(UCAdversary):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump):

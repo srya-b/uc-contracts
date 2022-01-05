@@ -1,4 +1,4 @@
-from uc.itm import UCProtocol
+from uc import UCProtocol
 from uc.utils import waits, wait_for
 import logging
 

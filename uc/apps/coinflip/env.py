@@ -199,16 +199,16 @@ from uc.apps.coinflip import F_Flip, Flip_Prot, Sim_Flip
 from uc.apps.commitment import F_Com_Channel
 from uc.adversary import DummyAdversary
 from uc import execUC
-from uc.itm import protocolWrapper, DummyParty
+from uc.protocol import protocolWrapper, DummyParty
 
 
 print('\n real \n')
 
 treal = execUC(
     128,
-    env_receiver_crupt_no_open,
+    env_flipper_crupt_no_open,
     F_Com_Channel,
-    protocolWrapper(Flip_Prot),
+    Flip_Prot,
     DummyAdversary
 )
 
@@ -216,9 +216,9 @@ print('\n ideal \n')
 
 tideal = execUC(
     128,
-    env_receiver_crupt_no_open,
+    env_flipper_crupt_no_open,
     F_Flip,
-    protocolWrapper(DummyParty),
+    DummyParty,
     Sim_Flip
 )
 

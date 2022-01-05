@@ -1,4 +1,4 @@
-from uc.itm import UCFunctionality
+from uc import UCFunctionality
 import logging
 
 log = logging.getLogger(__name__)

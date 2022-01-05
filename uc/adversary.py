@@ -1,8 +1,56 @@
 import gevent
-from uc.itm import ITM, UCAdversary
+from uc.itm import ITM
 from gevent.queue import Queue, Channel, Empty
 from gevent.event import AsyncResult
 from collections import defaultdict
+
+class UCAdversary(ITM):
+    def __init__(self, k, bits, crupt, sid, pid, channels, pump):
+        self.crupt = crupt
+        self.handlers = {
+            channels['p2a'] : self.party_msg,
+            channels['f2a'] : self.func_msg,
+            channels['z2a'] : self.env_msg
+        }
+        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, pump)
+        self.env_msgs = {}
+        self.func_msgs = {}
+        self.party_msgs = {}
+        
+        self.z2a2f_msgs = {}
+        self.z2a2p_msgs = {}
+
+        self.f = lambda x: x[0]
+        self.fparse = lambda x: x[1:]
+
+    def is_dishonest(self, pid):
+        return pid in self.crupt
+
+    def party_msg(self, d):
+        sender, msg = d
+        if msg[0] in self.party_msgs:
+            self.party_msgs[msg[0]](sender, *msg[1:])
+        else:
+            self.pump.write('')
+
+    def func_msg(self, msg):
+        if self.f(msg) in self.func_msgs:
+            self.func_msgs[self.f(msg)](*self.fparse(msg))
+        else:
+            self.pump.write('')
+
+    def env_msg(self, m):
+        t,msg = m
+        if t == 'A2F' and msg[0] in self.z2a2f_msgs:
+            self.z2a2f_msgs[msg[0]](*msg[1:])
+        elif t == 'A2P' and msg[1][0] in self.z2a2p_msgs:
+            self.z2a2p_msgs[msg[1][0]](msg[0], *msg[1][1:])
+        elif t in self.env_msgs:
+            self.env_msgs[t](msg)
+        else:
+            raise Exception('Message {} not handled by adversary'.format(msg))
+            self.pump.write('')
+
 
 class DummyAdversary(UCAdversary):
     """

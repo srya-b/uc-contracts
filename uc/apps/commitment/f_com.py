@@ -1,4 +1,4 @@
-from uc.itm import UCFunctionality
+from uc import UCFunctionality
 from uc.utils import read_one, read
 import logging
 
