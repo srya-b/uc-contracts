@@ -48,6 +48,7 @@ class DummyParty(ITM):
         self.write('p2f', msg)
 
     def func_msg(self, msg):
+        print('dummy party func msg: {}'.format(msg))
         self.write('p2z', msg)
 
 def protocolWrapper(prot):
@@ -109,12 +110,14 @@ class ProtocolWrapper(ITM):
 
     def env_msg(self, msg):
         pid,msg = msg
+        print('new env msg {} to {}'.format(msg, pid))
         if self.is_dishonest(pid): raise Exception("Environment writing to corrupt party")
         _pid = self.getPID(self.z2pid,pid)
         _pid.write(msg)
     
     def func_msg(self, msg):        
         topid, msg = msg
+        print('fun msg {} to {}'.format(msg, topid))
         if self.is_dishonest(topid):
             self.write('p2a', (topid, msg))
         else:

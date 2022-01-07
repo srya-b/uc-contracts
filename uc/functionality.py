@@ -7,7 +7,6 @@ class UCFunctionality(ITM):
         self.handlers = {
             channels['p2f'] : self.party_msg,
             channels['a2f'] : self.adv_msg,
-            channels['z2f'] : self.env_msg
         }
         
         ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, pump)

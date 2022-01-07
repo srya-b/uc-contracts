@@ -19,7 +19,7 @@ class F_Com_Channel(UCFunctionality):
         self.party_msgs['sendmsg'] = self.sendmsg
 
     def commit(self, sender, bit):
-        if self.state is 0 and sender == self.committer and (bit == 0 or bit == 1):
+        if self.state == 0 and sender == self.committer and (bit == 0 or bit == 1):
             self.bit = bit
 
             self.write( ch='f2p', msg=(self.receiver, ('commit',)) )
@@ -28,7 +28,7 @@ class F_Com_Channel(UCFunctionality):
         else: self.pump.write('')
 
     def reveal(self, sender):
-        if self.state is 1 and sender == self.committer:
+        if self.state == 1 and sender == self.committer:
             self.write( ch='f2p', msg=(self.receiver, ('open', self.bit)) )
             self.state = 2
         else: self.pump.write('')

@@ -159,7 +159,7 @@ from uc.protocol import DummyParty, protocolWrapper
 if __name__=='__main__':
     tideal = execUC(
         128,
-        env_committer_crupt_bad_open,
+        env,
         F_Com_Channel,
         DummyParty,
         Sim_Com,
@@ -168,7 +168,7 @@ if __name__=='__main__':
     print('\n')
     treal = execUC(
         128,
-        env_committer_crupt_bad_open,
+        env,
         Random_Oracle_and_Chan,
         Commitment_Prot,
         DummyAdversary,

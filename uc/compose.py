@@ -46,15 +46,12 @@ def sim_compose(s1, s2):
             UCAdversary.__init__(self, k, bits, crupt, sid, pid, channels, pump)
 
             self.sim_pi2rho = GenChannel('simpi2rho')
-            #self.sim_rho2pi = GenChannel('simrho2pi')
             self.sim_pi_f2a = GenChannel('simpif2a')
             self.sim_pi_p2a = GenChannel('simpip2a')
 
             self.sim_pi_a2p = wrapwrite( self.sim_pi2rho, lambda x: ('A2P', x))
             self.sim_pi_a2f = wrapwrite( self.sim_pi2rho, lambda x: ('A2F', x))
             self.sim_rho2pi = unwrapread( [self.sim_pi_p2a, self.sim_pi_f2a], lambda x: self.sim_pi_p2a if x[0] == 'P2A' else self.sim_pi_f2a, lambda x: x[1] )
-            #self.sim_rho_p2a2z = wrapwrite( self.sim_rho2pi, lambda x: x[1] )
-            #self.sim_rho_f2a2z = wrapwrite( self.sim_rho2pi, lambda x: x[1] )
 
             self.channels_for_sim_pi = channels.copy()
             self.channels_for_sim_pi['a2f'] = self.sim_pi_a2f
