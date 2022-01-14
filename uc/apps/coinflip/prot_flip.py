@@ -1,3 +1,4 @@
+from ast import literal_eval
 from uc.protocol import UCProtocol
 from uc.utils import waits, wait_for
 import logging
@@ -6,11 +7,12 @@ log = logging.getLogger(__name__)
 
 class Flip_Prot(UCProtocol):
     def __init__(self, k, bits, sid, pid, channels, pump):
-        self.ssid = sid[0]
-        self.flipper = sid[1]
-        self.receiver = sid[2]
-        self.isflipper = pid == self.flipper
         UCProtocol.__init__(self, k, bits, sid, pid, channels, pump)
+        self.ssid,rest = sid
+        rest = literal_eval(rest)
+        self.flipper = rest[0]
+        self.receiver = rest[1]
+        self.isflipper = pid == self.flipper
         
         self.env_msgs['flip'] = self.env_flip
         self.env_msgs['getflip'] = self.env_getflip

@@ -2,7 +2,7 @@ from uc.utils import waits, collectOutputs
 import gevent
 
 def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
-    sid = ('one', 1, 2)
+    sid = ('one', "1, 2")
     static.write( (('sid',sid), ('crupt',)))
 
     transcript = []
@@ -37,7 +37,7 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     return transcript
 
 def env_flipper_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
-    sid = ('one', 1, 2)
+    sid = ('one', "1, 2")
     static.write( (('sid',sid), ('crupt', 1)))
 
     transcript = []
@@ -85,7 +85,7 @@ def env_flipper_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     return transcript
 
 def env_flipper_crupt_no_open(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
-    sid = ('one', 1, 2)
+    sid = ('one', "1, 2")
     static.write( (('sid',sid), ('crupt', 1)))
 
     transcript = []
@@ -133,7 +133,7 @@ def env_flipper_crupt_no_open(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     return transcript
 
 def env_receiver_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
-    sid = ('one', 1, 2)
+    sid = ('one', "1, 2")
     static.write( (('sid',sid), ('crupt', 2)))
 
     transcript = []

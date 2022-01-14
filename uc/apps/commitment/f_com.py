@@ -1,3 +1,4 @@
+from ast import literal_eval
 from uc import UCFunctionality
 from uc.utils import read_one, read
 import logging
@@ -5,11 +6,12 @@ import logging
 log = logging.getLogger(__name__)
 
 class F_Com_Channel(UCFunctionality):
-    def __init__(self, k, bits, crupt, sid, pid, channels, pump):
-        self.ssid = sid[0]
-        self.committer = sid[1]
-        self.receiver = sid[2]
-        UCFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, pump)
+    def __init__(self, k, bits, crupt, sid, channels, pump):
+        UCFunctionality.__init__(self, k, bits, crupt, sid, channels, pump)
+        self.ssid,sid = sid
+        sid = literal_eval(sid)
+        self.committer = sid[0]
+        self.receiver = sid[1]
 
         self.bit = None
         self.state = 0 # wait to commit, 1: committed, 2: reveal

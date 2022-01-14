@@ -3,7 +3,6 @@ import sys
 from uc.utils import wait_for, waits
 from gevent.queue import Queue, Channel, Empty
 from gevent.event import AsyncResult, Event
-from uc.errors import WriteImportError, TickError
 import gevent
 import logging
 import inspect

@@ -1,12 +1,13 @@
 from uc import UCAdversary
+from ast import literal_eval
 
 class Sim_Flip(UCAdversary):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump):
-        self.ssid = sid[0]
-        self.flipper = sid[1]
-        self.receiver = sid[2]
-
         UCAdversary.__init__(self, k, bits, crupt, sid, pid, channels, pump)
+        self.ssid,rest = sid
+        rest = literal_eval(rest)
+        self.flipper = rest[0]
+        self.receiver = rest[1]
 
         self.receiver_bit = None
         self.z2a2p_msgs['sendmsg'] = self.sendmsg

@@ -1,3 +1,4 @@
+from ast import literal_eval
 from uc import UCFunctionality
 from uc.utils import read_one, read
 import logging 
@@ -5,10 +6,12 @@ import logging
 log = logging.getLogger(__name__)
 
 class F_Flip(UCFunctionality):
-    def __init__(self, k, bits, crupt, sid, pid, channels, pump):
-        self.flipper = sid[1]
-        self.receiver = sid[2]
-        UCFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, pump)
+    def __init__(self, k, bits, crupt, sid, channels, pump):
+        UCFunctionality.__init__(self, k, bits, crupt, sid, channels, pump)
+        self.ssid,rest = sid
+        rest = literal_eval(rest)
+        self.flipper = rest[0]
+        self.receiver = rest[1]
 
         self.flip = None
 

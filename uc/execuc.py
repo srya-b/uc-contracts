@@ -59,7 +59,7 @@ def createUC(k, fs, ps, adv):
         for _p in crupt_msg[1:]:
             crupt.add( _p )
 
-        f = fs(k, rng, crupt, sid, -1, func_channels, pump)
+        f = fs(k, rng, crupt, sid, func_channels, pump)
         gevent.spawn( f.run )
         p = ProtocolWrapper(k, rng, crupt, sid, party_channels, pump, ps)
         #p = ps(k, rng, crupt, sid, party_channels, pump)

@@ -2,14 +2,14 @@ from uc.itm import ITM
 
 
 class UCFunctionality(ITM):
-    def __init__(self, k, bits, crupt, sid, pid, channels, pump):
+    def __init__(self, k, bits, crupt, sid, channels, pump):
         self.crupt = crupt
         self.handlers = {
             channels['p2f'] : self.party_msg,
             channels['a2f'] : self.adv_msg,
         }
         
-        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, pump)
+        ITM.__init__(self, k, bits, sid, -1, channels, self.handlers, pump)
 
         self.party_msgs = {}
         self.adv_msgs = {}

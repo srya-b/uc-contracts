@@ -1,3 +1,4 @@
+from ast import literal_eval
 from uc import UCProtocol
 from uc.utils import waits, wait_for
 import logging
@@ -6,11 +7,12 @@ log = logging.getLogger(__name__)
 
 class Commitment_Prot(UCProtocol):
     def __init__(self, k, bits, sid, pid, channels, pump):
-        self.ssid = sid[0]
-        self.committer = sid[1]
-        self.receiver = sid[2]
-        self.iscommitter = pid == self.committer
         UCProtocol.__init__(self, k, bits, sid, pid, channels, pump) 
+        self.ssid,sid = sid
+        sid = literal_eval(sid)
+        self.committer = sid[0]
+        self.receiver = sid[1]
+        self.iscommitter = pid == self.committer
 
         self.env_msgs['commit'] = self.env_commit
         self.env_msgs['reveal'] = self.env_reveal

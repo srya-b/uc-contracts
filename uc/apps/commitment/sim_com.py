@@ -1,10 +1,12 @@
 from uc import UCAdversary
+from ast import literal_eval
 
 class Sim_Com(UCAdversary):
     def __init__(self, k, bits, crupt, sid, pid, channels, pump):
-        self.ssid = sid[0]
-        self.committer = sid[1]
-        self.receiver = sid[2]
+        self.ssid,rest = sid
+        rest = literal_eval(rest)
+        self.committer = rest[0]
+        self.receiver = rest[1]
 
         UCAdversary.__init__(self, k, bits, crupt, sid, pid, channels, pump)
 

@@ -2,7 +2,8 @@ from uc.utils import waits, collectOutputs
 import gevent
 
 def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
-    sid = ('one', 1, 2)
+    print('\033[94m[ env_honest ]\033[0m')
+    sid = ('one', "1, 2")
     static.write( (('sid',sid), ('crupt',)))
 
     transcript = []
@@ -35,7 +36,8 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     return transcript
 
 def env_receiver_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
-    sid = ('one', 1, 2)
+    print('\033[94m[ env_receiver_crupt ]\033[0m')
+    sid = ('one', "1, 2")
     static.write( (('sid',sid), ('crupt', (sid,2))))
 
     transcript = []
@@ -66,7 +68,8 @@ def env_receiver_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     return transcript
 
 def env_committer_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
-    sid = ('one', 1, 2)
+    print('\033[94m[ env_committer_crupt ]\033[0m')
+    sid = ('one', "1, 2")
     static.write( (('sid',sid), ('crupt', 1)))
 
     transcript = []
@@ -99,7 +102,8 @@ def env_committer_crupt(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     return transcript
 
 def env_committer_crupt_bad_open(k, static, z2p, z2f, z2a, a2z, f2a, p2z, pump):
-    sid = ('one', 1, 2)
+    print('\033[94m[ env_committer_crupt_bad_open ]\033[0m')
+    sid = ('one', "1, 2")
     static.write( (('sid',sid), ('crupt', 1)))
 
     transcript = []
@@ -159,7 +163,7 @@ from uc.protocol import DummyParty, protocolWrapper
 if __name__=='__main__':
     tideal = execUC(
         128,
-        env,
+        env_receiver_crupt,
         F_Com_Channel,
         DummyParty,
         Sim_Com,
@@ -168,7 +172,7 @@ if __name__=='__main__':
     print('\n')
     treal = execUC(
         128,
-        env,
+        env_receiver_crupt,
         Random_Oracle_and_Chan,
         Commitment_Prot,
         DummyAdversary,

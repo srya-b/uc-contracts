@@ -4,9 +4,9 @@ import logging
 log = logging.getLogger(__name__)
 
 class Random_Oracle_and_Chan(UCFunctionality):
-    def __init__(self, k, bits, crupt, sid, pid, channels, pump):
+    def __init__(self, k, bits, crupt, sid, channels, pump):
+        UCFunctionality.__init__(self, k, bits, crupt, sid, channels, pump)
         self.table = {}
-        UCFunctionality.__init__(self, k, bits, crupt, sid, pid, channels, pump)
         self.party_msgs['hash'] = self.phash
         self.party_msgs['sendmsg'] = self.sendmsg
 
