@@ -195,14 +195,18 @@ class ITM:
         And ITM is run by running `gevent.spawn(machin.run)`.
         """
         while True:
-            print('ITM waiting on channels: {}'.format([c.id for c in self.handlers.keys()]))
+            # wait for any of the channels to return a message
             ready = gevent.wait(
                 objects=self.handlers.keys(),
                 count=1
             )
+
+            # sanity check only on channel should return
             assert len(ready) == 1
             r = ready[0]
             msg = r.read()
             r.reset()
+            
+            # send the message to the handler for this channel
             self.handlers[r](msg)
 

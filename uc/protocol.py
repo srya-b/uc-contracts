@@ -55,6 +55,8 @@ class UCProtocol(ITM):
         Args:
             msg (tuple): message from functionality
         """
+
+        # tee message to handler for this message type or do nothing
         if self.f(msg) in self.func_msgs:
             self.func_msgs[self.f(msg)](*(self.parse(msg)))
         else:
@@ -104,6 +106,10 @@ class DummyParty(ITM):
         self.write('p2z', msg)
 
 def protocolWrapper(prot):
+    """ Return a protocol wrapper parameterized with the required protocol. Its
+    done this way to keep the interface of the ProtocolWrapper for the same as 
+    UCProtocol.
+    """
     def f(k, bits, crupt, sid, channels, pump):
         return ProtocolWrapper(k, bits, crupt, sid, channels, pump, prot)
     return f
@@ -166,17 +172,26 @@ class ProtocolWrapper(ITM):
             p2_ (GenChannel): the protocol wrapper's real outgoing channel (for the example `p2z`)
             tag (str): a name to give the spawned channels
         """
+
+        # create the intermediate outgoing channel for the party that is intercepted
+        # and has pid appended to it
         pp2_ = GenChannel(('write-translate-{}'.format(tag),self.sid,pid)) 
+
+        # an incoming channel for the party
         _2pp = GenChannel(('read-{}'.format(tag),self.sid,pid)) 
 
         def _translate():
            while True:
+                # intercept outgoing messages
                 r = gevent.wait(objects=[pp2_],count=1)
                 msg = r[0].read()
                 pp2_.reset()
+
+                # and append `pid` to it
                 p2_.write( (pid, msg) )
         gevent.spawn(_translate)
 
+        # put the outgoing channel dictionary for it
         _2pid[self.sid,pid] = _2pp
         return (_2pp, pp2_) 
 
@@ -190,10 +205,14 @@ class ProtocolWrapper(ITM):
             pid (int): pid instance to create.
         """
         print('\033[1m[{}]\033[0m Creating new party with pid: {}'.format('PWrapper', pid))
+
+        # create all the internal channels for this protocol instance and wrap outgoing channels
+        # with _translate in _newPID
         _z2p,_p2z = self._newPID(pid, self.z2pid, self.channels['p2z'], 'p2z')
         _f2p,_p2f = self._newPID(pid, self.f2pid, self.channels['p2f'], 'p2f')
         _a2p,_p2a = self._newPID(pid, self.a2pid, self.channels['p2a'], 'p2a')
-        
+       
+        # spawn the protocol
         p = self.prot(self.k, self.bits, self.sid, pid, {'a2p':_a2p,'p2a':_p2a, 'z2p':_z2p,'p2z':_p2z, 'f2p':_f2p, 'p2f':_p2f}, self.pump)
         gevent.spawn(p.run)
 
