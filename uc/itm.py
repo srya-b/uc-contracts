@@ -116,29 +116,86 @@ class ITM:
         return msg
 
     def write(self, ch, msg):
+        """ Write a message on a channel specified by the string `ch`. `ch` is looked up 
+        in the ITMs channels and written to. A default `wrapwrite` function is applied to 
+        the message being written. Unless overridden, it does not modify the message.
+
+        Args:
+            ch (str): the name of the channel to write to
+            msg (tuple), the message to be written
+        """
         self.channels[ch].write(self.wrapwrite(msg))
 
     def read(self, ch):
+        """ Blocking function that reads from the channel names `ch`.
+
+        Args:
+            ch (str): the name of the channel to read from
+
+        Returns:
+            (tuple): the message written on the channel
+        """
         return wait_for(self.channels[ch])
 
     def write_and_wait_for(self, ch=None, msg=None, read=None):
+        """ Write to a channel `ch` and wait for an incoming message on the channel
+        `read`. 
+
+        Args:
+            ch (str): the channel to write on
+            msg (tuple): the message to write
+            read (str): the channel to wait for a message on
+
+        Returns:
+            (tuple): the message read from `read`
+        """
         self.write(ch, msg)
         m = self.read(read)
         return m
 
     def write_and_expect_msg(self, ch=None, msg=None, read=None, expect=None):
+        """ Write on a channel, wait for an incoming message and expect it to equal
+        some value. Useful for things like "expect an OK back from the ITM".
+
+        Args:
+            ch (str): the channel to write on
+            msg (tuple): the message to write
+            read (str): the channel to read on
+            expect (tuple): the message to expect on `read`
+
+        Throws:
+            AssertionError: if the message is not what is expected.
+
+        Returns:
+            (tuple): the message to be expected
+        """
         m = self.write_and_wait_for(ch, msg, read)
         assert m == expect, 'Expected: {}, Received: {}'.format(expect, m)
         return m
 
     def sample(self, n):
+        """ Sample some bits of randomness from the ITMs random tape.
+
+        Args:
+            n (int): number of bits to sample
+
+        Returns:
+            r (int): an n-bit random integer
+        """
         r = ""
         for _ in range(n):
             r += str(self.bits.randint(0,1))
         return int(r)
 
     def run(self):
+        """ The main function of an ITM. It runs forever and waits for messages on any
+        of the channels for whom a handler is specified (self.handlers.keys()). Once read
+        is activates the channel's handler with the message.
+
+        And ITM is run by running `gevent.spawn(machin.run)`.
+        """
         while True:
+            print('ITM waiting on channels: {}'.format([c.id for c in self.handlers.keys()]))
             ready = gevent.wait(
                 objects=self.handlers.keys(),
                 count=1
