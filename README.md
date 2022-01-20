@@ -8,6 +8,7 @@ Installation is easy (we assume `python>=3.5`)
 * Install the dependencies with ```pip install -r uc/requirements.txt```
 * Install the the `uc` module as a working module with ```pip install -e .```
 
+If you're able to run `python uc/apps/coinflip/env.py` successfully and get output you're good to go!
 
 ## Folder structure
 
