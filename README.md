@@ -5,7 +5,7 @@ This is an imlementation of the basic UC framework. It provides code to specify 
 ## Installation
 Installation is easy (we assume `python>=3.5`)
 * Clone the repo and go into the `uc_contracts/` directory.
-* Install the dependencies with ```pip install -r requirements.txt```
+* Install the dependencies with ```pip install -r uc/requirements.txt```
 * Install the the `uc` module as a working module with ```pip install -e .```
 
 
