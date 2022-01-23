@@ -192,7 +192,7 @@ class ProtocolWrapper(ITM):
         gevent.spawn(_translate)
 
         # put the outgoing channel dictionary for it
-        _2pid[self.sid,pid] = _2pp
+        _2pid[pid] = _2pp
         return (_2pp, pp2_) 
 
     def newPID(self, pid):
@@ -225,10 +225,10 @@ class ProtocolWrapper(ITM):
         Returns:
             (GenChannel): the corresponding incoming channel for the party `pid`.
         """
-        if (self.sid,pid) in _2pid: return _2pid[self.sid,pid]
+        if (pid) in _2pid: return _2pid[pid]
         else:
             self.newPID(pid)
-            return _2pid[self.sid,pid]
+            return _2pid[pid]
 
     def env_msg(self, msg):
         """Handle messages incoming from z2p. Get the z2p channel for the party and write on it
