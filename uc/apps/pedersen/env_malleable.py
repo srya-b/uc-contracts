@@ -4,7 +4,7 @@ import gevent
 import secp256k1 as secp
 
 def env_crupt_receiver_malleability(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
-    sid = ('one', ("1, 2",))
+    sid = ('one', "1, 2")
     static.write( (('sid',sid), ('crupt', 2)))
 
     transcript = []
@@ -19,10 +19,10 @@ def env_crupt_receiver_malleability(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pum
 
     m = secp.uint256_from_str(os.urandom(32))
    
-    z2p.write( (1, ('commit', m)) )
+    z2p.write( (1, ('commit', 1, m)) )
     msg = waits(a2z)
     transcript.append('a2z: ' + str(msg))
-    _,(fro,(_,_,(_, commitment))) = msg
+    _,(fro,(_,_,(_,cid,commitment))) = msg
 
     z2a.write( ('A2P', (2, ('value',))) )
     msg = waits(a2z)
@@ -31,10 +31,10 @@ def env_crupt_receiver_malleability(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pum
 
     commitmentplus1 = commitment + g
 
-    z2p.write( (1, ('reveal',)) )
+    z2p.write( (1, ('reveal', 1)) )
     msg = waits(a2z)
     transcript.append('a2z: ' + str(msg))
-    _,(fro,(_,_,(_,msg,randomness))) = msg
+    _,(fro,(_,_,(_,cid,msg,randomness))) = msg
 
     checkcommitmentplus1 = (g * (msg+1)) + (h * randomness)
 
