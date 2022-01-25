@@ -59,14 +59,14 @@ class Commitment_Prot(UCProtocol):
         self.g, self.h = self.write_and_wait_for('p2f', ('value',), 'f2p')[0]
         recv_commit = (self.g * preimage) + (self.h * randomness)
         if secp.deser(self.commitment[cid]) == recv_commit:
-            self.write( 'p2z', ('open', preimage) )
+            self.write( 'p2z', ('open', cid, preimage) )
         else:
             self.pump.write('')
 
     def func_receive(self, fro, msg):
         #if not self.iscommitter and self.state == 1 and msg[0] == 'commit':
         if not self.iscommitter and self.state[msg[1]] == 0 and msg[0] == 'commit':
-            self.write('p2z', msg=('commit',))
+            self.write('p2z', msg=('commit', msg[1]))
             self.commitment[msg[1]] = secp.ser(msg[2])
             self.state[msg[1]] = 1
         elif not self.iscommitter and self.state[msg[1]] == 1 and msg[0] == 'open':

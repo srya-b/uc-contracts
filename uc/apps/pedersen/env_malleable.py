@@ -46,17 +46,42 @@ def env_crupt_receiver_malleability(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pum
     print('\ntranscript:\n\t{}'.format(transcript))
     return transcript
 
+
+
+def distinguisher(t_ideal, t_real):
+    print('\n\t\033[93m Ideal transcript\033[0m')
+    for i in t_ideal: print(str(i))
+
+    print('\n\t\033[93m real transcript\033[0m')
+    for i in t_real: print(str(i))
+
+    if t_ideal == t_real:
+        print("\033[92m[Distinguisher] They're the same\033[0m")
+    else:
+        print("\033[91m[Distinguisher] They're different\033[0m")
+
 from uc.adversary import DummyAdversary
 from uc.protocol import DummyParty
 from uc.execuc import execUC
 from f_crs import F_CRS
+from f_mcom import F_Mcom
+from sim_mcom import Sim_Mcom
 from prot_com import Commitment_Prot
 
-tideal = execUC(
+treal = execUC(
     128,
-    env_crupt_receiver_malleability,
+    env_crupt_committer,
     F_CRS,
     Commitment_Prot,
     DummyAdversary
 )
-    
+
+tideal = execUC(
+    128,
+    env_crupt_committer,
+    F_Mcom,
+    DummyParty,
+    Sim_Mcom
+) 
+
+distinguisher(tideal, treal)

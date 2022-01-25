@@ -19,13 +19,13 @@ class F_Mcom(UCFunctionality):
     def commit(self, sender, cid, msg):
         if self.state[cid] == 0 and sender == self.committer:
             self.msg[cid] = msg
-            self.write('f2p', (self.receiver, ('commit',)))
+            self.write('f2p', (self.receiver, ('commit', cid)))
             self.state[cid] = 1
         else: self.pump.write('')
 
     def reveal(self, sender, cid):
         if self.state[cid] == 1 and sender == self.committer:
-            self.write('f2p', (self.receiver, ('open', self.msg[cid])))
+            self.write('f2p', (self.receiver, ('open', cid, self.msg[cid])))
             self.state[cid] = 2
         else: self.pump.write('')
 
