@@ -173,6 +173,12 @@ class ITM:
         assert m == expect, 'Expected: {}, Received: {}'.format(expect, m)
         return m
 
+    def _sample(self, n):
+        r = ''
+        for _ in range(n):
+            r += str(self.bits.randint(0,1))
+        return r
+
     def sample(self, n):
         """ Sample some bits of randomness from the ITMs random tape.
 
@@ -182,10 +188,10 @@ class ITM:
         Returns:
             r (int): an n-bit random integer
         """
-        r = ""
-        for _ in range(n):
-            r += str(self.bits.randint(0,1))
-        return int(r)
+        #r = ""
+        #for _ in range(n):
+        #    r += str(self.bits.randint(0,1))
+        return int(self._sample(n), 2)
 
     def run(self):
         """ The main function of an ITM. It runs forever and waits for messages on any

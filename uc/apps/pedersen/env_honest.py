@@ -6,10 +6,7 @@ import secp256k1 as secp
 def env_honest(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     print('\033[94m[ env_honest ]\033[0m')
 
-    g = secp.make_random_point()
-    h = secp.make_random_point()
-
-    sid = ('one', ("1, 2", (g,h)))
+    sid = ('one', ("1, 2",))
     static.write( (('sid',sid), ('crupt',)))
 
     transcript = []
@@ -29,6 +26,7 @@ def env_honest(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     g2 = gevent.spawn(_p2z)
 
     m = secp.uint256_from_str(os.urandom(32))
+    print('\n commiting to the point: \n\t{}\n'.format(m))
 
     z2p.write( (1, ('commit', m)) )
     waits(pump)

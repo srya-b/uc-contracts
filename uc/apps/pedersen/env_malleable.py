@@ -4,11 +4,7 @@ import gevent
 import secp256k1 as secp
 
 def env_crupt_receiver_malleability(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
-
-    g = secp.make_random_point()
-    h = secp.make_random_point()
-
-    sid = ('one', ("1, 2", (g,h)))
+    sid = ('one', ("1, 2",))
     static.write( (('sid',sid), ('crupt', 2)))
 
     transcript = []
@@ -27,6 +23,12 @@ def env_crupt_receiver_malleability(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pum
     msg = waits(a2z)
     transcript.append('a2z: ' + str(msg))
     _,(fro,(_,_,(_, commitment))) = msg
+
+    z2a.write( ('A2P', (2, ('value',))) )
+    msg = waits(a2z)
+    transcript.append('a2z: ' + str(msg))
+    _,(fro,((g,h),)) = msg
+
     commitmentplus1 = commitment + g
 
     z2p.write( (1, ('reveal',)) )
