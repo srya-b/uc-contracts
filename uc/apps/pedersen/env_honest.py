@@ -6,7 +6,7 @@ import secp256k1 as secp
 def env_honest(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     print('\033[94m[ env_honest ]\033[0m')
 
-    sid = ('one', ("1, 2",))
+    sid = ('one', "1, 2")
     static.write( (('sid',sid), ('crupt',)))
 
     transcript = []
@@ -46,9 +46,10 @@ from uc.adversary import DummyAdversary
 from uc.protocol import DummyParty
 from uc.execuc import execUC
 from f_crs import F_CRS
+from f_mcom import F_Mcom
 from prot_com import Commitment_Prot
 
-tideal = execUC(
+execUC(
     128,
     env_honest,
     F_CRS,
@@ -56,3 +57,10 @@ tideal = execUC(
     DummyAdversary
 )
     
+execUC(
+    128,
+    env_honest,
+    F_Mcom,
+    DummyParty,
+    DummyAdversary
+)

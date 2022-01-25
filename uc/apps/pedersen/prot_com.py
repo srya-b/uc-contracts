@@ -12,7 +12,7 @@ class Commitment_Prot(UCProtocol):
     def __init__(self, k, bits, sid, pid, channels, pump):
         UCProtocol.__init__(self, k, bits, sid, pid, channels, pump) 
         self.ssid,sid = sid
-        parties = literal_eval(sid[0])
+        parties = literal_eval(sid)
         self.committer = parties[0]
         self.receiver = parties[1]
         self.iscommitter = pid == self.committer
