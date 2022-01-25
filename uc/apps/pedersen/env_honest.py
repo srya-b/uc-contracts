@@ -25,14 +25,16 @@ def env_honest(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     g1 = gevent.spawn(_a2z)
     g2 = gevent.spawn(_p2z)
 
-    m = secp.uint256_from_str(os.urandom(32))
-    print('\n commiting to the point: \n\t{}\n'.format(m))
+    for i in range(2):
+        m = secp.uint256_from_str(os.urandom(32))
+        print('\n commiting to the point: \n\t{}\n'.format(m))
 
-    z2p.write( (1, ('commit', m)) )
-    waits(pump)
+        z2p.write( (1, ('commit', i, m)) )
+        waits(pump)
 
-    z2p.write( (1, ('reveal',)) )
-    waits(pump)
+    for i in range(2):
+        z2p.write( (1, ('reveal', i)) )
+        waits(pump)
     
     gevent.kill(g1)
     gevent.kill(g2)
