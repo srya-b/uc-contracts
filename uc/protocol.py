@@ -30,7 +30,7 @@ class UCProtocol(ITM):
         self.handlers = {
             channels['z2p'] : self.env_msg,
             channels['f2p'] : self.func_msg,
-            channels['a2p'] : self.adv_msg,
+            #channels['a2p'] : self.adv_msg,
         }
         ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, pump)
         self.f = lambda x: x[0]

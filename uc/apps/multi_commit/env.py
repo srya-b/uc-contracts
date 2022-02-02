@@ -21,10 +21,10 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     g1 = gevent.spawn(_a2z)
     g2 = gevent.spawn(_p2z)
 
-    z2p.write( (1, ("('two', 1, 2)", ('commit', 0))) )
+    z2p.write( (1, (('two', "1, 2"), ('commit', 0))) )
     waits(pump)
 
-    z2p.write( (1, ("('two', 1, 2)", ('reveal',))) )
+    z2p.write( (1, (('two', "1, 2"), ('reveal',))) )
     waits(pump)
 
     gevent.kill(g1)

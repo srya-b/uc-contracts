@@ -55,7 +55,7 @@ class GenChannel(Event):
         self.clear()
 
 def wrapwrite(chan, wrapper):
-    newchan = GenChannel('wrap(' + chan.id + ')')
+    newchan = GenChannel('wrap(' + str(chan.id) + ')')
     def _wrapwrite():
         while True:
             m = waits(newchan)

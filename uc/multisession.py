@@ -55,13 +55,13 @@ class Bang_F(UCFunctionality):
 
 
 def bangP(p):
-    def _p(k, bits, crupt, sid, pid, channels, pump):
-        return Bang_P(k, bits, crupt, sid, pid, channels, pump, p)
+    def _p(k, bits, sid, pid, channels, pump):
+        return Bang_P(k, bits, sid, pid, channels, pump, p)
     return _p
 
 class Bang_P(UCProtocol):
     def __init__(self, k, bits, sid, pid, channels, pump, p):
-        UCProtocol.__init__(self, k, bits, crupt, sid, pid, channels, pump)
+        UCProtocol.__init__(self, k, bits, sid, pid, channels, pump)
 
         self.p = p
 
@@ -74,16 +74,18 @@ class Bang_P(UCProtocol):
         _z2p = GenChannel('z2ssid')
         _f2p = GenChannel('f2ssid')
 
-        _p2z = wrapwrite( self.channels['p2z'], lambda x: (x[0], (ssid, x[1])) )
-        _p2f = wrapwrite( self.channels['p2f'], lambda x: (x[0], (ssid, x[1])) )
+        #_p2z = wrapwrite( self.channels['p2z'], lambda x: (x[0], (ssid, x[1])) )
+        _p2z = wrapwrite( self.channels['p2z'], lambda x: (ssid, x))
+        #_p2f = wrapwrite( self.channels['p2f'], lambda x: (x[0], (ssid, x[1])) )
+        _p2f = wrapwrite( self.channels['p2f'], lambda x: (ssid, x))
     
         self.z2p_channels[ssid] = _z2p
         self.p2z_channels[ssid] = _p2z
-        self.p2a_channels[ssid] = _p2f
+        self.p2f_channels[ssid] = _p2f
         self.f2p_channels[ssid] = _f2p
 
-        _p = self.p(self.k, self.bits, ssid, self.pid, {'p2f': _p2f, 'f2p': _f2p, 'a2f': _a2f, 'f2a': _f2a}, self.pump)
-        gevent.spawn(_f.run)
+        _p = self.p(self.k, self.bits, ssid, self.pid, {'p2f': _p2f, 'f2p': _f2p, 'z2p': _z2p, 'p2z': _p2z}, self.pump)
+        gevent.spawn(_p.run)
 
     def get_channel(self, _2ssid, ssid):
         if ssid in _2ssid: return _2ssid[ssid]
@@ -97,6 +99,11 @@ class Bang_P(UCProtocol):
         z2ssid_chan.write( msg )
 
     def func_msg(self, m):
+        print('func message', m)
+        print('\n')
+        for i in m:
+            print(i)
+        print('\n')
         ssid,msg = m
         f2ssid_chan = self.get_channel(self.f2p_channels, ssid)
         f2ssid_chan.write( msg )
