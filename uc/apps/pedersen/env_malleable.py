@@ -22,6 +22,7 @@ def env_crupt_receiver_malleability(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pum
     z2p.write( (1, ('commit', 1, m)) )
     msg = waits(a2z)
     transcript.append('a2z: ' + str(msg))
+
     _,(fro,(_,_,(_,cid,commitment))) = msg
 
     z2a.write( ('A2P', (2, ('value',))) )
@@ -66,19 +67,19 @@ from uc.execuc import execUC
 from f_crs import F_CRS
 from f_mcom import F_Mcom
 from sim_mcom import Sim_Mcom
-from prot_com import Commitment_Prot
+from prot_mcom import MCommitment_Prot
 
 treal = execUC(
     128,
-    env_crupt_committer,
+    env_crupt_receiver_malleability,
     F_CRS,
-    Commitment_Prot,
+    MCommitment_Prot,
     DummyAdversary
 )
 
 tideal = execUC(
     128,
-    env_crupt_committer,
+    env_crupt_receiver_malleability,
     F_Mcom,
     DummyParty,
     Sim_Mcom

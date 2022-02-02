@@ -80,11 +80,7 @@ class UCFunctionality(ITM):
             msg (tuple(pid,msg)): message from protocol party with `pid`.
         """
         sender,msg = m
-        print('sender:', sender)
-        print('msg:', msg)
-        #if msg[0] in self.party_msgs:
         if self.p_msg(msg) in self.party_msgs:
-            #self.party_msgs[msg[0]](sender, *msg[1:])
             self.party_msgs[self.p_msg(msg)](sender, *self.p_parse(msg))
         else:
             raise Exception('unknown message', msg)

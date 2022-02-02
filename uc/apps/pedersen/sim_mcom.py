@@ -70,4 +70,4 @@ class Sim_Mcom(UCAdversary):
 
     def recv_open(self, sender, cid, m):
         self.receiver_randomness = secp.uint256_from_str(os.urandom(32))
-        self.write( 'a2z', ('P2A', (sender, ('recvmsg', (self.committer, ('open', cid, m, self.receiver_randomness))))) )
+        self.write( 'a2z', ('P2A', (sender, ('recvmsg', self.committer, ('open', cid, m, self.receiver_randomness)))) )

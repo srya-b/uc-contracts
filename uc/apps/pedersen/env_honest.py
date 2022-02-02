@@ -60,14 +60,14 @@ from uc.protocol import DummyParty
 from uc.execuc import execUC
 from f_crs import F_CRS
 from f_mcom import F_Mcom
-from prot_com import Commitment_Prot
+from prot_mcom import MCommitment_Prot
 
 print('\nreal\n')
 treal = execUC(
     128,
     env_honest,
     F_CRS,
-    Commitment_Prot,
+    MCommitment_Prot,
     DummyAdversary
 )
 

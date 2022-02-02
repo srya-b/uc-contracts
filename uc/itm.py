@@ -188,9 +188,6 @@ class ITM:
         Returns:
             r (int): an n-bit random integer
         """
-        #r = ""
-        #for _ in range(n):
-        #    r += str(self.bits.randint(0,1))
         return int(self._sample(n), 2)
 
     def run(self):

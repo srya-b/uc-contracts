@@ -29,11 +29,11 @@ def env_honest(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
         m = secp.uint256_from_str(os.urandom(32))
         print('\n commiting to the point: \n\t{}\n'.format(m))
 
-        z2p.write( (1, ((str(i), "1,2"), ('commit', i, m))) )
+        z2p.write( (1, ((str(i), "1,2"), ('commit', m))) )
         waits(pump)
 
     for i in range(2):
-        z2p.write( (1, ((str(i), "1,2"),('reveal', i))) )
+        z2p.write( (1, ((str(i), "1,2"),('reveal',))) )
         waits(pump)
     
     gevent.kill(g1)
@@ -59,7 +59,7 @@ from uc.adversary import DummyAdversary
 from uc.protocol import DummyParty
 from uc.execuc import execUC
 from f_mcrs import F_MCRS
-from uc.apps.commitment import F_Com_Channel
+from f_com import F_com
 from uc.multisession import bangP, bangF
 from prot_com import Commitment_Prot
 
@@ -76,8 +76,7 @@ print('\nideal\n')
 tideal = execUC(
     128,
     env_honest,
-    #F_Mcom,
-    bangF(F_Com_Channel),
+    bangF(F_com),
     DummyParty,
     DummyAdversary
 )
