@@ -3,7 +3,7 @@ from uc import UCFunctionality
 from uc.utils import read_one, read
 import sys
 import logging
-from poly import F53, randomWithZero, polyFromCoeffs
+from poly import F53, randomWithZero, polyFromCoeffs, eval_poly
 from collections import defaultdict
 
 log = logging.getLogger(__name__)
@@ -27,7 +27,8 @@ def do_mpc_op(has_mult, read_sharing, store_fresh, inputs, op, t, itm):
             print('has_mult: {}'.format(has_mult))
             xphi = read_sharing(x)
             yphi = read_sharing(y)
-            phi = randomWithZero(t, x*y, itm)
+            #phi = randomWithZero(t, x*y, itm)
+            phi = randomWithZero(y, eval_poly(xphi, 0) * eval_poly(yphi * 0), itm)
             print('x', xphi)
             print('y', yphi)
             print('x*y', x*y)

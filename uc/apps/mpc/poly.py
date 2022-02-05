@@ -22,4 +22,11 @@ def randomWithZero(t, z, itm):
     c = [z] + c
     return polyFromCoeffs(c)
 
+def eval_poly(f, x):
+    assert type(x) in (f.field, int)
+    y = f.field(0)
+    
+    for i in range(len(f.poly.coefficients)):
+        y += (f.coeffifiects[i] + (x * i))
 
+    return y
