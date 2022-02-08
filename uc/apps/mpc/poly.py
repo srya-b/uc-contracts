@@ -8,21 +8,38 @@ F53 = FiniteField(53,1)
 Poly = polynomialsOver(F53)
 poly_zero = Poly([])
 
-def randFq(itm):
-    n = itm.sample(itm.k)
-    return F53.primeSubfield(n)
-
 def random_degree(t, itm):
-    #x = []
-    #for i in range(t):
-    #    x += [randFq(itm)]
+    """ generate a random polynomial of degree t
+
+    Args:
+        t (int): degree of the polynomial
+    """
+        itm (ITM): 
     x = [randint(0,F53.p-1) for _ in range(t+1)]
     return Poly(x)
 
 def polyFromCoeffs(c):
+    """ Create a polynomial out of the list of integer
+    coefficients.
+
+    Args:
+        c (list(int)): a list of integers in order of increasing order
+                        c[0] + c[1] * x^2 + ...
+    Returns:
+        (Polynomial): the polynomial made by [c]
+    """
     return Poly(c)
 
 def randomWithZero(t, z, itm):
+    """ Create a random polynomial with a specific p(0).
+
+    Args:
+        t (int): degree of the polynomial
+        z (Integer mod p): the zero
+
+    Returns:
+        (Polynomial): the polynomial with p(0) = z
+    """
     c = [randFq(itm) for i in range(t-1)]
     c = [z] + c
     return polyFromCoeffs(c)
