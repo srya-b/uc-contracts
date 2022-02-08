@@ -53,20 +53,38 @@ class _MPC_Prot(UCProtocol):
         #self.env_msgs['myshare'] = self.env_myshare
 
     def _op(self, opcode):
+        """ Execute the opcode + any args in fMPC and return the result
+
+        Args:
+            opcode (tuple): op and possible arguments as (op,args)
+        
+        Writes:
+            ('op', opcode): the opcode (including arguments) to the
+                            functionality and read the result.
+        """
         m = self.write_and_wait_for('p2f', ('op', opcode), 'f2p')
         return m
 
     def commit(self, opcode, res):
+        """ Commit opcode and result to the log.
+
+        Args:
+            opcode (tuple): opcodes + args
+            res (int,(tuple)): the share id(s) of the result
+        """
         self.log += [(opcode,res)]
         self.write('p2z', ('OpOutput',res)) 
 
     def env_op(self, op):
         op,args = op
         if op == 'MULT':
+            # handle the MULT using the multiplication program
+            # given. In the example environment it's mpc_beaver
             x,y = args
             xy = self.mult_prog(x, y, self._op)
             self.commit( ('MULT',(x,y)), xy )
         else:
+            # all other opcodes can be handled by fMPC_sansMULT
             m = self.write_and_wait_for('p2f', ('op', (op, args)), 'f2p')
             if m[0] == 'OpRes' or m[0] == 'OpOutput':
                 self.commit( (op,args), m[1])

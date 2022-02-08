@@ -130,11 +130,26 @@ class fMPC_(UCFunctionality):
         self.party_msgs['myshare'] = self.party_myshare
 
     def fresh(self):
+        """ Get the next number in the counter. 
+
+        Returns:
+            (int): a new share if to be used
+        """
         x = self.freshCtr
         self.freshCtr += 1
         return x
 
     def commit(self, op, outp):
+        """ Add the opcode that was executed and the result of the execution
+        to the log stores int the `ops` list.
+
+        Args:
+            op (tuple): the opcode + any arguments
+            outp (int/tuple): the share id(s) of result of the execution
+
+        Writes:
+            (OpOutput, outp) to the calling party.
+        """
         self.ops.append( (op, outp) )
         self.write( 'f2p', (self.input_party, ('OpOutput', outp)) )
 
@@ -170,15 +185,31 @@ class fMPC_(UCFunctionality):
             self.pump.write('')
     
     def party_log(self, sender):
+        """ Send the log of opcodes to the calling party
+
+        Writes:
+            ('Log', log) to `sender`.
+        """
         self.write('f2p', (sender, ('Log', self.ops)))
 
     def party_input(self, sender, x):
+        """ Adds input to the inputs by the input party."""
         if sender == self.input_party:
             self.inputs += [x]
             self.write('f2p', (sender, ('OK',))) 
         else: self.pump.write('')
 
     def party_myshare(self, sender, sh):
+        """ Get the party's share corresponding to the shareid
+        they give.
+        
+        Args:
+            sh (int): the shareid
+
+        Writes:
+            ('myshare', ms): the share to the sender
+            ('WrongFollow',): if the share doesn't exist
+        """
         if self.has_mpc: 
             ms = self.share_table[sh]
             if ms is not None:
