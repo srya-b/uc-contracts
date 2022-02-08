@@ -3,7 +3,7 @@ from uc import UCFunctionality
 from uc.utils import read_one, read
 import sys
 import logging
-from poly import F53, randomWithZero, polyFromCoeffs, eval_poly, random_degree
+from poly import F53, randomWithZero, polyFromCoeffs, eval_poly, random_degree, poly_zero
 from collections import defaultdict
 
 log = logging.getLogger(__name__)
@@ -18,19 +18,21 @@ opcodes = [
 ]
 
 def do_abb_op(read_secret, store_fresh, inputs, op):
-    op,args = op
-    if op == 'MULT':
+    if op[0] == 'MULT':
+        op,args = op
         x,y = args
         x = read_secret(x)
         y = read_secret(y)
         xy = store_fresh(x*y)
         return xy
     #elif op == 'LIN':
-    elif op == 'OPEN':
+    elif op[0] == 'OPEN':
+        op,args = op
         sh = args
         x = read_secret(sh)
         return polyFromCoeffs([x])
-    elif op == 'INPUT':
+    elif op[0] == 'INPUT':
+        op,args = op
         x = inputs[0]
         inputs = inputs[1:]
         k = store_fresh(x)
@@ -38,30 +40,36 @@ def do_abb_op(read_secret, store_fresh, inputs, op):
     else: return 0 
 
 def do_mpc_op(has_mult, read_sharing, store_fresh, inputs, op, t, itm):
-    print('\n Do MPC OP: {}\n'.format(op))
-    op,args = op
-    if op == 'MULT':
+    if op[0] == 'MULT':
+        op,args = op
         x,y = args
         if has_mult:
             xphi = read_sharing(x)
             yphi = read_sharing(y)
             phi = randomWithZero(t, eval_poly(xphi, 0) * eval_poly(yphi, 0), itm)
-            print('\n t',t)
             xy = store_fresh(phi)
-            print('\n**** xy in MULT: {}, type: {}****\n'.format(xy, type(xy)))
             return xy
         else: raise Exception("no MULT")
-    #elif op == 'LIN':
-    elif op == 'OPEN':
+    elif op[0] == 'LIN':
+        op,cs = op
+        r = poly_zero
+        for (c,sh) in cs:
+            x = read_sharing(sh)
+            r += (polyFromCoeffs([c]) * x)
+        k = store_fresh(r)
+        return k
+    elif op[0] == 'OPEN':
+        op,args = op
         k = args
         phi = read_sharing(k)
         return phi
-    elif op == 'CONST': 
+    elif op[0] == 'CONST': 
+        op,args = op
         v = args
         phi = polyFromCoeffs([v])
         k = store_fresh(phi)
         return k
-    elif op == 'RAND':
+    elif op[0] == 'RAND':
         a = random_degree(t, itm)
         b = random_degree(t, itm)
         ab = randomWithZero(t, (eval_poly(a,0) * eval_poly(b,0)), itm)

@@ -61,7 +61,7 @@ class UCProtocol(ITM):
         if self.f(msg) in self.func_msgs:
             self.func_msgs[self.f(msg)](*(self.parse(msg)))
         else:
-            self.pump.write('')
+            raise Exception('Message from functionality not accepted: {}'.format(msg))
 
     def env_msg(self, msg):
         """ Handlers for messages from Z. msg[0] is the type of the message
@@ -73,7 +73,7 @@ class UCProtocol(ITM):
         if msg[0] in self.env_msgs:
             self.env_msgs[msg[0]](*msg[1:])
         else:
-            self.pump.write('')
+            raise Exception('Message from Environment not accepted: {}'.format(msg))
 
 class DummyParty(ITM):
     """ The dummy party that passes through all the messages directly to the functionality and back to

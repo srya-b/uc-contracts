@@ -19,6 +19,7 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
             transcript.append('a2z: ' + str((tag,m)))
             if tag == 'P2A':
                 pid,m = m
+                print('a2z m', m)
                 if m[0] == 'OpOutput' or m[0] == 'OpRes':
                     last_handle = m[1]
             pump.write('dump')
@@ -27,6 +28,7 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
         while True:
             global last_handle
             pid,m = waits(p2z)
+            print('p2z m', m)
             if m[0] == 'OpOutput' or m[0] == 'OpRes':
                 last_handle = m[1]
             transcript.append('p2z: ' + str((pid,m)))
@@ -40,11 +42,13 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     waits(pump)
 
     x = last_handle
-   
+    print('x last handle', x)
+
     z2p.write( (99, ('op', ('CONST', 5))) )
     waits(pump)
 
     y = last_handle
+    print('y last handle', y)
 
     z2p.write( (99, ('op', ('MULT', (x, y)))) )
     waits(pump)
@@ -95,9 +99,9 @@ def env(k, static, z2p, z2f, z2a, a2z, f2z, p2z, pump):
     z2a.write( ('A2P', (1, ('op', ('RAND',)))))
     waits(pump)
 
-    ## logs from an honest party
-    #z2p.write( ('99', ('log',)))
-    #waits(pump)
+    # logs from an honest party
+    z2p.write( ('99', ('log',)))
+    waits(pump)
 
     gevent.kill(g1)
     gevent.kill(g2)
@@ -132,7 +136,7 @@ tideal = execUC(
     DummyParty,
     DummyAdversary
 )
-#tideal = execUC(
+#treal = execUC(
 #    128,
 #    env,
 #    fMPC_sansMULT,

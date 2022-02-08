@@ -2,22 +2,21 @@ import sys
 sys.path += ['elliptic-curves-finite-fields']
 from finitefield.finitefield import FiniteField
 from finitefield.polynomial import polynomialsOver
+from random import randint
 
 F53 = FiniteField(53,1)
 Poly = polynomialsOver(F53)
-
-print('\nFinite field: {}\n'.format(FiniteField))
-print('\n F53: {}\n'.format(F53))
-print('\ntype of F53: {}\n'.format(type(F53)))
+poly_zero = Poly([])
 
 def randFq(itm):
     n = itm.sample(itm.k)
     return F53.primeSubfield(n)
 
 def random_degree(t, itm):
-    x = []
-    for i in range(t):
-        x += [randFq(itm)]
+    #x = []
+    #for i in range(t):
+    #    x += [randFq(itm)]
+    x = [randint(0,F53.p-1) for _ in range(t+1)]
     return Poly(x)
 
 def polyFromCoeffs(c):
