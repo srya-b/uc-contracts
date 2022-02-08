@@ -37,7 +37,8 @@ class UCAdversary(ITM):
             channels['f2a'] : self.func_msg,
             channels['z2a'] : self.env_msg
         }
-        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, pump)
+        to_write = ['a2p', 'a2f', 'a2z']
+        ITM.__init__(self, k, bits, sid, pid, channels, self.handlers, to_write, pump)
         self.env_msgs = {}
         self.func_msgs = {}
         self.party_msgs = {}

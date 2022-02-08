@@ -27,8 +27,9 @@ class UCFunctionality(ITM):
             channels['p2f'] : self.party_msg,
             channels['a2f'] : self.adv_msg,
         }
-        
-        ITM.__init__(self, k, bits, sid, -1, channels, self.handlers, pump)
+
+        to_write = ['f2p', 'f2a']
+        ITM.__init__(self, k, bits, sid, -1, channels, self.handlers, to_write, pump)
 
         self.party_msgs = {}
         self.adv_msgs = {}

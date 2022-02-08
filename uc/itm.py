@@ -78,7 +78,7 @@ class ITM:
     """
     Class encapsultes the basic ITM with channels in place of the traditional tapes.
     """
-    def __init__(self, k, bits, sid, pid, channels, handlers, pump):
+    def __init__(self, k, bits, sid, pid, channels, handlers, to_write, pump):
         """
         Args:
             k (int): the security parameter
@@ -98,6 +98,7 @@ class ITM:
         self.pump = pump
         self.channels = channels
         self.handlers = handlers
+        self.to_write = to_write
 
         self.log = logging.getLogger(type(self).__name__)
 
@@ -124,7 +125,10 @@ class ITM:
             ch (str): the name of the channel to write to
             msg (tuple), the message to be written
         """
-        self.channels[ch].write(self.wrapwrite(msg))
+        if ch in self.to_write:
+            self.channels[ch].write(self.wrapwrite(msg))
+        else:
+            raise Exception("Writing to incoming channel {}".format(ch))
 
     def read(self, ch):
         """ Blocking function that reads from the channel names `ch`.

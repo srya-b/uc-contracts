@@ -13,7 +13,6 @@ def IntegersModP(p):
 
    class IntegerModP(_Modular):
       def __init__(self, n):
-         print('\n heres the input: {}\n'.format(n))
          if type(n) is list:
             n = n[0] 
          try:
