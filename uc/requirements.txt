@@ -1,5 +1,5 @@
 gevent==20.6.2
 greenlet==0.4.16
-numpy==1.19.0
+numpy==1.21.0
 zope.event==4.4
 zope.interface==5.1.0
